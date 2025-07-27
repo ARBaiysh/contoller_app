@@ -10,6 +10,7 @@ abstract class Routes {
   static const SUBSCRIBER_DETAIL = _Paths.SUBSCRIBER_DETAIL;
   static const SEARCH = _Paths.SEARCH;
   static const REPORTS = _Paths.REPORTS;
+  static const REPORT_VIEWER = _Paths.REPORT_VIEWER;
   static const SETTINGS = _Paths.SETTINGS;
 }
 
@@ -23,5 +24,6 @@ abstract class _Paths {
   static const SUBSCRIBER_DETAIL = '/subscriber-detail';
   static const SEARCH = '/search';
   static const REPORTS = '/reports';
+  static const REPORT_VIEWER = '/report-viewer';
   static const SETTINGS = '/settings';
 }

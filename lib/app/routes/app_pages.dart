@@ -6,7 +6,9 @@ import '../modules/search/views/search_view.dart';
 import '../modules/subscriber_detail/views/subscriber_detail_view.dart';
 import '../modules/subscribers/views/subscribers_view.dart';
 import '../modules/tp_list/views/tp_list_view.dart';
-
+import '../modules/reports/views/reports_view.dart';
+import '../modules/report_viewer/views/report_viewer_view.dart';
+import '../modules/settings/views/settings_view.dart';
 
 part 'app_routes.dart';
 
@@ -47,15 +49,20 @@ class AppPages {
       transition: Transition.fadeIn,
       fullscreenDialog: true,
     ),
-    // GetPage(
-    //   name: _Paths.REPORTS,
-    //   page: () => const ReportsView(),
-    //   transition: Transition.rightToLeft,
-    // ),
-    // GetPage(
-    //   name: _Paths.SETTINGS,
-    //   page: () => const SettingsView(),
-    //   transition: Transition.rightToLeft,
-    // ),
+    GetPage(
+      name: _Paths.REPORTS,
+      page: () => const ReportsView(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: _Paths.REPORT_VIEWER,
+      page: () => const ReportViewerView(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: _Paths.SETTINGS,
+      page: () => const SettingsView(),
+      transition: Transition.rightToLeft,
+    ),
   ];
 }

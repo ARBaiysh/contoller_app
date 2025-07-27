@@ -47,27 +47,40 @@ class HomeController extends GetxController {
     await loadStatistics();
   }
 
-  // Navigation bar
+  // Bottom Navigation bar handler
   void changeTabIndex(int index) {
     _currentIndex.value = index;
+
+    switch (index) {
+      case 0:
+      // Already on home - refresh data
+        refreshStatistics();
+        break;
+      case 1:
+        navigateToTpList();
+        break;
+      case 2:
+        navigateToSearch();
+        break;
+      case 3:
+        navigateToReports();
+        break;
+    }
   }
 
-  // Navigate to TP list
+  // Navigation methods
   void navigateToTpList() {
     Get.toNamed(Routes.TP_LIST);
   }
 
-  // Navigate to search
   void navigateToSearch() {
     Get.toNamed(Routes.SEARCH);
   }
 
-  // Navigate to reports
   void navigateToReports() {
     Get.toNamed(Routes.REPORTS);
   }
 
-  // Navigate to settings
   void navigateToSettings() {
     Get.toNamed(Routes.SETTINGS);
   }

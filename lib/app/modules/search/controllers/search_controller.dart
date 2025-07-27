@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/models/tp_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
@@ -11,6 +12,10 @@ import '../../../core/values/constants.dart';
 class GlobalSearchController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
   final TpRepository _tpRepository = Get.find<TpRepository>();
+  final GetStorage _storage = GetStorage();
+
+  // Storage key for recent searches
+  static const String _recentSearchesKey = 'recent_searches';
 
   // Text controller
   final TextEditingController searchTextController = TextEditingController();
@@ -67,15 +72,35 @@ class GlobalSearchController extends GetxController {
     }
   }
 
-  // Load recent searches
+  // Load recent searches from storage
   void loadRecentSearches() {
-    // In real app, load from local storage
-    _recentSearches.value = [
-      'Абдуллаев',
-      '090099',
-      'Гайрат',
-      'должники',
-    ];
+    try {
+      final List<dynamic>? storedSearches = _storage.read(_recentSearchesKey);
+      if (storedSearches != null) {
+        _recentSearches.value = storedSearches.cast<String>();
+      } else {
+        // Set default searches for first time users
+        _recentSearches.value = [
+          'Абдуллаев',
+          '090099',
+          'Гайрат',
+          'должники',
+        ];
+        _saveRecentSearches();
+      }
+    } catch (e) {
+      print('Error loading recent searches: $e');
+      _recentSearches.value = [];
+    }
+  }
+
+  // Save recent searches to storage
+  void _saveRecentSearches() {
+    try {
+      _storage.write(_recentSearchesKey, _recentSearches.toList());
+    } catch (e) {
+      print('Error saving recent searches: $e');
+    }
   }
 
   // Search with debounce
@@ -153,14 +178,16 @@ class GlobalSearchController extends GetxController {
     }
   }
 
-  // Add to recent searches
+  // Add to recent searches with persistence
   void addToRecentSearches(String query) {
     if (query.isNotEmpty && !_recentSearches.contains(query)) {
       _recentSearches.insert(0, query);
+      // Keep only last 10 searches
       if (_recentSearches.length > 10) {
         _recentSearches.removeLast();
       }
-      // In real app, save to local storage
+      // Save to storage
+      _saveRecentSearches();
     }
   }
 
@@ -175,13 +202,15 @@ class GlobalSearchController extends GetxController {
   // Remove from recent searches
   void removeFromRecent(String query) {
     _recentSearches.remove(query);
-    // In real app, update local storage
+    // Save updated list to storage
+    _saveRecentSearches();
   }
 
   // Clear all recent searches
   void clearRecentSearches() {
     _recentSearches.clear();
-    // In real app, clear from local storage
+    // Clear from storage
+    _saveRecentSearches();
   }
 
   // Toggle debtor filter

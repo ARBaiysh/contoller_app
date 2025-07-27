@@ -27,49 +27,50 @@ class AppDrawer extends StatelessWidget {
               children: [
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.home_outlined,
-                  title: 'Главная',
+                  icon: Icons.person_outline,
+                  title: 'Профиль',
+                  subtitle: 'Информация о пользователе',
                   onTap: () {
                     Get.back();
+                    // В будущем можно добавить отдельный экран профиля
+                    Get.snackbar(
+                      'Профиль',
+                      'Функция в разработке',
+                      snackPosition: SnackPosition.TOP,
+                    );
                   },
                 ),
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.electrical_services_outlined,
-                  title: 'Список ТП',
-                  onTap: () {
-                    Get.back();
-                    homeController.navigateToTpList();
-                  },
-                ),
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.search_outlined,
-                  title: 'Поиск абонентов',
-                  onTap: () {
-                    Get.back();
-                    homeController.navigateToSearch();
-                  },
-                ),
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.description_outlined,
-                  title: 'Отчеты',
-                  onTap: () {
-                    Get.back();
-                    homeController.navigateToReports();
-                  },
-                ),
-                const Divider(),
                 _buildMenuItem(
                   context: context,
                   icon: Icons.settings_outlined,
                   title: 'Настройки',
+                  subtitle: 'Конфигурация приложения',
                   onTap: () {
                     Get.back();
                     homeController.navigateToSettings();
                   },
                 ),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.help_outline,
+                  title: 'Помощь и поддержка',
+                  subtitle: 'Инструкции и FAQ',
+                  onTap: () {
+                    Get.back();
+                    _showHelp();
+                  },
+                ),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.info_outline,
+                  title: 'О приложении',
+                  subtitle: 'Версия и информация',
+                  onTap: () {
+                    Get.back();
+                    _showAbout();
+                  },
+                ),
+                const Divider(),
               ],
             ),
           ),
@@ -151,19 +152,35 @@ class AppDrawer extends StatelessWidget {
     required BuildContext context,
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: Theme.of(context).iconTheme.color,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: Theme.of(context).primaryColor,
+          size: 20,
+        ),
       ),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.bodyLarge,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+        ),
       ),
       onTap: onTap,
-      horizontalTitleGap: 0,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: Constants.paddingL,
         vertical: Constants.paddingXS,
@@ -226,6 +243,80 @@ class AppDrawer extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelp() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Помощь'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Основные функции приложения:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text('• Просмотр списка ТП и абонентов'),
+              Text('• Ввод показаний счетчиков'),
+              Text('• Поиск абонентов по различным критериям'),
+              Text('• Формирование отчетов'),
+              SizedBox(height: 16),
+              Text(
+                'Навигация:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text('• Используйте нижнюю панель для быстрого перехода'),
+              Text('• Боковое меню содержит настройки и профиль'),
+              SizedBox(height: 16),
+              Text(
+                'Для получения дополнительной помощи обратитесь к администратору системы.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Закрыть'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAbout() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('О приложении'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${Constants.appName}'),
+            const SizedBox(height: 8),
+            Text('Версия: ${Constants.appVersion}'),
+            const SizedBox(height: 8),
+            Text('${Constants.companyName}'),
+            const SizedBox(height: 16),
+            const Text(
+              'Мобильное приложение для контролеров электросетевой компании для сбора показаний электросчетчиков.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Закрыть'),
           ),
         ],
       ),

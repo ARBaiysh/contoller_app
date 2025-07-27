@@ -12,6 +12,10 @@ class SearchView extends GetView<GlobalSearchController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
         title: TextField(
           controller: controller.searchTextController,
           onChanged: controller.search,
@@ -210,9 +214,12 @@ class SearchView extends GetView<GlobalSearchController> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              TextButton(
-                onPressed: controller.clearRecentSearches,
-                child: const Text('Очистить'),
+              SizedBox(
+                width: 100,
+                child: TextButton(
+                  onPressed: controller.clearRecentSearches,
+                  child: const Text('Очистить'),
+                ),
               ),
             ],
           ),
@@ -319,14 +326,17 @@ class SearchView extends GetView<GlobalSearchController> {
             ),
             const SizedBox(height: Constants.paddingL),
             if (controller.filterByDebtor || controller.filterByStatus != 'all')
-              TextButton(
-                onPressed: () {
-                  controller.setStatusFilter('all');
-                  if (controller.filterByDebtor) {
-                    controller.toggleDebtorFilter();
-                  }
-                },
-                child: const Text('Сбросить фильтры'),
+              SizedBox(
+                width: 200,
+                child: TextButton(
+                  onPressed: () {
+                    controller.setStatusFilter('all');
+                    if (controller.filterByDebtor) {
+                      controller.toggleDebtorFilter();
+                    }
+                  },
+                  child: const Text('Сбросить фильтры'),
+                ),
               ),
           ],
         ),

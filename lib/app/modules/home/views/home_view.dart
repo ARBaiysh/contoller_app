@@ -21,13 +21,6 @@ class HomeView extends GetView<HomeController> {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: controller.navigateToSearch,
-            tooltip: 'Поиск',
-          ),
-        ],
       ),
       drawer: const AppDrawer(),
       body: Obx(() => _buildBody(context)),
@@ -116,7 +109,7 @@ class HomeView extends GetView<HomeController> {
           crossAxisCount: 2,
           mainAxisSpacing: Constants.paddingM,
           crossAxisSpacing: Constants.paddingM,
-          childAspectRatio: 1.0, // Изменено с 1.2 на 1.0
+          childAspectRatio: 1.0,
           children: [
             StatisticCard(
               title: 'Собрано показаний',

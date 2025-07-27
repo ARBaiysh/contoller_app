@@ -12,6 +12,9 @@ import '../modules/search/controllers/search_controller.dart';
 import '../modules/subscriber_detail/controllers/subscriber_detail_controller.dart';
 import '../modules/subscribers/controllers/subscribers_controller.dart';
 import '../modules/tp_list/controllers/tp_list_controller.dart';
+import '../modules/reports/controllers/reports_controller.dart';
+import '../modules/report_viewer/controllers/report_viewer_controller.dart';
+import '../modules/settings/controllers/settings_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -33,7 +36,8 @@ class InitialBinding extends Bindings {
     Get.lazyPut<SubscribersController>(() => SubscribersController(), fenix: true);
     Get.lazyPut<SubscriberDetailController>(() => SubscriberDetailController(), fenix: true);
     Get.lazyPut<GlobalSearchController>(() => GlobalSearchController(), fenix: true);
-    // Get.lazyPut<ReportsController>(() => ReportsController(), fenix: true);
-    // Get.lazyPut<SettingsController>(() => SettingsController(), fenix: true);
+    Get.lazyPut<ReportsController>(() => ReportsController(), fenix: true);
+    Get.lazyPut<ReportViewerController>(() => ReportViewerController(), fenix: true);
+    Get.lazyPut<SettingsController>(() => SettingsController(), fenix: true);
   }
 }
