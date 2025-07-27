@@ -92,7 +92,12 @@ class AppDrawer extends StatelessWidget {
         bottom: Constants.paddingL,
       ),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        color: Theme.of(context).cardColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,10 +107,10 @@ class AppDrawer extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.3),
                 width: 2,
               ),
             ),
@@ -114,8 +119,8 @@ class AppDrawer extends StatelessWidget {
                 controller.userName.isNotEmpty
                     ? controller.userName[0].toUpperCase()
                     : 'К',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.primary,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -127,9 +132,7 @@ class AppDrawer extends StatelessWidget {
           // User name
           Text(
             controller.userName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: Constants.fontSizeL,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -138,9 +141,8 @@ class AppDrawer extends StatelessWidget {
           // Role
           Text(
             'Контролер',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: Constants.fontSizeS,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
             ),
           ),
         ],

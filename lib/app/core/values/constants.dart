@@ -17,9 +17,9 @@ class Constants {
   static const String languageKey = 'app_language';
 
   // App Info
-  static const String appName = 'ОшЭлектро: Контролер';
+  static const String appName = 'ОшПЭС: Контролер';
   static const String appVersion = '1.0.0';
-  static const String companyName = 'ОАО «ОшЭлектро»';
+  static const String companyName = 'ОАО «ОшПЭС»';
 
   // Pagination
   static const int itemsPerPage = 20;
