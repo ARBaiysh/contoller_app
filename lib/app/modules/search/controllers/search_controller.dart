@@ -1,0 +1,238 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../data/models/subscriber_model.dart';
+import '../../../data/models/tp_model.dart';
+import '../../../data/repositories/subscriber_repository.dart';
+import '../../../data/repositories/tp_repository.dart';
+import '../../../routes/app_pages.dart';
+import '../../../core/values/constants.dart';
+
+class GlobalSearchController extends GetxController {
+  final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
+  final TpRepository _tpRepository = Get.find<TpRepository>();
+
+  // Text controller
+  final TextEditingController searchTextController = TextEditingController();
+
+  // Debounce timer
+  Timer? _debounce;
+
+  // Observable states
+  final _isLoading = false.obs;
+  final _searchQuery = ''.obs;
+  final _searchResults = <SubscriberModel>[].obs;
+  final _tpList = <TpModel>[].obs;
+  final _showRecent = true.obs;
+  final _recentSearches = <String>[].obs;
+
+  // Filter states
+  final _filterByDebtor = false.obs;
+  final _filterByStatus = 'all'.obs;
+
+  // Getters
+  bool get isLoading => _isLoading.value;
+  String get searchQuery => _searchQuery.value;
+  List<SubscriberModel> get searchResults => _searchResults;
+  bool get showRecent => _showRecent.value;
+  List<String> get recentSearches => _recentSearches;
+  bool get filterByDebtor => _filterByDebtor.value;
+  String get filterByStatus => _filterByStatus.value;
+
+  // Statistics
+  int get totalResults => _searchResults.length;
+  int get debtorResults => _searchResults.where((s) => s.isDebtor).length;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadTpList();
+    loadRecentSearches();
+  }
+
+  @override
+  void onClose() {
+    _debounce?.cancel();
+    searchTextController.dispose();
+    super.onClose();
+  }
+
+  // Load TP list for mapping
+  Future<void> loadTpList() async {
+    try {
+      final tps = await _tpRepository.getTpList();
+      _tpList.value = tps;
+    } catch (e) {
+      print('Error loading TP list: $e');
+    }
+  }
+
+  // Load recent searches
+  void loadRecentSearches() {
+    // In real app, load from local storage
+    _recentSearches.value = [
+      'Абдуллаев',
+      '090099',
+      'Гайрат',
+      'должники',
+    ];
+  }
+
+  // Search with debounce
+  void search(String query) {
+    _searchQuery.value = query;
+    searchTextController.text = query;
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    if (query.isEmpty) {
+      _searchResults.clear();
+      _showRecent.value = true;
+      return;
+    }
+
+    _showRecent.value = false;
+
+    _debounce = Timer(
+      const Duration(milliseconds: Constants.searchDebounceMs),
+          () => performSearch(query),
+    );
+  }
+
+  // Perform actual search
+  Future<void> performSearch(String query) async {
+    if (query.length < 3) {
+      Get.snackbar(
+        'Поиск',
+        'Введите минимум 3 символа для поиска',
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
+    _isLoading.value = true;
+
+    try {
+      final results = await _subscriberRepository.searchSubscribers(query);
+
+      // Apply filters
+      List<SubscriberModel> filtered = results;
+
+      if (_filterByDebtor.value) {
+        filtered = filtered.where((s) => s.isDebtor).toList();
+      }
+
+      if (_filterByStatus.value != 'all') {
+        switch (_filterByStatus.value) {
+          case 'available':
+            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.available).toList();
+            break;
+          case 'processing':
+            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.processing).toList();
+            break;
+          case 'completed':
+            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.completed).toList();
+            break;
+        }
+      }
+
+      _searchResults.value = filtered;
+
+      // Add to recent searches
+      addToRecentSearches(query);
+    } catch (e) {
+      Get.snackbar(
+        'Ошибка',
+        'Не удалось выполнить поиск',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Constants.error.withOpacity(0.1),
+        colorText: Constants.error,
+      );
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  // Add to recent searches
+  void addToRecentSearches(String query) {
+    if (query.isNotEmpty && !_recentSearches.contains(query)) {
+      _recentSearches.insert(0, query);
+      if (_recentSearches.length > 10) {
+        _recentSearches.removeLast();
+      }
+      // In real app, save to local storage
+    }
+  }
+
+  // Clear search
+  void clearSearch() {
+    searchTextController.clear();
+    _searchQuery.value = '';
+    _searchResults.clear();
+    _showRecent.value = true;
+  }
+
+  // Remove from recent searches
+  void removeFromRecent(String query) {
+    _recentSearches.remove(query);
+    // In real app, update local storage
+  }
+
+  // Clear all recent searches
+  void clearRecentSearches() {
+    _recentSearches.clear();
+    // In real app, clear from local storage
+  }
+
+  // Toggle debtor filter
+  void toggleDebtorFilter() {
+    _filterByDebtor.value = !_filterByDebtor.value;
+    if (_searchQuery.value.isNotEmpty) {
+      performSearch(_searchQuery.value);
+    }
+  }
+
+  // Set status filter
+  void setStatusFilter(String status) {
+    _filterByStatus.value = status;
+    if (_searchQuery.value.isNotEmpty) {
+      performSearch(_searchQuery.value);
+    }
+  }
+
+  // Get TP name for subscriber
+  String getTpName(String tpId) {
+    final tp = _tpList.firstWhereOrNull((tp) => tp.id == tpId);
+    return tp != null ? '${tp.number} ${tp.name}' : 'ТП';
+  }
+
+  // Navigate to subscriber detail
+  void navigateToSubscriberDetail(SubscriberModel subscriber) {
+    Get.toNamed(
+      Routes.SUBSCRIBER_DETAIL,
+      arguments: {
+        'subscriberId': subscriber.id,
+        'tpName': getTpName(subscriber.tpId),
+      },
+    );
+  }
+
+  // Search suggestions
+  List<String> getSuggestions(String query) {
+    if (query.isEmpty) return [];
+
+    final suggestions = <String>[];
+
+    // Add matching recent searches
+    suggestions.addAll(
+      _recentSearches.where((s) => s.toLowerCase().contains(query.toLowerCase())),
+    );
+
+    // Add common search patterns
+    if (query.startsWith('0900')) {
+      suggestions.add('Поиск по лицевому счету');
+    }
+
+    return suggestions.take(5).toList();
+  }
+}
