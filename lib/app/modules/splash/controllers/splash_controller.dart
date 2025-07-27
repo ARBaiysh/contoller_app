@@ -14,7 +14,6 @@ class SplashController extends GetxController {
 
   // Getters
   bool get isLoading => _isLoading.value;
-
   String get loadingText => _loadingText.value;
 
   @override
