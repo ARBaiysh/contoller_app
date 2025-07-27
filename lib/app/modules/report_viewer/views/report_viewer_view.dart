@@ -28,16 +28,22 @@ class ReportViewerView extends GetView<ReportViewerController> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Report header
-          ReportHeaderCard(controller: controller),
+      body: SafeArea(
+        top: false,    // AppBar уже учитывает верхнюю область
+        bottom: true,  // Защищаем от виртуальных кнопок внизу
+        left: true,    // Защищаем от вырезов по бокам
+        right: true,
+        child: Column(
+          children: [
+            // Report header
+            ReportHeaderCard(controller: controller),
 
-          // Subscribers list
-          Expanded(
-            child: _buildSubscribersList(context),
-          ),
-        ],
+            // Subscribers list
+            Expanded(
+              child: _buildSubscribersList(context),
+            ),
+          ],
+        ),
       ),
     );
   }

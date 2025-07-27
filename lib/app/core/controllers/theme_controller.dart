@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -17,27 +18,60 @@ class ThemeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Load saved theme preference
-    _isDarkMode.value = _box.read(_key) ?? false;
+    _loadTheme();
+  }
 
-    // Listen to system theme changes
-    ever(_isDarkMode, (_) => _saveTheme());
+  @override
+  void onReady() {
+    super.onReady();
+    // Применяем тему после полной инициализации
+    _applyTheme();
+  }
+
+  // Загрузка сохраненной темы
+  void _loadTheme() {
+    final savedTheme = _box.read(_key);
+    if (savedTheme != null) {
+      _isDarkMode.value = savedTheme;
+    } else {
+      // Если нет сохраненной темы, используем системную
+      _isDarkMode.value = _getSystemTheme();
+      _saveTheme(); // Сохраняем первоначальное значение
+    }
+  }
+
+  // Получение системной темы
+  bool _getSystemTheme() {
+    final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    return brightness == Brightness.dark;
+  }
+
+  // Применение темы
+  void _applyTheme() {
+    Get.changeThemeMode(theme);
+    _updateStatusBar();
   }
 
   // Toggle theme
   void toggleTheme() {
     _isDarkMode.value = !_isDarkMode.value;
-    Get.changeThemeMode(theme);
-
-    // Update status bar
-    _updateStatusBar();
+    _saveTheme();
+    _applyTheme();
   }
 
   // Set specific theme
   void setTheme(bool isDark) {
-    _isDarkMode.value = isDark;
-    Get.changeThemeMode(theme);
-    _updateStatusBar();
+    if (_isDarkMode.value != isDark) {
+      _isDarkMode.value = isDark;
+      _saveTheme();
+      _applyTheme();
+    }
+  }
+
+  // Следование системной теме
+  void followSystemTheme() {
+    final systemTheme = _getSystemTheme();
+    setTheme(systemTheme);
   }
 
   // Save theme preference
@@ -47,9 +81,23 @@ class ThemeController extends GetxController {
 
   // Update status bar icons color
   void _updateStatusBar() {
-    // This will be called automatically by the theme
-    // but we can force update if needed
-    Get.forceAppUpdate();
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: _isDarkMode.value
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: _isDarkMode.value
+            ? Brightness.dark
+            : Brightness.light,
+        systemNavigationBarColor: _isDarkMode.value
+            ? const Color(0xFF0D1117)
+            : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness: _isDarkMode.value
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+    );
   }
 
   // Check if current theme is dark
@@ -62,8 +110,18 @@ class ThemeController extends GetxController {
 
   // Get text colors based on theme
   Color get textPrimaryColor =>
-      Get.isDarkMode ? const Color(0xFFE0E0E0) : const Color(0xFF212121);
+      _isDarkMode.value ? const Color(0xFFE0E0E0) : const Color(0xFF212121);
 
   Color get textSecondaryColor =>
-      Get.isDarkMode ? const Color(0xFF9E9E9E) : const Color(0xFF757575);
+      _isDarkMode.value ? const Color(0xFF9E9E9E) : const Color(0xFF757575);
+
+  // Debug методы
+  void debugPrintThemeState() {
+    print('=== THEME DEBUG ===');
+    print('isDarkMode: ${_isDarkMode.value}');
+    print('Get.isDarkMode: ${Get.isDarkMode}');
+    print('Current ThemeMode: ${Get.theme.brightness}');
+    print('Saved in storage: ${_box.read(_key)}');
+    print('==================');
+  }
 }

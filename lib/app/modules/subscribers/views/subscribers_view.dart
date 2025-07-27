@@ -22,19 +22,25 @@ class SubscribersView extends GetView<SubscribersController> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search field
-          _buildSearchField(context),
+      body: SafeArea(
+        top: false,    // AppBar уже учитывает верхнюю область
+        bottom: true,  // Защищаем от виртуальных кнопок внизу
+        left: true,    // Защищаем от вырезов по бокам
+        right: true,
+        child: Column(
+          children: [
+            // Search field
+            _buildSearchField(context),
 
-          // Status filter chips
-          _buildStatusChips(context),
+            // Status filter chips
+            _buildStatusChips(context),
 
-          // Subscribers list
-          Expanded(
-            child: Obx(() => _buildSubscribersList(context)),
-          ),
-        ],
+            // Subscribers list
+            Expanded(
+              child: Obx(() => _buildSubscribersList(context)),
+            ),
+          ],
+        ),
       ),
     );
   }

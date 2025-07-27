@@ -19,139 +19,145 @@ class SettingsView extends GetView<SettingsController> {
       appBar: const CustomAppBar(
         title: 'Настройки',
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(Constants.paddingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User profile card
-            UserProfileCard(controller: controller),
-            const SizedBox(height: Constants.paddingL),
-
-            // Security settings section
-            SettingsSection(
-              title: 'Безопасность',
-              children: [
-                Obx(() => controller.biometricAvailable
-                    ? SettingsItem(
-                  icon: Icons.fingerprint,
-                  title: 'Биометрическая аутентификация',
-                  subtitle: controller.biometricEnabled
-                      ? 'Быстрый вход с помощью биометрии'
-                      : 'Включить для быстрого входа',
-                  trailing: Switch(
-                    value: controller.biometricEnabled,
-                    onChanged: controller.toggleBiometric,
-                    activeColor: AppColors.primary,
-                  ),
-                )
-                    : const SizedBox.shrink()),
-              ],
-            ),
-            const SizedBox(height: Constants.paddingL),
-
-            // App settings section
-            SettingsSection(
-              title: 'Настройки приложения',
-              children: [
-                Obx(() => SettingsItem(
-                  icon: Icons.notifications_outlined,
-                  title: 'Уведомления',
-                  subtitle: 'Получать уведомления о новых данных',
-                  trailing: Switch(
-                    value: controller.notificationsEnabled,
-                    onChanged: controller.toggleNotifications,
-                    activeColor: AppColors.primary,
-                  ),
-                )),
-                Obx(() => SettingsItem(
-                  icon: Icons.sync_outlined,
-                  title: 'Автосинхронизация',
-                  subtitle: 'Автоматическое обновление данных',
-                  trailing: Switch(
-                    value: controller.autoSyncEnabled,
-                    onChanged: controller.toggleAutoSync,
-                    activeColor: AppColors.primary,
-                  ),
-                )),
-                Obx(() => SettingsItem(
-                  icon: Get.find<ThemeController>().isDarkMode
-                      ? Icons.dark_mode_outlined
-                      : Icons.light_mode_outlined,
-                  title: 'Тема оформления',
-                  subtitle: Get.find<ThemeController>().isDarkMode
-                      ? 'Темная тема'
-                      : 'Светлая тема',
-                  trailing: Switch(
-                    value: Get.find<ThemeController>().isDarkMode,
-                    onChanged: controller.toggleTheme,
-                    activeColor: AppColors.primary,
-                  ),
-                )),
-              ],
-            ),
-            const SizedBox(height: Constants.paddingL),
-
-            // Data and storage section
-            SettingsSection(
-              title: 'Данные и хранилище',
-              children: [
-                Obx(() => SettingsItem(
-                  icon: Icons.storage_outlined,
-                  title: 'Размер кэша',
-                  subtitle: controller.cacheFormattedSize,
-                  trailing: SizedBox(
-                    width: 80, // Fixed width for the button
-                    child: TextButton(
-                      onPressed: controller.isLoading ? null : controller.clearCache,
-                      child: controller.isLoading
-                          ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                          : const Text('Очистить'),
+      body: SafeArea(
+        top: false,    // AppBar уже учитывает верхнюю область
+        bottom: true,  // Защищаем от виртуальных кнопок внизу
+        left: true,    // Защищаем от вырезов по бокам
+        right: true,   // Защищаем от вырезов по бокам
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Constants.paddingM),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // User profile card
+              UserProfileCard(controller: controller),
+              const SizedBox(height: Constants.paddingL),
+        
+              // Security settings section
+              SettingsSection(
+                title: 'Безопасность',
+                children: [
+                  Obx(() => controller.biometricAvailable
+                      ? SettingsItem(
+                    icon: Icons.fingerprint,
+                    title: 'Биометрическая аутентификация',
+                    subtitle: controller.biometricEnabled
+                        ? 'Быстрый вход с помощью биометрии'
+                        : 'Включить для быстрого входа',
+                    trailing: Switch(
+                      value: controller.biometricEnabled,
+                      onChanged: controller.toggleBiometric,
+                      activeColor: AppColors.primary,
                     ),
+                  )
+                      : const SizedBox.shrink()),
+                ],
+              ),
+              const SizedBox(height: Constants.paddingL),
+        
+              // App settings section
+              SettingsSection(
+                title: 'Настройки приложения',
+                children: [
+                  Obx(() => SettingsItem(
+                    icon: Icons.notifications_outlined,
+                    title: 'Уведомления',
+                    subtitle: 'Получать уведомления о новых данных',
+                    trailing: Switch(
+                      value: controller.notificationsEnabled,
+                      onChanged: controller.toggleNotifications,
+                      activeColor: AppColors.primary,
+                    ),
+                  )),
+                  Obx(() => SettingsItem(
+                    icon: Icons.sync_outlined,
+                    title: 'Автосинхронизация',
+                    subtitle: 'Автоматическое обновление данных',
+                    trailing: Switch(
+                      value: controller.autoSyncEnabled,
+                      onChanged: controller.toggleAutoSync,
+                      activeColor: AppColors.primary,
+                    ),
+                  )),
+                  Obx(() => SettingsItem(
+                    icon: Get.find<ThemeController>().isDarkMode
+                        ? Icons.dark_mode_outlined
+                        : Icons.light_mode_outlined,
+                    title: 'Тема оформления',
+                    subtitle: Get.find<ThemeController>().isDarkMode
+                        ? 'Темная тема'
+                        : 'Светлая тема',
+                    trailing: Switch(
+                      value: Get.find<ThemeController>().isDarkMode,
+                      onChanged: controller.toggleTheme,
+                      activeColor: AppColors.primary,
+                    ),
+                  )),
+                ],
+              ),
+              const SizedBox(height: Constants.paddingL),
+        
+              // Data and storage section
+              SettingsSection(
+                title: 'Данные и хранилище',
+                children: [
+                  Obx(() => SettingsItem(
+                    icon: Icons.storage_outlined,
+                    title: 'Размер кэша',
+                    subtitle: controller.cacheFormattedSize,
+                    trailing: SizedBox(
+                      width: 80, // Fixed width for the button
+                      child: TextButton(
+                        onPressed: controller.isLoading ? null : controller.clearCache,
+                        child: controller.isLoading
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                            : const Text('Очистить'),
+                      ),
+                    ),
+                  )),
+                  SettingsItem(
+                    icon: Icons.refresh_outlined,
+                    title: 'Обновить данные',
+                    subtitle: 'Принудительное обновление с сервера',
+                    onTap: () => _refreshData(),
                   ),
-                )),
-                SettingsItem(
-                  icon: Icons.refresh_outlined,
-                  title: 'Обновить данные',
-                  subtitle: 'Принудительное обновление с сервера',
-                  onTap: () => _refreshData(),
-                ),
-              ],
-            ),
-            const SizedBox(height: Constants.paddingL),
-
-            // About section
-            SettingsSection(
-              title: 'О приложении',
-              children: [
-                SettingsItem(
-                  icon: Icons.info_outline,
-                  title: 'О приложении',
-                  subtitle: 'Информация о версии и разработчике',
-                  onTap: controller.showAboutDialog,
-                ),
-                SettingsItem(
-                  icon: Icons.help_outline,
-                  title: 'Помощь и поддержка',
-                  subtitle: 'Инструкции по использованию',
-                  onTap: () => _showHelp(),
-                ),
-              ],
-            ),
-            const SizedBox(height: Constants.paddingL),
-
-            // App info card
-            AppInfoCard(controller: controller),
-            const SizedBox(height: Constants.paddingL),
-
-            // Logout button
-            _buildLogoutButton(context),
-            const SizedBox(height: Constants.paddingXL),
-          ],
+                ],
+              ),
+              const SizedBox(height: Constants.paddingL),
+        
+              // About section
+              SettingsSection(
+                title: 'О приложении',
+                children: [
+                  SettingsItem(
+                    icon: Icons.info_outline,
+                    title: 'О приложении',
+                    subtitle: 'Информация о версии и разработчике',
+                    onTap: controller.showAboutDialog,
+                  ),
+                  SettingsItem(
+                    icon: Icons.help_outline,
+                    title: 'Помощь и поддержка',
+                    subtitle: 'Инструкции по использованию',
+                    onTap: () => _showHelp(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Constants.paddingL),
+        
+              // App info card
+              AppInfoCard(controller: controller),
+              const SizedBox(height: Constants.paddingL),
+        
+              // Logout button
+              _buildLogoutButton(context),
+              const SizedBox(height: Constants.paddingXL),
+            ],
+          ),
         ),
       ),
     );

@@ -24,7 +24,13 @@ class HomeView extends GetView<HomeController> {
         ),
       ),
       drawer: const AppDrawer(),
-      body: Obx(() => _buildBody(context)),
+      body: SafeArea(
+        top: false,    // AppBar уже учитывает верхнюю область
+        bottom: false, // BottomNavigationBar уже учитывает нижнюю область
+        left: true,    // Защищаем от вырезов по бокам
+        right: true,   // Защищаем от вырезов по бокам
+        child: Obx(() => _buildBody(context)),
+      ),
       bottomNavigationBar: _buildBottomNavigationBar(context),
     );
   }

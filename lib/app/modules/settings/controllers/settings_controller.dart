@@ -34,6 +34,7 @@ class SettingsController extends GetxController {
   String get userName => _authRepository.userFullName;
   String get userRole => _getRoleDisplayName(_authRepository.userRole);
   List<String> get assignedTps => _authRepository.assignedTps;
+  bool get isDarkTheme => Get.find<ThemeController>().isDarkMode;
 
   @override
   void onInit() {
@@ -92,10 +93,18 @@ class SettingsController extends GetxController {
   }
 
   // Toggle theme
-  void toggleTheme(bool isDark) {
-    _themeController.setTheme(isDark);
-  }
+  void toggleTheme(bool value) {
+    final themeController = Get.find<ThemeController>();
+    themeController.setTheme(value);
 
+    // Опционально: показать уведомление
+    Get.snackbar(
+      'Тема изменена',
+      value ? 'Включена темная тема' : 'Включена светлая тема',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 1),
+    );
+  }
   // Toggle biometric authentication
   Future<void> toggleBiometric(bool value) async {
     if (value) {

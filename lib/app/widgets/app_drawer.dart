@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../core/controllers/theme_controller.dart';
 import '../core/theme/app_colors.dart';
 import '../core/values/constants.dart';
-import '../core/controllers/theme_controller.dart';
 import '../modules/home/controllers/home_controller.dart';
-import '../routes/app_pages.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -206,45 +206,87 @@ class AppDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Theme switcher
+          // ИСПРАВЛЕННЫЙ Theme switcher с динамическим текстом
           Obx(() => SwitchListTile(
             title: Text(
-              'Темная тема',
-              style: Theme.of(context).textTheme.bodyMedium,
+              'Тема оформления',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              themeController.isDarkMode ? 'Темная тема' : 'Светлая тема',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+              ),
             ),
             value: themeController.isDarkMode,
-            onChanged: (value) => themeController.toggleTheme(),
-            secondary: Icon(
-              themeController.isDarkMode
-                  ? Icons.dark_mode
-                  : Icons.light_mode,
+            onChanged: (value) {
+              themeController.setTheme(value);
+
+              // Опциональное уведомление
+              Get.snackbar(
+                'Тема изменена',
+                value ? 'Включена темная тема' : 'Включена светлая тема',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(milliseconds: 1500),
+                margin: const EdgeInsets.all(Constants.paddingM),
+                backgroundColor: Theme.of(context).cardColor,
+                colorText: Theme.of(context).textTheme.bodyLarge?.color,
+              );
+            },
+            secondary: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                themeController.isDarkMode
+                    ? Icons.dark_mode
+                    : Icons.light_mode,
+                color: AppColors.primary,
+                size: 20,
+              ),
             ),
             contentPadding: EdgeInsets.zero,
+            activeColor: AppColors.primary,
           )),
+
+          const SizedBox(height: Constants.paddingS),
 
           // Logout button
           ListTile(
-            leading: const Icon(
-              Icons.logout,
-              color: AppColors.error,
-            ),
-            title: Text(
-              'Выход',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.logout,
                 color: AppColors.error,
+                size: 20,
               ),
             ),
-            onTap: homeController.logout,
-            contentPadding: EdgeInsets.zero,
-          ),
-
-          // Version info
-          const SizedBox(height: Constants.paddingS),
-          Text(
-            'Версия ${Constants.appVersion}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+            title: Text(
+              'Выйти из системы',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w500,
+              ),
             ),
+            subtitle: Text(
+              'Завершить текущую сессию',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.error.withOpacity(0.7),
+              ),
+            ),
+            onTap: () {
+              Get.back(); // Закрываем drawer сначала
+              homeController.logout();
+            },
+            contentPadding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -280,7 +322,6 @@ class AppDrawer extends StatelessWidget {
               SizedBox(height: 16),
               Text(
                 'Для получения дополнительной помощи обратитесь к администратору системы.',
-                style: TextStyle(fontSize: 12),
               ),
             ],
           ),
@@ -303,15 +344,27 @@ class AppDrawer extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${Constants.appName}'),
+            Text(
+              Constants.appName,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('Версия: ${Constants.appVersion}'),
-            const SizedBox(height: 8),
-            Text('${Constants.companyName}'),
+            Text('Версия ${Constants.appVersion}'),
             const SizedBox(height: 16),
             const Text(
-              'Мобильное приложение для контролеров электросетевой компании для сбора показаний электросчетчиков.',
-              style: TextStyle(fontSize: 12),
+              'Мобильное приложение для контролеров электросети ОшПЭС.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '© 2024 ОшПЭС',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ),

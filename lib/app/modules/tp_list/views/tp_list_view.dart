@@ -22,19 +22,25 @@ class TpListView extends GetView<TpListController> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search field
-          _buildSearchField(context),
-
-          // Summary cards
-          _buildSummaryCards(context),
-
-          // TP List
-          Expanded(
-            child: Obx(() => _buildTpList(context)),
-          ),
-        ],
+      body: SafeArea(
+        top: false,    // AppBar уже учитывает верхнюю область
+        bottom: true,  // Защищаем от виртуальных кнопок внизу
+        left: true,    // Защищаем от вырезов по бокам
+        right: true,
+        child: Column(
+          children: [
+            // Search field
+            _buildSearchField(context),
+        
+            // Summary cards
+            _buildSummaryCards(context),
+        
+            // TP List
+            Expanded(
+              child: Obx(() => _buildTpList(context)),
+            ),
+          ],
+        ),
       ),
     );
   }

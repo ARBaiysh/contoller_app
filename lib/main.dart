@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+
 import 'app/bindings/initial_binding.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
@@ -18,15 +19,6 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-    ),
-  );
-
   runApp(const MyApp());
 }
 
@@ -35,21 +27,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: GetMaterialApp(
-        title: 'ОшПЭС: Контролер',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        initialBinding: InitialBinding(),
-        initialRoute: AppPages.INITIAL,
-        getPages: AppPages.routes,
-        defaultTransition: Transition.cupertino,
-        transitionDuration: const Duration(milliseconds: 300),
-        locale: const Locale('ru', 'RU'),
-        fallbackLocale: const Locale('ru', 'RU'),
-      ),
+    return GetMaterialApp(
+      title: 'ОшПЭС: Контролер',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      // ИСПРАВЛЕНИЕ: Убираем themeMode: ThemeMode.system
+      // Теме будет управлять ThemeController
+      initialBinding: InitialBinding(),
+      initialRoute: AppPages.INITIAL,
+      getPages: AppPages.routes,
+      defaultTransition: Transition.cupertino,
+      transitionDuration: const Duration(milliseconds: 300),
+      locale: const Locale('ru', 'RU'),
+      fallbackLocale: const Locale('ru', 'RU'),
     );
   }
 }
