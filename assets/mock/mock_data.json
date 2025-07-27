@@ -1,0 +1,245 @@
+{
+  "statistics": {
+    "total_subscribers": 1260,
+    "readings_collected": 597,
+    "readings_remaining": 663,
+    "paid_subscribers": 842,
+    "debtor_count": 418,
+    "total_debt_amount": 473634.8,
+    "total_collected_amount": 268194.94,
+    "last_updated": "2025-07-27T19:37:00"
+  },
+  "tps": [
+    {
+      "id": "1",
+      "number": "№1107",
+      "name": "Бориев 63",
+      "address": "ул. Бориева, 63",
+      "total_subscribers": 9,
+      "readings_collected": 3,
+      "readings_available": 4,
+      "readings_processing": 2,
+      "readings_completed": 0,
+      "last_updated": "2025-07-27T19:00:00"
+    },
+    {
+      "id": "2",
+      "number": "№1122",
+      "name": "Сайдамат",
+      "address": "ул. Сайдамат",
+      "total_subscribers": 14,
+      "readings_collected": 14,
+      "readings_available": 0,
+      "readings_processing": 0,
+      "readings_completed": 14,
+      "last_updated": "2025-07-27T18:30:00"
+    },
+    {
+      "id": "3",
+      "number": "№1130",
+      "name": "Большевик",
+      "address": "ул. Большевик",
+      "total_subscribers": 44,
+      "readings_collected": 22,
+      "readings_available": 15,
+      "readings_processing": 7,
+      "readings_completed": 0,
+      "last_updated": "2025-07-27T19:15:00"
+    },
+    {
+      "id": "4",
+      "number": "№1183",
+      "name": "Салиев",
+      "address": "ул. Салиева",
+      "total_subscribers": 15,
+      "readings_collected": 8,
+      "readings_available": 7,
+      "readings_processing": 0,
+      "readings_completed": 0,
+      "last_updated": "2025-07-27T17:45:00"
+    },
+    {
+      "id": "5",
+      "number": "№1205",
+      "name": "Жаштар Саидмурат",
+      "address": "ул. Жаштар, Саидмурат",
+      "total_subscribers": 41,
+      "readings_collected": 30,
+      "readings_available": 11,
+      "readings_processing": 0,
+      "readings_completed": 0,
+      "last_updated": "2025-07-27T18:00:00"
+    }
+  ],
+  "subscribers": [
+    {
+      "id": "1",
+      "account_number": "09000620799",
+      "full_name": "Сатаев Абдималик",
+      "address": "ул. МСО Кирос 686 дом",
+      "tp_id": "1",
+      "tp_number": "№1107",
+      "meter_info": {
+        "type": "СОЭ ЖК",
+        "serial_number": "195085988",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": 104.97,
+      "last_payment_amount": 500.0,
+      "last_payment_date": "2025-06-15T10:30:00",
+      "reading_status": "available",
+      "last_reading": 51850,
+      "current_reading": null,
+      "last_reading_date": "2025-06-22T14:20:00",
+      "consumption": null,
+      "amount_due": null
+    },
+    {
+      "id": "2",
+      "account_number": "09008310021",
+      "full_name": "Бердибаев Азамат",
+      "address": "ул. Жоош 623 дом с.Маданят",
+      "tp_id": "1",
+      "tp_number": "№1107",
+      "meter_info": {
+        "type": "DD5 ЖК",
+        "serial_number": "1204694",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": 188.62,
+      "last_payment_amount": 350.0,
+      "last_payment_date": "2025-06-20T11:15:00",
+      "reading_status": "processing",
+      "last_reading": 12450,
+      "current_reading": 12680,
+      "last_reading_date": "2025-06-22T15:30:00",
+      "consumption": 230.0,
+      "amount_due": 345.0
+    },
+    {
+      "id": "3",
+      "account_number": "09008310120",
+      "full_name": "Абдуллаев Мирзабек",
+      "address": "ул. Маданият дом 6н",
+      "tp_id": "1",
+      "tp_number": "№1107",
+      "meter_info": {
+        "type": "СОЭ",
+        "serial_number": "001108",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": -295.17,
+      "last_payment_amount": 0.0,
+      "last_payment_date": null,
+      "reading_status": "completed",
+      "last_reading": 8920,
+      "current_reading": 9150,
+      "last_reading_date": "2025-06-22T16:00:00",
+      "consumption": 230.0,
+      "amount_due": 345.0
+    },
+    {
+      "id": "4",
+      "account_number": "09010090319",
+      "full_name": "Ташбаева Патма",
+      "address": "ул. Маданият дом 1009 кв.0",
+      "tp_id": "1",
+      "tp_number": "№1107",
+      "meter_info": {
+        "type": "СОЭ ЖК",
+        "serial_number": "164257900",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": -0.14,
+      "last_payment_amount": 420.0,
+      "last_payment_date": "2025-07-01T09:45:00",
+      "reading_status": "available",
+      "last_reading": 34200,
+      "current_reading": null,
+      "last_reading_date": "2025-06-22T10:30:00",
+      "consumption": null,
+      "amount_due": null
+    },
+    {
+      "id": "5",
+      "account_number": "09009960568",
+      "full_name": "Боруев",
+      "address": "ул.996-Гайрат, д.0",
+      "tp_id": "3",
+      "tp_number": "№1130",
+      "meter_info": {
+        "type": "СОЭ ЖК",
+        "serial_number": "118235626",
+        "seal_number": "20648015",
+        "tariff_code": 1
+      },
+      "balance": 272.64,
+      "last_payment_amount": 275.0,
+      "last_payment_date": "2025-06-29T14:20:00",
+      "reading_status": "available",
+      "last_reading": 51900,
+      "current_reading": null,
+      "last_reading_date": "2025-06-24T11:00:00",
+      "consumption": null,
+      "amount_due": null
+    },
+    {
+      "id": "6",
+      "account_number": "09009960764",
+      "full_name": "Алибаев Доорон",
+      "address": "ул.996-Гайрат",
+      "tp_id": "3",
+      "tp_number": "№1130",
+      "meter_info": {
+        "type": "DD5",
+        "serial_number": "1215678",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": -542.24,
+      "last_payment_amount": 0.0,
+      "last_payment_date": null,
+      "reading_status": "processing",
+      "last_reading": 45200,
+      "current_reading": 45550,
+      "last_reading_date": "2025-06-23T09:15:00",
+      "consumption": 350.0,
+      "amount_due": 525.0
+    },
+    {
+      "id": "7",
+      "account_number": "09009960577",
+      "full_name": "Боруев",
+      "address": "ул.996-Гайрат, д.0",
+      "tp_id": "3",
+      "tp_number": "№1130",
+      "meter_info": {
+        "type": "Меркурий ЖК",
+        "serial_number": "32178475",
+        "seal_number": "",
+        "tariff_code": 1
+      },
+      "balance": 0.0,
+      "last_payment_amount": 380.0,
+      "last_payment_date": "2025-07-15T16:30:00",
+      "reading_status": "available",
+      "last_reading": 23400,
+      "current_reading": null,
+      "last_reading_date": "2025-06-24T13:45:00",
+      "consumption": null,
+      "amount_due": null
+    }
+  ],
+  "user": {
+    "id": "1",
+    "username": "k10",
+    "full_name": "Анаркулов Медер",
+    "pin": "1234",
+    "role": "controller",
+    "assigned_tps": ["1", "2", "3", "4", "5"]
+  }
+}
