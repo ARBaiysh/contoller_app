@@ -26,10 +26,10 @@ class GenerateReportButton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(Constants.paddingM),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(Constants.borderRadius),
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.2),
+                color: AppColors.primary.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -64,7 +64,7 @@ class GenerateReportButton extends StatelessWidget {
                         Text(
                           'Для выбранного ТП',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                           ),
                         ),
                       ] else ...[
@@ -72,7 +72,7 @@ class GenerateReportButton extends StatelessWidget {
                         Text(
                           'Для всех ТП',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -95,7 +95,7 @@ class GenerateReportButton extends StatelessWidget {
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey,
                 elevation: isGenerating ? 0 : 2,
-                shadowColor: AppColors.primary.withOpacity(0.3),
+                shadowColor: AppColors.primary.withValues(alpha: 0.3),
               ),
               child: isGenerating
                   ? _buildLoadingContent()
@@ -110,7 +110,7 @@ class GenerateReportButton extends StatelessWidget {
                 ? 'Формирование отчета может занять несколько секунд...'
                 : 'Отчет будет сформирован в формате PDF и сохранен в память устройства',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),

@@ -36,7 +36,7 @@ class SubscriberReportItem extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -69,7 +69,7 @@ class SubscriberReportItem extends StatelessWidget {
                     Text(
                       'Л/С: ${subscriber.accountNumber}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -84,8 +84,8 @@ class SubscriberReportItem extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: isDebtor
-                      ? AppColors.error.withOpacity(0.1)
-                      : AppColors.success.withOpacity(0.1),
+                      ? AppColors.error.withValues(alpha: 0.1)
+                      : AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -107,7 +107,7 @@ class SubscriberReportItem extends StatelessWidget {
               Icon(
                 Icons.location_on_outlined,
                 size: 16,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               const SizedBox(width: Constants.paddingS),
               Expanded(
@@ -128,7 +128,7 @@ class SubscriberReportItem extends StatelessWidget {
               Icon(
                 Icons.electrical_services,
                 size: 16,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               const SizedBox(width: Constants.paddingS),
               Text(
@@ -144,10 +144,10 @@ class SubscriberReportItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(Constants.paddingS),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
+                color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppColors.warning.withOpacity(0.3),
+                  color: AppColors.warning.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),

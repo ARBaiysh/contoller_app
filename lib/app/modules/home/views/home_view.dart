@@ -210,7 +210,7 @@ class HomeView extends GetView<HomeController> {
           borderRadius: BorderRadius.circular(Constants.borderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -221,7 +221,7 @@ class HomeView extends GetView<HomeController> {
             Container(
               padding: const EdgeInsets.all(Constants.paddingS),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -245,7 +245,7 @@ class HomeView extends GetView<HomeController> {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

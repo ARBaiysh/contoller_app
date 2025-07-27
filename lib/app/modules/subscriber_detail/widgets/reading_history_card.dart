@@ -70,7 +70,7 @@ class ReadingHistoryCard extends StatelessWidget {
             Text(
               'Нет данных о предыдущих показаниях',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
             ),
         ],

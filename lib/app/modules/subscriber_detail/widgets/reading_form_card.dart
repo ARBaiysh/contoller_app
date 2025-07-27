@@ -20,9 +20,9 @@ class ReadingFormCard extends StatelessWidget {
       margin: const EdgeInsets.all(Constants.paddingM),
       padding: const EdgeInsets.all(Constants.paddingM),
       decoration: Constants.getCardDecoration(context).copyWith(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
           width: 2,
         ),
       ),

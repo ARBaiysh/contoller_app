@@ -26,7 +26,7 @@ class SettingsSection extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -42,7 +42,7 @@ class SettingsSection extends StatelessWidget {
                   Divider(
                     height: 1,
                     thickness: 1,
-                    color: Theme.of(context).dividerColor.withOpacity(0.5),
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                     indent: Constants.paddingL + Constants.iconSizeMedium,
                   ),
               ],

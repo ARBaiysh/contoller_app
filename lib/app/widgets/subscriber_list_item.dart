@@ -60,7 +60,7 @@ class SubscriberListItem extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.1),
+                                  color: AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -89,7 +89,7 @@ class SubscriberListItem extends StatelessWidget {
                         Text(
                           subscriber.address,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -102,7 +102,7 @@ class SubscriberListItem extends StatelessWidget {
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                   ),
                 ],
               ),
@@ -115,7 +115,7 @@ class SubscriberListItem extends StatelessWidget {
                 vertical: Constants.paddingS,
               ),
               decoration: BoxDecoration(
-                color: Theme.of(context).dividerColor.withOpacity(0.1),
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(Constants.borderRadius),
                   bottomRight: Radius.circular(Constants.borderRadius),
@@ -130,7 +130,7 @@ class SubscriberListItem extends StatelessWidget {
                       Icon(
                         Icons.electric_meter,
                         size: 14,
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -144,7 +144,7 @@ class SubscriberListItem extends StatelessWidget {
                         Icon(
                           Icons.speed,
                           size: 14,
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -191,7 +191,7 @@ class SubscriberListItem extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(

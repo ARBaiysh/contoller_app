@@ -29,7 +29,7 @@ class ReportStatsCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(Constants.borderRadius),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -75,7 +75,7 @@ class ReportStatsCard extends StatelessWidget {
                   Container(
                     height: 40,
                     width: 1,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   Expanded(
                     child: _buildStatItem(

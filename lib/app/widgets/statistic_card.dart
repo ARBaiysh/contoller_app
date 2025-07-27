@@ -28,7 +28,6 @@ class StatisticCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = backgroundColor ?? Theme.of(context).cardColor;
     final defaultIconColor = iconColor ?? AppColors.primary;
 
     return InkWell(
@@ -55,7 +54,7 @@ class StatisticCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: defaultIconColor.withOpacity(0.1),
+                          color: defaultIconColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -113,7 +112,7 @@ class StatisticCard extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -152,7 +151,7 @@ class StatisticCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progressValue! / 100,
-            backgroundColor: Colors.grey.withOpacity(0.2),
+            backgroundColor: Colors.grey.withValues(alpha: 0.2),
             valueColor: AlwaysStoppedAnimation<Color>(
               iconColor ?? AppColors.primary,
             ),

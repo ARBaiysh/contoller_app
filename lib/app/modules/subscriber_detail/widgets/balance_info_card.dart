@@ -26,8 +26,8 @@ class BalanceInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(Constants.paddingM),
       decoration: Constants.getCardDecoration(context).copyWith(
         color: isDebtor
-            ? AppColors.error.withOpacity(0.05)
-            : AppColors.success.withOpacity(0.05),
+            ? AppColors.error.withValues(alpha: 0.05)
+            : AppColors.success.withValues(alpha: 0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

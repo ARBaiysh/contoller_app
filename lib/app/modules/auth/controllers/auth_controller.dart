@@ -120,7 +120,7 @@ class AuthController extends GetxController {
         Get.snackbar(
           'Успех',
           Constants.loginSuccess,
-          backgroundColor: Constants.success.withOpacity(0.1),
+          backgroundColor: Constants.success.withValues(alpha: 0.1),
           colorText: Constants.success,
           snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 2),
@@ -150,7 +150,7 @@ class AuthController extends GetxController {
         Get.snackbar(
           'Успех',
           'Вход выполнен с помощью биометрии',
-          backgroundColor: Constants.success.withOpacity(0.1),
+          backgroundColor: Constants.success.withValues(alpha: 0.1),
           colorText: Constants.success,
           snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 2),
@@ -203,7 +203,7 @@ class AuthController extends GetxController {
             Get.snackbar(
               'Успех',
               '$biometricText успешно настроен',
-              backgroundColor: Constants.success.withOpacity(0.1),
+              backgroundColor: Constants.success.withValues(alpha: 0.1),
               colorText: Constants.success,
               snackPosition: SnackPosition.TOP,
             );
@@ -212,7 +212,7 @@ class AuthController extends GetxController {
             Get.snackbar(
               'Ошибка',
               'Не удалось настроить $biometricText',
-              backgroundColor: Constants.error.withOpacity(0.1),
+              backgroundColor: Constants.error.withValues(alpha: 0.1),
               colorText: Constants.error,
               snackPosition: SnackPosition.TOP,
             );
@@ -229,7 +229,7 @@ class AuthController extends GetxController {
     Get.snackbar(
       'Ошибка',
       message,
-      backgroundColor: Constants.error.withOpacity(0.1),
+      backgroundColor: Constants.error.withValues(alpha: 0.1),
       colorText: Constants.error,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 3),

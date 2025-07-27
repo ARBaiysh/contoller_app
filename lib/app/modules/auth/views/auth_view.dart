@@ -93,7 +93,7 @@ class AuthView extends GetView<AuthController> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -162,7 +162,7 @@ class AuthView extends GetView<AuthController> {
               child: Text(
                 'или',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -259,7 +259,7 @@ class AuthView extends GetView<AuthController> {
         Text(
           Constants.companyName,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
           ),
           textAlign: TextAlign.center,
         ),
@@ -267,7 +267,7 @@ class AuthView extends GetView<AuthController> {
         Text(
           'Версия ${Constants.appVersion}',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.4),
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
           ),
           textAlign: TextAlign.center,
         ),

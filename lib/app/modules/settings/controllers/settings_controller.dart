@@ -134,7 +134,7 @@ class SettingsController extends GetxController {
         Get.snackbar(
           'Успех',
           '$biometricText успешно настроен',
-          backgroundColor: Constants.success.withOpacity(0.1),
+          backgroundColor: Constants.success.withValues(alpha: 0.1),
           colorText: Constants.success,
           snackPosition: SnackPosition.TOP,
         );
@@ -142,7 +142,7 @@ class SettingsController extends GetxController {
         Get.snackbar(
           'Ошибка',
           'Не удалось настроить $biometricText',
-          backgroundColor: Constants.error.withOpacity(0.1),
+          backgroundColor: Constants.error.withValues(alpha: 0.1),
           colorText: Constants.error,
           snackPosition: SnackPosition.TOP,
         );
@@ -152,7 +152,7 @@ class SettingsController extends GetxController {
       Get.snackbar(
         'Ошибка',
         'Произошла ошибка при настройке биометрии',
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
         snackPosition: SnackPosition.TOP,
       );
@@ -261,7 +261,7 @@ class SettingsController extends GetxController {
       Get.snackbar(
         'Успех',
         'Кэш очищен',
-        backgroundColor: Constants.success.withOpacity(0.1),
+        backgroundColor: Constants.success.withValues(alpha: 0.1),
         colorText: Constants.success,
         snackPosition: SnackPosition.TOP,
       );
@@ -269,7 +269,7 @@ class SettingsController extends GetxController {
       Get.snackbar(
         'Ошибка',
         'Не удалось очистить кэш',
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
         snackPosition: SnackPosition.TOP,
       );
@@ -346,7 +346,7 @@ class SettingsController extends GetxController {
       Get.snackbar(
         'Ошибка',
         'Не удалось выйти из системы',
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
         snackPosition: SnackPosition.TOP,
       );

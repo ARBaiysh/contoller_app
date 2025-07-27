@@ -18,8 +18,8 @@ class AppInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(Constants.paddingM),
       decoration: Constants.getCardDecoration(context).copyWith(
         color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.primary.withOpacity(0.05)
-            : AppColors.primary.withOpacity(0.02),
+            ? AppColors.primary.withValues(alpha: 0.05)
+            : AppColors.primary.withValues(alpha: 0.02),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +104,7 @@ class AppInfoCard extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -133,13 +133,13 @@ class AppInfoCard extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isActive
-            ? AppColors.success.withOpacity(0.1)
-            : Colors.grey.withOpacity(0.1),
+            ? AppColors.success.withValues(alpha: 0.1)
+            : Colors.grey.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isActive
-              ? AppColors.success.withOpacity(0.3)
-              : Colors.grey.withOpacity(0.3),
+              ? AppColors.success.withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.3),
           width: 1,
         ),
       ),

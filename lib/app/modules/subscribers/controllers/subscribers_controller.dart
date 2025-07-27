@@ -61,7 +61,7 @@ class SubscribersController extends GetxController {
         'Ошибка',
         'Не удалось загрузить список абонентов',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
       );
     } finally {

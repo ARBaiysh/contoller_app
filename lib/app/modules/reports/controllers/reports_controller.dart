@@ -83,7 +83,7 @@ class ReportsController extends GetxController {
       Get.snackbar(
         'Ошибка',
         'Не удалось сформировать отчет: $e',
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
         snackPosition: SnackPosition.TOP,
       );

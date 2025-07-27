@@ -61,7 +61,7 @@ class SplashView extends GetView<SplashController> {
         colors: isDarkMode ? [
           const Color(0xFF0D1117), // Dark background start
           const Color(0xFF161B22), // Dark background end
-          const Color(0xFF1976D2).withOpacity(0.1), // Primary color hint
+          const Color(0xFF1976D2).withValues(alpha: 0.1), // Primary color hint
         ] : [
           const Color(0xFFE3F2FD), // Light blue start
           const Color(0xFFFFFFFF), // White
@@ -97,15 +97,15 @@ class SplashView extends GetView<SplashController> {
               boxShadow: [
                 // Outer glow
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.4 * value),
+                  color: AppColors.primary.withValues(alpha: 0.4 * value),
                   blurRadius: 30 * value,
                   spreadRadius: 10 * value,
                 ),
                 // Inner shadow for depth
                 BoxShadow(
                   color: isDarkMode
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.1),
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -121,7 +121,7 @@ class SplashView extends GetView<SplashController> {
                     child: Icon(
                       Icons.electric_bolt,
                       size: 70,
-                      color: Colors.white.withOpacity(iconValue),
+                      color: Colors.white.withValues(alpha: iconValue),
                     ),
                   );
                 },
@@ -187,11 +187,11 @@ class SplashView extends GetView<SplashController> {
               ),
               decoration: BoxDecoration(
                 color: (isDarkMode ? Colors.white : AppColors.primary)
-                    .withOpacity(0.1),
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: (isDarkMode ? Colors.white : AppColors.primary)
-                      .withOpacity(0.2),
+                      .withValues(alpha: 0.2),
                 ),
               ),
               child: Text(
@@ -226,7 +226,7 @@ class SplashView extends GetView<SplashController> {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.3),
+                  AppColors.primary.withValues(alpha: 0.3),
                   AppColors.primary,
                 ],
               ),
@@ -236,7 +236,7 @@ class SplashView extends GetView<SplashController> {
               child: CircularProgressIndicator(
                 valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 strokeWidth: 3,
-                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -260,7 +260,7 @@ class SplashView extends GetView<SplashController> {
             ),
             decoration: BoxDecoration(
               color: (isDarkMode ? Colors.white : Colors.black)
-                  .withOpacity(0.05),
+                  .withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Text(
@@ -298,7 +298,7 @@ class SplashView extends GetView<SplashController> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: (isDarkMode ? Colors.white : AppColors.primary)
-                          .withOpacity(0.3 + (index * 0.2)),
+                          .withValues(alpha: 0.3 + (index * 0.2)),
                     ),
                   );
                 }),
@@ -310,7 +310,7 @@ class SplashView extends GetView<SplashController> {
                 'Версия ${Constants.appVersion}',
                 style: TextStyle(
                   color: (isDarkMode ? Colors.white : Colors.black)
-                      .withOpacity(0.5),
+                      .withValues(alpha: 0.5),
                   fontSize: 12,
                   letterSpacing: 0.5,
                 ),

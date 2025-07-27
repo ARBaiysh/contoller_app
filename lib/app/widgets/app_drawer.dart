@@ -107,10 +107,10 @@ class AppDrawer extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -142,7 +142,7 @@ class AppDrawer extends StatelessWidget {
           Text(
             'Контролер',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -161,7 +161,7 @@ class AppDrawer extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -179,7 +179,7 @@ class AppDrawer extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
         ),
       ),
       onTap: onTap,
@@ -217,7 +217,7 @@ class AppDrawer extends StatelessWidget {
             subtitle: Text(
               themeController.isDarkMode ? 'Темная тема' : 'Светлая тема',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
             ),
             value: themeController.isDarkMode,
@@ -238,7 +238,7 @@ class AppDrawer extends StatelessWidget {
             secondary: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -260,7 +260,7 @@ class AppDrawer extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -279,7 +279,7 @@ class AppDrawer extends StatelessWidget {
             subtitle: Text(
               'Завершить текущую сессию',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.error.withOpacity(0.7),
+                color: AppColors.error.withValues(alpha: 0.7),
               ),
             ),
             onTap: () {

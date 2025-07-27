@@ -60,11 +60,11 @@ class _InfoRow extends StatelessWidget {
   final TextStyle? valueStyle;
 
   const _InfoRow({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     this.valueStyle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -112,10 +112,10 @@ class _StatusBadge extends StatelessWidget {
         vertical: Constants.paddingS,
       ),
       decoration: BoxDecoration(
-        color: _getStatusColor().withOpacity(0.1),
+        color: _getStatusColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: _getStatusColor().withOpacity(0.3),
+          color: _getStatusColor().withValues(alpha: 0.3),
           width: 1,
         ),
       ),

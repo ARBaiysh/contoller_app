@@ -62,7 +62,7 @@ class SubscriberDetailController extends GetxController {
         'Ошибка',
         'Не удалось загрузить данные абонента',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
       );
     } finally {
@@ -108,7 +108,7 @@ class SubscriberDetailController extends GetxController {
         'Ошибка',
         'Невозможно внести показание для данного абонента',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
       );
       return;
@@ -136,7 +136,7 @@ class SubscriberDetailController extends GetxController {
       Get.snackbar(
         'Успех',
         Constants.readingSubmitted,
-        backgroundColor: Constants.success.withOpacity(0.1),
+        backgroundColor: Constants.success.withValues(alpha: 0.1),
         colorText: Constants.success,
         snackPosition: SnackPosition.TOP,
       );
@@ -148,7 +148,7 @@ class SubscriberDetailController extends GetxController {
         'Ошибка',
         e.toString(),
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withOpacity(0.1),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
       );
     } finally {

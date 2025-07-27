@@ -31,7 +31,7 @@ class SettingsItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(Constants.paddingS),
               decoration: BoxDecoration(
-                color: (iconColor ?? Theme.of(context).primaryColor).withOpacity(0.1),
+                color: (iconColor ?? Theme.of(context).primaryColor).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -58,7 +58,7 @@ class SettingsItem extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -75,7 +75,7 @@ class SettingsItem extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
               ),
             ],
           ],

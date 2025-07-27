@@ -81,7 +81,7 @@ class ReportViewerView extends GetView<ReportViewerController> {
       margin: const EdgeInsets.only(top: Constants.paddingM),
       padding: const EdgeInsets.all(Constants.paddingM),
       decoration: Constants.getCardDecoration(context).copyWith(
-        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +133,7 @@ class ReportViewerView extends GetView<ReportViewerController> {
           Text(
             'Дата формирования: ${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now())}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -151,7 +151,7 @@ class ReportViewerView extends GetView<ReportViewerController> {
             Icon(
               Icons.description_outlined,
               size: 64,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
@@ -162,7 +162,7 @@ class ReportViewerView extends GetView<ReportViewerController> {
             Text(
               'По выбранным критериям не найдено ни одной записи',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -184,7 +184,7 @@ class ReportViewerView extends GetView<ReportViewerController> {
     Get.snackbar(
       'Экспорт',
       'Отчет экспортирован в PDF формат',
-      backgroundColor: Constants.success.withOpacity(0.1),
+      backgroundColor: Constants.success.withValues(alpha: 0.1),
       colorText: Constants.success,
       snackPosition: SnackPosition.TOP,
     );

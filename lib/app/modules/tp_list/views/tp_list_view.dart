@@ -132,24 +132,24 @@ class TpListView extends GetView<TpListController> {
         padding: const EdgeInsets.all(8), // Уменьшено с 12 до 8
         decoration: BoxDecoration(
           color: isActive
-              ? color.withOpacity(0.2)
+              ? color.withValues(alpha: 0.2)
               : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(Constants.borderRadius),
           border: Border.all(
             color: isActive
                 ? color
                 : Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.1)
+                ? Colors.white.withValues(alpha: 0.1)
                 : Colors.transparent,
             width: isActive ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isActive
-                  ? color.withOpacity(0.3)
+                  ? color.withValues(alpha: 0.3)
                   : Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: isActive ? 15 : 10,
               offset: const Offset(0, 4),
             ),
@@ -186,7 +186,7 @@ class TpListView extends GetView<TpListController> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: isActive
                         ? color
-                        : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                     fontSize: 10, // Уменьшено с 11 до 10
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                   ),
@@ -245,7 +245,7 @@ class TpListView extends GetView<TpListController> {
             Icon(
               isSearching ? Icons.search_off : Icons.electrical_services_outlined,
               size: 64,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
@@ -262,7 +262,7 @@ class TpListView extends GetView<TpListController> {
                   ? 'Нет ТП с выбранным фильтром'
                   : 'Нет доступных трансформаторных пунктов',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

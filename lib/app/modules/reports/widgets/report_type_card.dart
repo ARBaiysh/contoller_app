@@ -27,7 +27,7 @@ class ReportTypeCard extends StatelessWidget {
           padding: const EdgeInsets.all(Constants.paddingM),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withOpacity(0.1)
+                ? AppColors.primary.withValues(alpha: 0.1)
                 : Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(Constants.borderRadius),
             border: Border.all(
@@ -39,8 +39,8 @@ class ReportTypeCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -59,8 +59,8 @@ class ReportTypeCard extends StatelessWidget {
                       padding: const EdgeInsets.all(Constants.paddingS),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primary.withOpacity(0.2)
-                            : AppColors.primary.withOpacity(0.1),
+                            ? AppColors.primary.withValues(alpha: 0.2)
+                            : AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -68,7 +68,7 @@ class ReportTypeCard extends StatelessWidget {
                         size: 24,
                         color: isSelected
                             ? AppColors.primary
-                            : AppColors.primary.withOpacity(0.7),
+                            : AppColors.primary.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -100,7 +100,7 @@ class ReportTypeCard extends StatelessWidget {
                       reportType.description,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 11,
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,

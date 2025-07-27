@@ -44,7 +44,7 @@ class TpSelectorCard extends StatelessWidget {
           Text(
             'Выберите трансформаторный пункт для формирования отчета',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: Constants.paddingM),
@@ -121,7 +121,7 @@ class TpSelectorCard extends StatelessWidget {
         padding: const EdgeInsets.all(Constants.paddingM),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.1)
+              ? AppColors.primary.withValues(alpha: 0.1)
               : Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(Constants.borderRadius),
           border: Border.all(
@@ -138,8 +138,8 @@ class TpSelectorCard extends StatelessWidget {
               padding: const EdgeInsets.all(Constants.paddingS),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withOpacity(0.2)
-                    : AppColors.primary.withOpacity(0.1),
+                    ? AppColors.primary.withValues(alpha: 0.2)
+                    : AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -168,7 +168,7 @@ class TpSelectorCard extends StatelessWidget {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -180,7 +180,7 @@ class TpSelectorCard extends StatelessWidget {
                         Expanded(
                           child: LinearProgressIndicator(
                             value: progressPercentage / 100,
-                            backgroundColor: Colors.grey.withOpacity(0.2),
+                            backgroundColor: Colors.grey.withValues(alpha: 0.2),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               progressPercentage == 100
                                   ? AppColors.success
@@ -249,7 +249,7 @@ class TpSelectorCard extends StatelessWidget {
         child: Text(
           'Нет доступных ТП',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
           ),
         ),
       ),

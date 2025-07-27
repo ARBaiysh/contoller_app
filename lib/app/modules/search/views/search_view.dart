@@ -53,7 +53,7 @@ class SearchView extends GetView<GlobalSearchController> {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -88,7 +88,7 @@ class SearchView extends GetView<GlobalSearchController> {
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(Constants.borderRadius),
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -99,7 +99,7 @@ class SearchView extends GetView<GlobalSearchController> {
               decoration: InputDecoration(
                 hintText: 'ФИО, адрес или лицевой счет',
                 hintStyle: TextStyle(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                 ),
                 prefixIcon: Icon(
                   Icons.search,
@@ -235,14 +235,14 @@ class SearchView extends GetView<GlobalSearchController> {
       selected: isSelected,
       onSelected: (_) => controller.setStatusFilter(value),
       selectedColor: chipColor,
-      backgroundColor: chipColor.withOpacity(0.1),
+      backgroundColor: chipColor.withValues(alpha: 0.1),
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : chipColor,
         fontSize: 13,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       side: BorderSide(
-        color: chipColor.withOpacity(0.3),
+        color: chipColor.withValues(alpha: 0.3),
         width: 1,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -258,7 +258,7 @@ class SearchView extends GetView<GlobalSearchController> {
             Container(
               padding: const EdgeInsets.all(Constants.paddingXL),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -278,7 +278,7 @@ class SearchView extends GetView<GlobalSearchController> {
             Text(
               'Введите ФИО, адрес или лицевой счет абонента',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -400,7 +400,7 @@ class SearchView extends GetView<GlobalSearchController> {
                         horizontal: Constants.paddingM,
                         vertical: Constants.paddingS,
                       ),
-                      color: AppColors.primary.withOpacity(0.05),
+                      color: AppColors.primary.withValues(alpha: 0.05),
                       child: Row(
                         children: [
                           Icon(
@@ -444,7 +444,7 @@ class SearchView extends GetView<GlobalSearchController> {
             Container(
               padding: const EdgeInsets.all(Constants.paddingXL),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -464,7 +464,7 @@ class SearchView extends GetView<GlobalSearchController> {
             Text(
               'Попробуйте изменить параметры поиска',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

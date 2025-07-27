@@ -195,7 +195,7 @@ class SettingsView extends GetView<SettingsController> {
     Get.snackbar(
       'Обновление',
       'Данные обновляются...',
-      backgroundColor: Constants.info.withOpacity(0.1),
+      backgroundColor: Constants.info.withValues(alpha: 0.1),
       colorText: Constants.info,
       snackPosition: SnackPosition.TOP,
     );

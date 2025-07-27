@@ -98,7 +98,7 @@ class SubscribersView extends GetView<SubscribersController> {
               ),
               selected: isSelected,
               onSelected: (_) => controller.setStatusFilter(option.value),
-              backgroundColor: option.color.withOpacity(0.1),
+              backgroundColor: option.color.withValues(alpha: 0.1),
               selectedColor: option.color,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : option.color,
@@ -106,7 +106,7 @@ class SubscribersView extends GetView<SubscribersController> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               side: BorderSide(
-                color: option.color.withOpacity(0.3),
+                color: option.color.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -159,7 +159,7 @@ class SubscribersView extends GetView<SubscribersController> {
             Icon(
               isSearching ? Icons.search_off : Icons.people_outline,
               size: 64,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
@@ -176,7 +176,7 @@ class SubscribersView extends GetView<SubscribersController> {
                   ? 'Нет абонентов с выбранным статусом'
                   : 'В данном ТП нет абонентов',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
