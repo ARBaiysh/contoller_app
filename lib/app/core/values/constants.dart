@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 
 class Constants {
   Constants._();
@@ -102,4 +102,28 @@ class Constants {
     'debtors': 'Список должников',
     'payments': 'Отчет по оплатам',
   };
+
+  // Helper method for card decoration
+  static BoxDecoration getCardDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: isDark
+            ? Colors.white.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.2),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: isDark
+              ? Colors.black.withOpacity(0.3)
+              : Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
 }

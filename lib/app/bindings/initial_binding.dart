@@ -8,6 +8,7 @@ import '../data/repositories/subscriber_repository.dart';
 import '../data/repositories/tp_repository.dart';
 import '../modules/auth/controllers/auth_controller.dart';
 import '../modules/home/controllers/home_controller.dart';
+import '../modules/tp_list/controllers/tp_list_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -25,7 +26,7 @@ class InitialBinding extends Bindings {
     // Controllers - Lazy loaded
     Get.lazyPut<AuthController>(() => AuthController());
     Get.lazyPut<HomeController>(() => HomeController());
-    // Get.lazyPut<TpListController>(() => TpListController());
+    Get.lazyPut<TpListController>(() => TpListController(), fenix: true);
     // Get.lazyPut<SubscribersController>(() => SubscribersController());
     // Get.lazyPut<SubscriberDetailController>(() => SubscriberDetailController());
   }

@@ -41,6 +41,10 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       color: AppColors.cardLight,
     ),
@@ -153,6 +157,10 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       color: AppColors.cardDark,
     ),

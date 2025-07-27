@@ -15,11 +15,11 @@ class AppColors {
 
   // Background Colors
   static const Color backgroundLight = Color(0xFFF5F5F5);
-  static const Color backgroundDark = Color(0xFF121212);
+  static const Color backgroundDark = Color(0xFF0D1117); // Темный с легким синим оттенком
 
   // Card Colors
   static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color cardDark = Color(0xFF1E1E1E);
+  static const Color cardDark = Color(0xFF161B22); // Карточки с синеватым оттенком
 
   // Text Colors
   static const Color textPrimary = Color(0xFF212121);

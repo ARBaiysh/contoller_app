@@ -36,17 +36,11 @@ class StatisticCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(Constants.borderRadius),
       child: Container(
         padding: const EdgeInsets.all(Constants.paddingM),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: backgroundColor != null
+            ? Constants.getCardDecoration(context).copyWith(
+          color: backgroundColor,
+        )
+            : Constants.getCardDecoration(context),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Column(

@@ -124,6 +124,9 @@ class HomeView extends GetView<HomeController> {
               subtitle: 'из ${stats.totalSubscribers}',
               icon: Icons.check_circle_outline,
               iconColor: AppColors.success,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.success.withOpacity(0.15)
+                  : null,
               showProgress: true,
               progressValue: stats.collectionPercentage,
               onTap: controller.navigateToTpList,
@@ -134,6 +137,9 @@ class HomeView extends GetView<HomeController> {
               subtitle: '${stats.paymentPercentage.toStringAsFixed(1)}%',
               icon: Icons.payment,
               iconColor: AppColors.info,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.info.withOpacity(0.15)
+                  : null,
             ),
             StatisticCard(
               title: 'Должников',
@@ -141,6 +147,9 @@ class HomeView extends GetView<HomeController> {
               subtitle: '${stats.debtorPercentage.toStringAsFixed(1)}%',
               icon: Icons.warning_amber_outlined,
               iconColor: AppColors.warning,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.warning.withOpacity(0.15)
+                  : null,
             ),
             StatisticCard(
               title: 'Сумма долга',
@@ -148,6 +157,9 @@ class HomeView extends GetView<HomeController> {
               subtitle: '${stats.totalDebtAmount.toStringAsFixed(0)} сом',
               icon: Icons.account_balance_wallet_outlined,
               iconColor: AppColors.error,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.error.withOpacity(0.15)
+                  : null,
             ),
           ],
         ),

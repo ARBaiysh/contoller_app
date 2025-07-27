@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../modules/auth/views/auth_view.dart';
 import '../modules/home/views/home_view.dart';
+import '../modules/tp_list/views/tp_list_view.dart';
 
 
 part 'app_routes.dart';
@@ -22,11 +23,11 @@ class AppPages {
       page: () => const HomeView(),
       transition: Transition.fadeIn,
     ),
-    // GetPage(
-    //   name: _Paths.TP_LIST,
-    //   page: () => const TpListView(),
-    //   transition: Transition.rightToLeft,
-    // ),
+    GetPage(
+      name: _Paths.TP_LIST,
+      page: () => const TpListView(),
+      transition: Transition.rightToLeft,
+    ),
     // GetPage(
     //   name: _Paths.SUBSCRIBERS,
     //   page: () => const SubscribersView(),
