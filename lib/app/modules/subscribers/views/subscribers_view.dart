@@ -16,11 +16,6 @@ class SubscribersView extends GetView<SubscribersController> {
         title: controller.tpName,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterBottomSheet(context),
-            tooltip: 'Фильтр',
-          ),
-          IconButton(
             icon: const Icon(Icons.sort),
             onPressed: () => _showSortDialog(context),
             tooltip: 'Сортировка',
@@ -195,80 +190,6 @@ class SubscribersView extends GetView<SubscribersController> {
     );
   }
 
-  void _showFilterBottomSheet(BuildContext context) {
-    Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(Constants.borderRadius * 2),
-            topRight: Radius.circular(Constants.borderRadius * 2),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: Constants.paddingM),
-              decoration: BoxDecoration(
-                color: Theme.of(context).dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.all(Constants.paddingL),
-              child: Text(
-                'Фильтр по статусу',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            // Options
-            Obx(() => Column(
-              children: controller.statusFilterOptions.map((option) {
-                final isSelected = controller.selectedStatus == option.value;
-                return ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: option.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      option.icon,
-                      color: option.color,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(option.label),
-                  subtitle: Text('${option.count} абонентов'),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: AppColors.primary)
-                      : null,
-                  onTap: () {
-                    controller.setStatusFilter(option.value);
-                    Get.back();
-                  },
-                );
-              }).toList(),
-            )),
-
-            const SizedBox(height: Constants.paddingL),
-          ],
-        ),
-      ),
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-    );
-  }
-
   void _showSortDialog(BuildContext context) {
     Get.dialog(
       Dialog(
@@ -307,9 +228,12 @@ class SubscribersView extends GetView<SubscribersController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Закрыть'),
+                  SizedBox(
+                    width: 100,
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Закрыть'),
+                    ),
                   ),
                 ],
               ),
