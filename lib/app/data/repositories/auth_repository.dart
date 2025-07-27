@@ -1,10 +1,12 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../providers/api_provider.dart';
+import '../../core/services/biometric_service.dart';
 import '../../core/values/constants.dart';
 
 class AuthRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
+  final BiometricService _biometricService = Get.find<BiometricService>();
   final GetStorage _storage = GetStorage();
 
   // Current user data
@@ -30,6 +32,7 @@ class AuthRepository {
   Future<bool> login({
     required String username,
     required String password,
+    bool saveForBiometric = false,
   }) async {
     try {
       final response = await _apiProvider.login(username, password);
@@ -43,6 +46,11 @@ class AuthRepository {
         await _storage.write(Constants.tokenKey, _authToken);
         await _storage.write(Constants.userKey, _currentUser);
 
+        // Сохранить учетные данные для биометрии если необходимо
+        if (saveForBiometric && _biometricService.isBiometricEnabled) {
+          await _biometricService.saveBiometricCredentials(username, password);
+        }
+
         return true;
       }
 
@@ -53,6 +61,75 @@ class AuthRepository {
     }
   }
 
+  // Биометрический вход
+  Future<bool> loginWithBiometrics() async {
+    try {
+      // Проверяем включена ли биометрия
+      if (!_biometricService.isBiometricEnabled) {
+        return false;
+      }
+
+      // Получаем сохраненные учетные данные
+      final credentials = _biometricService.savedCredentials;
+      if (credentials == null) {
+        return false;
+      }
+
+      // Проверяем не устарели ли учетные данные (30 дней)
+      final timestamp = credentials['timestamp'] as int?;
+      if (timestamp != null) {
+        final savedDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        final daysDifference = DateTime.now().difference(savedDate).inDays;
+        if (daysDifference > 30) {
+          // Очищаем устаревшие данные
+          await _biometricService.clearBiometricCredentials();
+          return false;
+        }
+      }
+
+      // Выполняем биометрическую аутентификацию
+      final authenticated = await _biometricService.authenticateWithBiometrics();
+      if (!authenticated) {
+        return false;
+      }
+
+      // Если биометрия прошла успешно, выполняем обычный вход
+      final username = credentials['username'] as String;
+      final password = credentials['password'] as String;
+
+      return await login(
+        username: username,
+        password: password,
+        saveForBiometric: false, // Уже сохранено
+      );
+    } catch (e) {
+      print('Biometric login error: $e');
+      return false;
+    }
+  }
+
+  // Настройка биометрии после успешного входа
+  Future<bool> setupBiometricAuth(String username, String password) async {
+    try {
+      final success = await _biometricService.setupBiometricAuth(username, password);
+      return success;
+    } catch (e) {
+      print('Setup biometric auth error: $e');
+      return false;
+    }
+  }
+
+  // Отключение биометрии
+  Future<void> disableBiometricAuth() async {
+    await _biometricService.disableBiometricAuth();
+  }
+
+  // Проверка доступности биометрии
+  Future<bool> get isBiometricAvailable => _biometricService.isBiometricAvailable;
+
+  // Проверка включена ли биометрия
+  bool get isBiometricEnabled => _biometricService.isBiometricEnabled;
+
   // Logout
   Future<void> logout() async {
     // Clear auth data
@@ -62,6 +139,15 @@ class AuthRepository {
     // Clear storage
     await _storage.remove(Constants.tokenKey);
     await _storage.remove(Constants.userKey);
+
+    // НЕ очищаем биометрические данные при обычном выходе
+    // Они останутся для быстрого входа
+  }
+
+  // Полный выход с очисткой биометрии
+  Future<void> logoutAndClearBiometric() async {
+    await logout();
+    await _biometricService.disableBiometricAuth();
   }
 
   // Check if session is valid
@@ -115,6 +201,16 @@ class AuthRepository {
       // In real app, would call API to change password
       // For mock, just simulate success
       await Future.delayed(Constants.networkDelay);
+
+      // Если биометрия включена, обновляем сохраненный пароль
+      if (_biometricService.isBiometricEnabled) {
+        final credentials = _biometricService.savedCredentials;
+        if (credentials != null) {
+          final username = credentials['username'] as String;
+          await _biometricService.saveBiometricCredentials(username, newPassword);
+        }
+      }
+
       return true;
     } catch (e) {
       print('Change password error: $e');

@@ -28,6 +28,28 @@ class SettingsView extends GetView<SettingsController> {
             UserProfileCard(controller: controller),
             const SizedBox(height: Constants.paddingL),
 
+            // Security settings section
+            SettingsSection(
+              title: 'Безопасность',
+              children: [
+                Obx(() => controller.biometricAvailable
+                    ? SettingsItem(
+                  icon: Icons.fingerprint,
+                  title: 'Биометрическая аутентификация',
+                  subtitle: controller.biometricEnabled
+                      ? 'Быстрый вход с помощью биометрии'
+                      : 'Включить для быстрого входа',
+                  trailing: Switch(
+                    value: controller.biometricEnabled,
+                    onChanged: controller.toggleBiometric,
+                    activeColor: AppColors.primary,
+                  ),
+                )
+                    : const SizedBox.shrink()),
+              ],
+            ),
+            const SizedBox(height: Constants.paddingL),
+
             // App settings section
             SettingsSection(
               title: 'Настройки приложения',
@@ -191,6 +213,7 @@ class SettingsView extends GetView<SettingsController> {
               Text('• Ввод показаний счетчиков'),
               Text('• Поиск абонентов'),
               Text('• Формирование отчетов'),
+              Text('• Биометрическая аутентификация'),
               SizedBox(height: 16),
               Text(
                 'Для получения дополнительной помощи обратитесь к администратору системы.',

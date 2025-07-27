@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../core/controllers/theme_controller.dart';
+import '../core/services/biometric_service.dart';
 import '../data/providers/api_provider.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/statistics_repository.dart';
@@ -15,12 +16,14 @@ import '../modules/tp_list/controllers/tp_list_controller.dart';
 import '../modules/reports/controllers/reports_controller.dart';
 import '../modules/report_viewer/controllers/report_viewer_controller.dart';
 import '../modules/settings/controllers/settings_controller.dart';
+import '../modules/splash/controllers/splash_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
     // Core Services - Permanent
     Get.put(ThemeController(), permanent: true);
+    Get.put(BiometricService(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
 
     // Repositories - Lazy loaded but kept in memory
@@ -30,6 +33,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut<StatisticsRepository>(() => StatisticsRepository(), fenix: true);
 
     // Controllers - Lazy loaded with fenix for auto-recreation
+    Get.lazyPut<SplashController>(() => SplashController(), fenix: true);
     Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
     Get.lazyPut<HomeController>(() => HomeController(), fenix: true);
     Get.lazyPut<TpListController>(() => TpListController(), fenix: true);

@@ -47,12 +47,26 @@ class AuthView extends GetView<AuthController> {
                   ),
                   const SizedBox(height: Constants.paddingXL),
 
+                  // Biometric login button (if available)
+                  Obx(() => controller.showBiometricOption
+                      ? _buildBiometricButton(context)
+                      : const SizedBox.shrink()),
+
+                  // Divider (if biometric is available)
+                  Obx(() => controller.showBiometricOption
+                      ? _buildDivider(context)
+                      : const SizedBox.shrink()),
+
                   // Username field
                   _buildUsernameField(context),
                   const SizedBox(height: Constants.paddingM),
 
                   // Password field
                   _buildPasswordField(context),
+                  const SizedBox(height: Constants.paddingM),
+
+                  // Remember me checkbox
+                  _buildRememberMeCheckbox(context),
                   const SizedBox(height: Constants.paddingL),
 
                   // Login button
@@ -95,6 +109,71 @@ class AuthView extends GetView<AuthController> {
     );
   }
 
+  Widget _buildBiometricButton(BuildContext context) {
+    return Column(
+      children: [
+        Obx(() => SizedBox(
+          width: double.infinity,
+          height: Constants.buttonHeight,
+          child: OutlinedButton.icon(
+            onPressed: controller.isBiometricLoading ? null : controller.loginWithBiometrics,
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.primary, width: 2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Constants.borderRadius),
+              ),
+            ),
+            icon: controller.isBiometricLoading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : const Icon(Icons.fingerprint, size: 24),
+            label: FutureBuilder<String>(
+              future: controller.getBiometricButtonText(),
+              builder: (context, snapshot) {
+                return Text(
+                  controller.isBiometricLoading
+                      ? 'Аутентификация...'
+                      : 'Войти с помощью ${snapshot.data ?? 'биометрии'}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            ),
+          ),
+        )),
+        const SizedBox(height: Constants.paddingL),
+      ],
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
+              child: Text(
+                'или',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+          ],
+        ),
+        const SizedBox(height: Constants.paddingL),
+      ],
+    );
+  }
+
   Widget _buildUsernameField(BuildContext context) {
     return TextFormField(
       controller: controller.usernameController,
@@ -133,6 +212,27 @@ class AuthView extends GetView<AuthController> {
         filled: true,
         fillColor: Theme.of(context).inputDecorationTheme.fillColor,
       ),
+    ));
+  }
+
+  Widget _buildRememberMeCheckbox(BuildContext context) {
+    return Obx(() => Row(
+      children: [
+        Checkbox(
+          value: controller.rememberMe,
+          onChanged: (_) => controller.toggleRememberMe(),
+          activeColor: AppColors.primary,
+        ),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => controller.toggleRememberMe(),
+            child: Text(
+              'Запомнить меня',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ),
+      ],
     ));
   }
 
