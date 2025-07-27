@@ -35,19 +35,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'ОшЭлектро: Контролер',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      initialBinding: InitialBinding(),
-      initialRoute: AppPages.INITIAL,
-      getPages: AppPages.routes,
-      defaultTransition: Transition.cupertino,
-      transitionDuration: const Duration(milliseconds: 300),
-      locale: const Locale('ru', 'RU'),
-      fallbackLocale: const Locale('ru', 'RU'),
+    return SafeArea(
+      child: GetMaterialApp(
+        title: 'ОшЭлектро: Контролер',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        initialBinding: InitialBinding(),
+        initialRoute: AppPages.INITIAL,
+        getPages: AppPages.routes,
+        defaultTransition: Transition.cupertino,
+        transitionDuration: const Duration(milliseconds: 300),
+        locale: const Locale('ru', 'RU'),
+        fallbackLocale: const Locale('ru', 'RU'),
+      ),
     );
   }
 }

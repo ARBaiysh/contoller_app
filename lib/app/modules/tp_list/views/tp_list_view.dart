@@ -16,9 +16,9 @@ class TpListView extends GetView<TpListController> {
         title: 'Список ТП',
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context),
-            tooltip: 'Фильтр',
+            icon: const Icon(Icons.sort),
+            onPressed: () => _showSortDialog(context),
+            tooltip: 'Сортировка',
           ),
         ],
       ),
@@ -65,37 +65,43 @@ class TpListView extends GetView<TpListController> {
 
   Widget _buildSummaryCards(BuildContext context) {
     return Container(
-      height: 90,
+      height: 100,
       padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
       child: Obx(() => Row(
         children: [
           Expanded(
-            child: _buildSummaryCard(
+            child: _buildClickableSummaryCard(
               context: context,
               title: 'Всего ТП',
               value: '${controller.totalTps}',
               color: AppColors.info,
               icon: Icons.electrical_services,
+              filterValue: 'all',
+              isActive: controller.selectedFilter == 'all',
             ),
           ),
           const SizedBox(width: Constants.paddingS),
           Expanded(
-            child: _buildSummaryCard(
+            child: _buildClickableSummaryCard(
               context: context,
               title: 'В работе',
               value: '${controller.inProgressTps}',
               color: AppColors.warning,
               icon: Icons.pending,
+              filterValue: 'in_progress',
+              isActive: controller.selectedFilter == 'in_progress',
             ),
           ),
           const SizedBox(width: Constants.paddingS),
           Expanded(
-            child: _buildSummaryCard(
+            child: _buildClickableSummaryCard(
               context: context,
               title: 'Завершено',
               value: '${controller.completedTps}',
               color: AppColors.success,
               icon: Icons.check_circle,
+              filterValue: 'completed',
+              isActive: controller.selectedFilter == 'completed',
             ),
           ),
         ],
@@ -103,66 +109,89 @@ class TpListView extends GetView<TpListController> {
     );
   }
 
-  Widget _buildSummaryCard({
+  Widget _buildClickableSummaryCard({
     required BuildContext context,
     required String title,
     required String value,
     required Color color,
     required IconData icon,
+    required String filterValue,
+    required bool isActive,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(Constants.borderRadius),
-        border: Theme.of(context).brightness == Brightness.dark
-            ? Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return InkWell(
+      onTap: () => controller.setFilter(filterValue),
+      borderRadius: BorderRadius.circular(Constants.borderRadius),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8), // Уменьшено с 12 до 8
+        decoration: BoxDecoration(
+          color: isActive
+              ? color.withOpacity(0.2)
+              : Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(Constants.borderRadius),
+          border: Border.all(
+            color: isActive
+                ? color
+                : Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.1)
+                : Colors.transparent,
+            width: isActive ? 2 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+          boxShadow: [
+            BoxShadow(
+              color: isActive
+                  ? color.withOpacity(0.3)
+                  : Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: isActive ? 15 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 18, // Уменьшено с 20 до 18
+            ),
+            const SizedBox(height: 2), // Уменьшено с 4 до 2
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? color : null,
+                    fontSize: 16, // Явно указан размер
+                  ),
+                ),
               ),
             ),
-          ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                fontSize: 11,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isActive
+                        ? color
+                        : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                    fontSize: 10, // Уменьшено с 11 до 10
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -247,7 +276,7 @@ class TpListView extends GetView<TpListController> {
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
+  void _showSortDialog(BuildContext context) {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(
@@ -260,22 +289,20 @@ class TpListView extends GetView<TpListController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Фильтр',
+                'Сортировка',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: Constants.paddingL),
               Obx(() => Column(
-                children: controller.filterOptions.map((option) {
-                  final isSelected = controller.selectedFilter == option.value;
+                children: controller.sortOptions.map((option) {
                   return RadioListTile<String>(
                     title: Text(option.label),
-                    subtitle: Text('${option.count} ТП'),
                     value: option.value,
-                    groupValue: controller.selectedFilter,
+                    groupValue: controller.sortBy,
                     onChanged: (value) {
-                      controller.setFilter(value!);
+                      controller.setSorting(value!);
                       Get.back();
                     },
                     activeColor: AppColors.primary,
@@ -287,9 +314,12 @@ class TpListView extends GetView<TpListController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Закрыть'),
+                  SizedBox(
+                    width: 100,
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Закрыть'),
+                    ),
                   ),
                 ],
               ),
