@@ -13,6 +13,10 @@ abstract class Routes {
   static const REPORTS = _Paths.REPORTS;
   static const REPORT_VIEWER = _Paths.REPORT_VIEWER;
   static const SETTINGS = _Paths.SETTINGS;
+  static const NEWS = _Paths.NEWS;
+  static const NEWS_DETAIL = _Paths.NEWS_DETAIL;
+  static const NOTIFICATIONS = _Paths.NOTIFICATIONS;
+  static const NOTIFICATION_DETAIL = _Paths.NOTIFICATION_DETAIL;
 }
 
 abstract class _Paths {
@@ -28,4 +32,8 @@ abstract class _Paths {
   static const REPORTS = '/reports';
   static const REPORT_VIEWER = '/report-viewer';
   static const SETTINGS = '/settings';
+  static const NEWS = '/news';
+  static const NEWS_DETAIL = '/news/detail';
+  static const NOTIFICATIONS = '/notifications';
+  static const NOTIFICATION_DETAIL = '/notifications/detail';
 }

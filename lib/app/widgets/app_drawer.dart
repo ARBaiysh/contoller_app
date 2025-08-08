@@ -5,6 +5,7 @@ import '../core/controllers/theme_controller.dart';
 import '../core/theme/app_colors.dart';
 import '../core/values/constants.dart';
 import '../modules/home/controllers/home_controller.dart';
+import '../routes/app_pages.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -50,6 +51,28 @@ class AppDrawer extends StatelessWidget {
                     homeController.navigateToSettings();
                   },
                 ),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.newspaper,
+                  title: 'Новости',
+                  subtitle: 'Новости',
+                  onTap: () {
+                    Get.back();
+                    Get.toNamed(Routes.NEWS);
+                  },
+                ),
+
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.notifications_outlined,
+                  title: 'Уведомления',
+                  subtitle: 'Задания и статусы',
+                  onTap: () {
+                    Get.back();
+                    Get.toNamed(Routes.NOTIFICATIONS);
+                  },
+                ),
+
                 _buildMenuItem(
                   context: context,
                   icon: Icons.help_outline,

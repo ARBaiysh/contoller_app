@@ -1,5 +1,14 @@
 import 'package:get/get.dart';
 
+import '../data/providers/news_api_provider.dart';
+import '../data/repositories/news_repository.dart';
+import '../data/repositories/notification_repository.dart';
+import '../modules/news/controllers/news_controller.dart';
+import '../modules/news/views/news_view.dart';
+import '../modules/news/widgets/news_detail_view.dart';
+import '../modules/notifications/controllers/notifications_controller.dart';
+import '../modules/notifications/views/notification_detail_view.dart';
+import '../modules/notifications/views/notifications_view.dart';
 import '../modules/splash/views/splash_view.dart';
 import '../modules/auth/views/auth_view.dart';
 import '../modules/home/views/home_view.dart';
@@ -70,5 +79,38 @@ class AppPages {
       page: () => const SettingsView(),
       transition: Transition.rightToLeft,
     ),
+
+    GetPage(
+      name: Routes.NEWS,
+      page: () => const NewsView(),
+      binding: BindingsBuilder(() {
+        Get.put(NewsApiProvider());
+        Get.put(NewsRepository());
+        Get.put(NewsController());
+      }),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: Routes.NEWS_DETAIL,
+      page: () => const NewsDetailView(),
+      transition: Transition.rightToLeftWithFade,
+    ),
+
+    GetPage(
+      name: Routes.NOTIFICATIONS,
+      page: () => const NotificationsView(),
+      binding: BindingsBuilder(() {
+        Get.put(NotificationRepository());
+        Get.put(NotificationsController());
+      }),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: Routes.NOTIFICATION_DETAIL,
+      page: () => const NotificationDetailView(),
+      transition: Transition.rightToLeftWithFade,
+    ),
+
+
   ];
 }
