@@ -18,6 +18,8 @@ abstract class Routes {
   static const NOTIFICATIONS = _Paths.NOTIFICATIONS;
   static const NOTIFICATION_DETAIL = _Paths.NOTIFICATION_DETAIL;
   static const NAVBAR = _Paths.NAVBAR;
+  static const HELP_SUPPORT = _Paths.HELP_SUPPORT;
+  static const ABOUT = _Paths.ABOUT;
 }
 
 abstract class _Paths {
@@ -38,4 +40,6 @@ abstract class _Paths {
   static const NOTIFICATIONS = '/notifications';
   static const NOTIFICATION_DETAIL = '/notifications/detail';
   static const NAVBAR = '/';
+  static const HELP_SUPPORT = '/help-support';
+  static const ABOUT = '/about';
 }

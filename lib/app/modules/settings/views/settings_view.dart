@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../routes/app_pages.dart';
 import '../controllers/settings_controller.dart';
 import '../widgets/user_profile_card.dart';
 import '../widgets/settings_section.dart';
@@ -137,13 +138,13 @@ class SettingsView extends GetView<SettingsController> {
                     icon: Icons.info_outline,
                     title: 'О приложении',
                     subtitle: 'Информация о версии и разработчике',
-                    onTap: controller.showAboutDialog,
+                    onTap: () => Get.toNamed(Routes.ABOUT),
                   ),
                   SettingsItem(
                     icon: Icons.help_outline,
                     title: 'Помощь и поддержка',
                     subtitle: 'Инструкции по использованию',
-                    onTap: () => _showHelp(),
+                    onTap: () => Get.toNamed(Routes.HELP_SUPPORT),
                   ),
                 ],
               ),
@@ -198,43 +199,6 @@ class SettingsView extends GetView<SettingsController> {
       backgroundColor: Constants.info.withValues(alpha: 0.1),
       colorText: Constants.info,
       snackPosition: SnackPosition.TOP,
-    );
-  }
-
-  void _showHelp() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Помощь'),
-        content: const SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Основные функции приложения:',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8),
-              Text('• Просмотр списка ТП и абонентов'),
-              Text('• Ввод показаний счетчиков'),
-              Text('• Поиск абонентов'),
-              Text('• Формирование отчетов'),
-              Text('• Биометрическая аутентификация'),
-              SizedBox(height: 16),
-              Text(
-                'Для получения дополнительной помощи обратитесь к администратору системы.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Закрыть'),
-          ),
-        ],
-      ),
     );
   }
 }

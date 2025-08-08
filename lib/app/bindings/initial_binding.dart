@@ -9,6 +9,7 @@ import '../data/repositories/statistics_repository.dart';
 import '../data/repositories/subscriber_repository.dart';
 import '../data/repositories/tp_repository.dart';
 import '../modules/auth/controllers/auth_controller.dart';
+import '../modules/help_support/controllers/help_support_controller.dart';
 import '../modules/home/controllers/home_controller.dart';
 import '../modules/report_viewer/controllers/report_viewer_controller.dart';
 import '../modules/reports/controllers/reports_controller.dart';
@@ -45,5 +46,6 @@ class InitialBinding extends Bindings {
     Get.lazyPut<ReportsController>(() => ReportsController(), fenix: true);
     Get.lazyPut<ReportViewerController>(() => ReportViewerController(), fenix: true);
     Get.lazyPut<SettingsController>(() => SettingsController(), fenix: true);
+    Get.lazyPut<HelpSupportController>(() => HelpSupportController(), fenix: true);
   }
 }

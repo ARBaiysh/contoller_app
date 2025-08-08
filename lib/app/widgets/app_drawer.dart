@@ -72,28 +72,6 @@ class AppDrawer extends StatelessWidget {
                     Get.toNamed(Routes.NOTIFICATIONS);
                   },
                 ),
-
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.help_outline,
-                  title: 'Помощь и поддержка',
-                  subtitle: 'Инструкции и FAQ',
-                  onTap: () {
-                    Get.back();
-                    _showHelp();
-                  },
-                ),
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.info_outline,
-                  title: 'О приложении',
-                  subtitle: 'Версия и информация',
-                  onTap: () {
-                    Get.back();
-                    _showAbout();
-                  },
-                ),
-                const Divider(),
               ],
             ),
           ),
@@ -310,91 +288,6 @@ class AppDrawer extends StatelessWidget {
               homeController.logout();
             },
             contentPadding: EdgeInsets.zero,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelp() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Помощь'),
-        content: const SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Основные функции приложения:',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8),
-              Text('• Просмотр списка ТП и абонентов'),
-              Text('• Ввод показаний счетчиков'),
-              Text('• Поиск абонентов по различным критериям'),
-              Text('• Формирование отчетов'),
-              SizedBox(height: 16),
-              Text(
-                'Навигация:',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8),
-              Text('• Используйте нижнюю панель для быстрого перехода'),
-              Text('• Боковое меню содержит настройки и профиль'),
-              SizedBox(height: 16),
-              Text(
-                'Для получения дополнительной помощи обратитесь к администратору системы.',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAbout() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('О приложении'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              Constants.appName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('Версия ${Constants.appVersion}'),
-            const SizedBox(height: 16),
-            const Text(
-              'Мобильное приложение для контролеров электросети ОшПЭС.',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '© 2024 ОшПЭС',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Закрыть'),
           ),
         ],
       ),

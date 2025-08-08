@@ -278,37 +278,6 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Show about dialog
-  void showAboutDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('О приложении'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${Constants.appName}'),
-            const SizedBox(height: 8),
-            Text('Версия: ${Constants.appVersion}'),
-            const SizedBox(height: 8),
-            Text('${Constants.companyName}'),
-            const SizedBox(height: 16),
-            const Text(
-              'Мобильное приложение для контролеров электросетевой компании для сбора показаний электросчетчиков.',
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Show logout confirmation
   void showLogoutConfirmation() {
     Get.dialog(

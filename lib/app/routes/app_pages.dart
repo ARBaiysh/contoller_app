@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import '../data/providers/news_api_provider.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/repositories/notification_repository.dart';
+import '../modules/about/views/about_view.dart';
 import '../modules/auth/views/auth_view.dart';
+import '../modules/help_support/views/help_support_view.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/navbar/main_nav_view.dart';
 import '../modules/news/controllers/news_controller.dart';
@@ -113,5 +115,8 @@ class AppPages {
       page: () => const NotificationDetailView(),
       transition: Transition.rightToLeftWithFade,
     ),
+
+    GetPage(name: Routes.HELP_SUPPORT, page: () => const HelpSupportView()),
+    GetPage(name: Routes.ABOUT, page: () => const AboutView()),
   ];
 }
