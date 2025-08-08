@@ -4,6 +4,8 @@ import '../../../data/repositories/statistics_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../routes/app_pages.dart';
 
+import '../../navbar/main_nav_controller.dart';
+
 class HomeController extends GetxController {
   final StatisticsRepository _statisticsRepository = Get.find<StatisticsRepository>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
@@ -11,12 +13,10 @@ class HomeController extends GetxController {
   // Observable states
   final _isLoading = false.obs;
   final _statistics = Rxn<StatisticsModel>();
-  final _currentIndex = 0.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
   StatisticsModel? get statistics => _statistics.value;
-  int get currentIndex => _currentIndex.value;
   String get userName => _authRepository.userFullName;
 
   @override
@@ -32,11 +32,7 @@ class HomeController extends GetxController {
       final stats = await _statisticsRepository.getStatistics();
       _statistics.value = stats;
     } catch (e) {
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось загрузить статистику',
-        snackPosition: SnackPosition.TOP,
-      );
+      Get.snackbar('Ошибка', 'Не удалось загрузить статистику');
     } finally {
       _isLoading.value = false;
     }
@@ -47,42 +43,33 @@ class HomeController extends GetxController {
     await loadStatistics();
   }
 
-  // Bottom Navigation bar handler
-  void changeTabIndex(int index) {
-    _currentIndex.value = index;
-
-    switch (index) {
-      case 0:
-      // Already on home - refresh data
-        refreshStatistics();
-        break;
-      case 1:
-        navigateToTpList();
-        break;
-      case 2:
-        navigateToSearch();
-        break;
-      case 3:
-        navigateToReports();
-        break;
-    }
-  }
-
-  // Navigation methods
+  // ---- Quick actions should switch tabs, not push screens
   void navigateToTpList() {
-    Get.toNamed(Routes.TP_LIST);
+    _switchMainTab(1); // TP
   }
 
   void navigateToSearch() {
-    Get.toNamed(Routes.SEARCH);
+    _switchMainTab(2); // Search
   }
 
   void navigateToReports() {
-    Get.toNamed(Routes.REPORTS);
+    _switchMainTab(3); // Reports
   }
 
-  void navigateToSettings() {
-    Get.toNamed(Routes.SETTINGS);
+  void _switchMainTab(int index) {
+    try {
+      final nav = Get.find<MainNavController>();
+      nav.switchTo(index);
+    } catch (_) {
+      // Fallback (just in case MainNav is not in tree)
+      // You can keep or remove these depending on your route setup
+      switch (index) {
+        case 1: Get.toNamed(Routes.TP_LIST); break;
+        case 2: Get.toNamed(Routes.SEARCH); break;
+        case 3: Get.toNamed(Routes.REPORTS); break;
+        default: break;
+      }
+    }
   }
 
   // Logout

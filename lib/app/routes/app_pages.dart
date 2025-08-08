@@ -3,22 +3,23 @@ import 'package:get/get.dart';
 import '../data/providers/news_api_provider.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/repositories/notification_repository.dart';
+import '../modules/auth/views/auth_view.dart';
+import '../modules/home/views/home_view.dart';
+import '../modules/navbar/main_nav_view.dart';
 import '../modules/news/controllers/news_controller.dart';
 import '../modules/news/views/news_view.dart';
 import '../modules/news/widgets/news_detail_view.dart';
 import '../modules/notifications/controllers/notifications_controller.dart';
 import '../modules/notifications/views/notification_detail_view.dart';
 import '../modules/notifications/views/notifications_view.dart';
-import '../modules/splash/views/splash_view.dart';
-import '../modules/auth/views/auth_view.dart';
-import '../modules/home/views/home_view.dart';
+import '../modules/report_viewer/views/report_viewer_view.dart';
+import '../modules/reports/views/reports_view.dart';
 import '../modules/search/views/search_view.dart';
+import '../modules/settings/views/settings_view.dart';
+import '../modules/splash/views/splash_view.dart';
 import '../modules/subscriber_detail/views/subscriber_detail_view.dart';
 import '../modules/subscribers/views/subscribers_view.dart';
 import '../modules/tp_list/views/tp_list_view.dart';
-import '../modules/reports/views/reports_view.dart';
-import '../modules/report_viewer/views/report_viewer_view.dart';
-import '../modules/settings/views/settings_view.dart';
 
 part 'app_routes.dart';
 
@@ -28,6 +29,10 @@ class AppPages {
   static const INITIAL = Routes.SPLASH;
 
   static final routes = [
+    GetPage(
+      name: Routes.NAVBAR,
+      page: () => const MainNavView(),
+    ),
     GetPage(
       name: _Paths.SPLASH,
       page: () => const SplashView(),
@@ -79,7 +84,6 @@ class AppPages {
       page: () => const SettingsView(),
       transition: Transition.rightToLeft,
     ),
-
     GetPage(
       name: Routes.NEWS,
       page: () => const NewsView(),
@@ -95,7 +99,6 @@ class AppPages {
       page: () => const NewsDetailView(),
       transition: Transition.rightToLeftWithFade,
     ),
-
     GetPage(
       name: Routes.NOTIFICATIONS,
       page: () => const NotificationsView(),
@@ -110,7 +113,5 @@ class AppPages {
       page: () => const NotificationDetailView(),
       transition: Transition.rightToLeftWithFade,
     ),
-
-
   ];
 }

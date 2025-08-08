@@ -51,6 +51,7 @@ flutter:
     - assets/icons/
     - assets/mock/
     - assets/mock/news.json
+    - assets/mock/mock_data.json
     - assets/mock/notifications.json
 
   fonts:

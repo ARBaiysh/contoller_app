@@ -17,6 +17,7 @@ abstract class Routes {
   static const NEWS_DETAIL = _Paths.NEWS_DETAIL;
   static const NOTIFICATIONS = _Paths.NOTIFICATIONS;
   static const NOTIFICATION_DETAIL = _Paths.NOTIFICATION_DETAIL;
+  static const NAVBAR = _Paths.NAVBAR;
 }
 
 abstract class _Paths {
@@ -36,4 +37,5 @@ abstract class _Paths {
   static const NEWS_DETAIL = '/news/detail';
   static const NOTIFICATIONS = '/notifications';
   static const NOTIFICATION_DETAIL = '/notifications/detail';
+  static const NAVBAR = '/';
 }

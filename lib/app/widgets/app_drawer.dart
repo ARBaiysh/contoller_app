@@ -8,7 +8,7 @@ import '../modules/home/controllers/home_controller.dart';
 import '../routes/app_pages.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({Key? key}) : super(key: key);
+  const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class AppDrawer extends StatelessWidget {
                   subtitle: 'Конфигурация приложения',
                   onTap: () {
                     Get.back();
-                    homeController.navigateToSettings();
+                    Get.toNamed(Routes.SETTINGS);
                   },
                 ),
                 _buildMenuItem(

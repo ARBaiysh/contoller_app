@@ -1,3 +1,4 @@
+import 'package:contoller_app/app/modules/navbar/main_nav_controller.dart';
 import 'package:get/get.dart';
 
 import '../core/controllers/theme_controller.dart';
@@ -9,14 +10,14 @@ import '../data/repositories/subscriber_repository.dart';
 import '../data/repositories/tp_repository.dart';
 import '../modules/auth/controllers/auth_controller.dart';
 import '../modules/home/controllers/home_controller.dart';
+import '../modules/report_viewer/controllers/report_viewer_controller.dart';
+import '../modules/reports/controllers/reports_controller.dart';
 import '../modules/search/controllers/search_controller.dart';
+import '../modules/settings/controllers/settings_controller.dart';
+import '../modules/splash/controllers/splash_controller.dart';
 import '../modules/subscriber_detail/controllers/subscriber_detail_controller.dart';
 import '../modules/subscribers/controllers/subscribers_controller.dart';
 import '../modules/tp_list/controllers/tp_list_controller.dart';
-import '../modules/reports/controllers/reports_controller.dart';
-import '../modules/report_viewer/controllers/report_viewer_controller.dart';
-import '../modules/settings/controllers/settings_controller.dart';
-import '../modules/splash/controllers/splash_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -34,6 +35,7 @@ class InitialBinding extends Bindings {
 
     // Controllers - Lazy loaded with fenix for auto-recreation
     Get.lazyPut<SplashController>(() => SplashController(), fenix: true);
+    Get.lazyPut<MainNavController>(() => MainNavController(), fenix: true);
     Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
     Get.lazyPut<HomeController>(() => HomeController(), fenix: true);
     Get.lazyPut<TpListController>(() => TpListController(), fenix: true);

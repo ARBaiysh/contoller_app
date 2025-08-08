@@ -127,7 +127,7 @@ class AuthController extends GetxController {
         );
 
         // Navigate to home
-        Get.offAllNamed(Routes.HOME);
+        Get.offAllNamed(Routes.NAVBAR);
       } else {
         // Show error message
         _showError(Constants.authError);

@@ -54,7 +54,7 @@ class SplashController extends GetxController {
           await _handleBiometricAuth();
         } else {
           // Переходим сразу на главную
-          _navigateToHome();
+          _navigateToNavBar();
         }
       } else {
         // Сессия истекла
@@ -84,7 +84,7 @@ class SplashController extends GetxController {
 
       if (authenticated) {
         // Успешная биометрическая аутентификация
-        _navigateToHome();
+        _navigateToNavBar();
       } else {
         // Биометрия не прошла - переходим к обычному входу
         _navigateToAuth();
@@ -107,9 +107,9 @@ class SplashController extends GetxController {
   }
 
   // Навигация к главному экрану
-  void _navigateToHome() {
+  void _navigateToNavBar() {
     _isLoading.value = false;
-    Get.offAllNamed(Routes.HOME);
+    Get.offAllNamed(Routes.NAVBAR);
   }
 
   // Принудительный переход к авторизации (например, при ошибке)

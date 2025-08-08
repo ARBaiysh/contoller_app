@@ -14,7 +14,7 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: Constants.appName,
+        title: controller.userName,
         showBackButton: false,
         leading: Builder(
           builder: (context) => IconButton(
@@ -31,7 +31,6 @@ class HomeView extends GetView<HomeController> {
         right: true,   // Защищаем от вырезов по бокам
         child: Obx(() => _buildBody(context)),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(context),
     );
   }
 
@@ -54,8 +53,6 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildWelcomeSection(context),
-            const SizedBox(height: Constants.paddingL),
             _buildStatisticsGrid(context),
             const SizedBox(height: Constants.paddingL),
             _buildQuickActions(context),
@@ -66,36 +63,6 @@ class HomeView extends GetView<HomeController> {
     );
   }
 
-  Widget _buildWelcomeSection(BuildContext context) {
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Доброе утро';
-    } else if (hour < 18) {
-      greeting = 'Добрый день';
-    } else {
-      greeting = 'Добрый вечер';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          greeting,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: Constants.paddingXS),
-        Text(
-          controller.userName,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildStatisticsGrid(BuildContext context) {
     final stats = controller.statistics!;
@@ -260,38 +227,6 @@ class HomeView extends GetView<HomeController> {
         ),
       ),
     );
-  }
-
-  Widget _buildBottomNavigationBar(BuildContext context) {
-    return Obx(() => BottomNavigationBar(
-      currentIndex: controller.currentIndex,
-      onTap: controller.changeTabIndex,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: Theme.of(context).textTheme.bodySmall?.color,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Главная',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.electrical_services_outlined),
-          activeIcon: Icon(Icons.electrical_services),
-          label: 'ТП',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search_outlined),
-          activeIcon: Icon(Icons.search),
-          label: 'Поиск',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.description_outlined),
-          activeIcon: Icon(Icons.description),
-          label: 'Отчеты',
-        ),
-      ],
-    ));
   }
 
   Widget _buildErrorState(BuildContext context) {
