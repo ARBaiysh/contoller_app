@@ -28,9 +28,20 @@ class TpRepository {
       // Fetch from API
       final allTps = await _apiProvider.getTpList();
 
-      // Filter by assigned TPs for current user
+      // ИСПРАВЛЕНИЕ: Проверяем, есть ли пользователь и assigned_tps
       final assignedTpIds = _authRepository.assignedTps;
-      final userTps = allTps.where((tp) => assignedTpIds.contains(tp.id)).toList();
+
+      List<TpModel> userTps;
+
+      // Если у пользователя нет assigned_tps или список пустой, показываем все ТП
+      if (assignedTpIds.isEmpty) {
+        print('Warning: No assigned TPs found, showing all TPs');
+        userTps = allTps;
+      } else {
+        // Фильтруем только если есть assigned_tps
+        userTps = allTps.where((tp) => assignedTpIds.contains(tp.id)).toList();
+        print('Filtered TPs: ${userTps.length} out of ${allTps.length}');
+      }
 
       // Update cache
       _tpListCache = userTps;
@@ -57,9 +68,9 @@ class TpRepository {
       // Fetch from API
       final tp = await _apiProvider.getTpById(tpId);
 
-      // Check if user has access to this TP
+      // ИСПРАВЛЕНИЕ: Убираем строгую проверку доступа, если assignedTps пустой
       final assignedTpIds = _authRepository.assignedTps;
-      if (!assignedTpIds.contains(tp.id)) {
+      if (assignedTpIds.isNotEmpty && !assignedTpIds.contains(tp.id)) {
         throw Exception('У вас нет доступа к данному ТП');
       }
 
