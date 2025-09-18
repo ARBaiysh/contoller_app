@@ -94,7 +94,7 @@ class TpSelectorCard extends StatelessWidget {
               context: context,
               tpId: tp.id,
               title: '${tp.number} ${tp.name}',
-              subtitle: tp.address,
+              subtitle: tp.fider,
               icon: Icons.electrical_services,
               isSelected: selectedTpId == tp.id,
               progressPercentage: tp.progressPercentage,

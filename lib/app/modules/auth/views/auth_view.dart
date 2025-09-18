@@ -52,6 +52,9 @@ class AuthView extends GetView<AuthController> {
                       ? _buildBiometricButton(context)
                       : const SizedBox.shrink()),
 
+                  _buildRegionSelector(context),
+                  const SizedBox(height: Constants.paddingM),
+
                   // Divider (if biometric is available)
                   Obx(() => controller.showBiometricOption
                       ? _buildDivider(context)
@@ -72,6 +75,25 @@ class AuthView extends GetView<AuthController> {
                   // Login button
                   _buildLoginButton(context),
                   const SizedBox(height: Constants.paddingM),
+
+                  const SizedBox(height: Constants.paddingM),
+
+// Sync status
+                  Obx(() => controller.isSyncing
+                      ? Column(
+                    children: [
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: Constants.paddingM),
+                      Text(
+                        controller.syncMessage,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
+                      : const SizedBox.shrink()),
 
                   // Company info
                   _buildCompanyInfo(context),
@@ -273,5 +295,37 @@ class AuthView extends GetView<AuthController> {
         ),
       ],
     );
+  }
+
+  Widget _buildRegionSelector(BuildContext context) {
+    return Obx(() => DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        labelText: 'Регион',
+        hintText: 'Выберите регион',
+        prefixIcon: const Icon(Icons.location_on_outlined),
+        filled: true,
+        fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+      ),
+      value: controller.selectedRegion?.code,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Выберите регион';
+        }
+        return null;
+      },
+      items: controller.regions
+          .map((region) => DropdownMenuItem(
+        value: region.code,
+        child: Text(region.name),
+      ))
+          .toList(),
+      onChanged: controller.isLoading || controller.isSyncing
+          ? null
+          : (value) {
+        final region = controller.regions
+            .firstWhereOrNull((r) => r.code == value);
+        controller.selectRegion(region);
+      },
+    ));
   }
 }

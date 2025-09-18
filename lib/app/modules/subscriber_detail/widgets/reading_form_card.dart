@@ -81,7 +81,7 @@ class ReadingFormCard extends StatelessWidget {
 
             // Submit button
             Obx(() => ElevatedButton(
-              onPressed: controller.isSubmitting ? null : controller.submitReading,
+              onPressed: controller.isSubmitting ? null : null,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
               ),

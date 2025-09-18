@@ -9,7 +9,7 @@ import '../models/news_item.dart';
 class NewsApiProvider extends GetxService {
   static const bool _useMockData = Constants.useMockData;
   static const String _mockPath = 'assets/mock/news.json';
-  static const String _baseUrl = Constants.baseUrl; // e.g. https://api.example.com
+  static const String _baseUrl = 'https://api.example.com'; // e.g. https://api.example.com
 
   late final Dio _dio;
 

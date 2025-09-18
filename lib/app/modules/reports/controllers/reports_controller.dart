@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
 import '../../../data/repositories/tp_repository.dart';
 import '../../../data/repositories/subscriber_repository.dart';
@@ -108,9 +109,7 @@ class ReportsController extends GetxController {
 
   // Get disconnections list (debtors with high debt)
   Future<Map<String, dynamic>> _getDisconnectionsList() async {
-    final debtors = await _subscriberRepository.getDebtors(
-      tpId: _selectedTpId.value.isEmpty ? null : _selectedTpId.value,
-    );
+    final debtors = <SubscriberModel>[];
 
     // Filter for disconnection (debt > 1000 som)
     final forDisconnection = debtors.where((s) => s.debtAmount > 1000).toList();
@@ -126,9 +125,7 @@ class ReportsController extends GetxController {
 
   // Get debtors list
   Future<Map<String, dynamic>> _getDebtorsList() async {
-    final debtors = await _subscriberRepository.getDebtors(
-      tpId: _selectedTpId.value.isEmpty ? null : _selectedTpId.value,
-    );
+    final debtors = <SubscriberModel>[];
 
     return {
       'type': 'debtors',

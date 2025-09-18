@@ -3,12 +3,20 @@ import 'package:flutter/material.dart';
 class Constants {
   Constants._();
 
+  // Storage keys (добавить если их нет)
+  static const String usernameKey = 'username';
+  static const String passwordKey = 'password';
+  static const String regionCodeKey = 'region_code';
+
+// API timeouts (новые)
+  static const Duration networkTimeout = Duration(seconds: 30);
+  static const Duration syncTimeout = Duration(seconds: 60);
+  static const Duration syncCheckInterval = Duration(seconds: 5);
+  static const Duration maxSyncWaitTime = Duration(minutes: 5);
   // API Configuration
-  static const bool useMockData = true;
-  static const String baseUrl = 'https://api.oshelectro.kg/v1';
-  static const String mockDataPath = 'assets/mock/mock_data.json';
-  static const Duration networkDelay = Duration(milliseconds: 500);
-  static const Duration apiTimeout = Duration(seconds: 30);
+  static const bool useMockData = false;
+  static const String biometricKey = 'biometric_enabled';
+
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

@@ -1,169 +1,142 @@
 import 'package:get/get.dart';
 import '../models/subscriber_model.dart';
 import '../providers/api_provider.dart';
-import '../../core/values/constants.dart';
+import 'tp_repository.dart';
 
 class SubscriberRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
+  final TpRepository _tpRepository = Get.find<TpRepository>();
 
-  // Cache for subscribers
-  final Map<String, List<SubscriberModel>> _subscribersCache = {};
-  final Map<String, SubscriberModel> _subscriberDetailsCache = {};
-
-  // Get subscribers by TP ID
-  Future<List<SubscriberModel>> getSubscribersByTp(String tpId) async {
+  // Get subscribers by TP
+  Future<List<SubscriberModel>> getSubscribersByTp(String tpCode, {bool forceRefresh = false}) async {
     try {
-      // Check cache first
-      if (_subscribersCache.containsKey(tpId)) {
-        return _subscribersCache[tpId]!;
+      // Всегда загружаем с сервера
+      final response = await _apiProvider.getAbonentsByTp(tpCode);
+      final subscribers = response.data;
+
+      // Обновляем статистику ТП
+      _updateTpStatistics(tpCode, subscribers);
+
+      // Проверяем статус синхронизации
+      if (response.syncing && response.syncMessageId != null) {
+        print('[SUBSCRIBER REPO] Abonents are syncing, messageId: ${response.syncMessageId}');
+        // TODO: Обработать синхронизацию когда будет готов механизм
       }
-
-      // Fetch from API
-      final subscribers = await _apiProvider.getSubscribersByTp(tpId);
-
-      // Cache the result
-      _subscribersCache[tpId] = subscribers;
 
       return subscribers;
     } catch (e) {
-      print('Error fetching subscribers: $e');
+      print('[SUBSCRIBER REPO] Error fetching subscribers: $e');
       throw Exception('Не удалось загрузить список абонентов');
     }
   }
 
-  // Get subscriber by ID
-  Future<SubscriberModel> getSubscriberById(String subscriberId) async {
-    try {
-      // Check cache first
-      if (_subscriberDetailsCache.containsKey(subscriberId)) {
-        return _subscriberDetailsCache[subscriberId]!;
-      }
-
-      // Fetch from API
-      final subscriber = await _apiProvider.getSubscriberById(subscriberId);
-
-      // Cache the result
-      _subscriberDetailsCache[subscriberId] = subscriber;
-
-      return subscriber;
-    } catch (e) {
-      print('Error fetching subscriber details: $e');
-      throw Exception('Не удалось загрузить данные абонента');
-    }
-  }
-
-  // Search subscribers across all TPs
+  // Search subscribers - теперь нужно загружать все ТП для поиска
   Future<List<SubscriberModel>> searchSubscribers(String query) async {
-    try {
-      if (query.isEmpty) return [];
+    if (query.isEmpty) return [];
 
-      // For search, always fetch fresh data
-      final results = await _apiProvider.searchSubscribers(query);
+    final lowerQuery = query.toLowerCase();
+    final List<SubscriberModel> results = [];
 
-      return results;
-    } catch (e) {
-      print('Error searching subscribers: $e');
-      throw Exception('Ошибка поиска');
+    // Получаем список всех ТП
+    final tpList = await _tpRepository.getTpList();
+
+    // Загружаем абонентов по каждому ТП и ищем
+    for (final tp in tpList) {
+      try {
+        final subscribers = await getSubscribersByTp(tp.id);
+        final filtered = subscribers.where((s) {
+          return s.accountNumber.toLowerCase().contains(lowerQuery) ||
+              s.fullName.toLowerCase().contains(lowerQuery) ||
+              s.address.toLowerCase().contains(lowerQuery);
+        });
+        results.addAll(filtered);
+      } catch (e) {
+        print('[SUBSCRIBER REPO] Error searching in TP ${tp.id}: $e');
+      }
     }
+
+    return results;
   }
 
-  // Submit reading for subscriber
-  Future<SubscriberModel> submitReading({
-    required String subscriberId,
-    required int reading,
-    String? comment,
+  // Get subscriber by account number
+  Future<SubscriberModel?> getSubscriberByAccountNumber(String accountNumber) async {
+    // Определяем TP по номеру счета
+    // Формат: TPXXXX_XXXXXX
+    final parts = accountNumber.split('_');
+    if (parts.length == 2) {
+      final tpCode = parts[0];
+      try {
+        final subscribers = await getSubscribersByTp(tpCode);
+        return subscribers.firstWhereOrNull(
+              (s) => s.accountNumber == accountNumber,
+        );
+      } catch (e) {
+        print('[SUBSCRIBER REPO] Error getting subscriber: $e');
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  // Submit meter reading
+  Future<bool> submitMeterReading({
+    required String accountNumber,
+    required int currentReading,
   }) async {
     try {
-      // Validate reading
-      if (reading < Constants.minReadingValue || reading > Constants.maxReadingValue) {
-        throw Exception('Показание должно быть от ${Constants.minReadingValue} до ${Constants.maxReadingValue}');
-      }
-
-      // Get current subscriber data
-      final subscriber = await getSubscriberById(subscriberId);
-
-      // Check if reading can be submitted
-      if (!subscriber.canTakeReading) {
-        throw Exception('Показание для данного абонента уже обрабатывается или завершено');
-      }
-
-      // Validate reading is greater than last reading
-      if (subscriber.lastReading != null && reading <= subscriber.lastReading!) {
-        throw Exception('Новое показание должно быть больше предыдущего (${subscriber.lastReading})');
-      }
-
-      // Submit to API
-      final updatedSubscriber = await _apiProvider.submitReading(
-        subscriberId: subscriberId,
-        reading: reading,
-        comment: comment,
+      final response = await _apiProvider.submitMeterReading(
+        accountNumber: accountNumber,
+        currentReading: currentReading,
       );
 
-      // Update caches
-      _subscriberDetailsCache[subscriberId] = updatedSubscriber;
-
-      // Update in list cache if exists
-      final tpId = updatedSubscriber.tpId;
-      if (_subscribersCache.containsKey(tpId)) {
-        final subscribers = _subscribersCache[tpId]!;
-        final index = subscribers.indexWhere((s) => s.id == subscriberId);
-        if (index != -1) {
-          subscribers[index] = updatedSubscriber;
-        }
+      // После отправки обновляем список абонентов
+      final parts = accountNumber.split('_');
+      if (parts.length == 2) {
+        final tpCode = parts[0];
+        await getSubscribersByTp(tpCode);
       }
 
-      return updatedSubscriber;
+      return true;
     } catch (e) {
-      print('Error submitting reading: $e');
-      throw Exception(e.toString());
+      print('[SUBSCRIBER REPO] Error submitting reading: $e');
+      throw Exception('Не удалось отправить показание');
     }
   }
 
-  // Get subscribers by status
-  Future<List<SubscriberModel>> getSubscribersByStatus({
-    required String tpId,
-    required ReadingStatus status,
-  }) async {
-    try {
-      final allSubscribers = await getSubscribersByTp(tpId);
-      return allSubscribers.where((s) => s.readingStatus == status).toList();
-    } catch (e) {
-      print('Error filtering subscribers by status: $e');
-      throw Exception('Ошибка фильтрации');
-    }
-  }
+  // Обновить статистику ТП
+  void _updateTpStatistics(String tpCode, List<SubscriberModel> subscribers) {
+    // Рассчитываем статистику
+    final statistics = <String, dynamic>{
+      'total_subscribers': subscribers.length,
+      'readings_collected': 0,
+      'readings_available': 0,
+      'readings_processing': 0,
+      'readings_completed': 0,
+    };
 
-  // Get debtors list
-  Future<List<SubscriberModel>> getDebtors({String? tpId}) async {
-    try {
-      List<SubscriberModel> subscribers;
-
-      if (tpId != null) {
-        subscribers = await getSubscribersByTp(tpId);
+    for (final subscriber in subscribers) {
+      if (subscriber.canTakeReading) {
+        statistics['readings_available']++;
       } else {
-        // Get all subscribers
-        subscribers = await _apiProvider.getAllSubscribers();
+        statistics['readings_completed']++;
+        statistics['readings_collected']++;
       }
 
-      // Filter debtors
-      return subscribers.where((s) => s.isDebtor).toList()
-        ..sort((a, b) => b.debtAmount.compareTo(a.debtAmount));
-    } catch (e) {
-      print('Error fetching debtors: $e');
-      throw Exception('Не удалось загрузить список должников');
+      // Если есть текущее показание в процессе
+      if (subscriber.readingStatus == ReadingStatus.processing) {
+        statistics['readings_processing']++;
+        statistics['readings_collected']++;
+      }
     }
+
+    // Обновляем в TpRepository
+    _tpRepository.updateTpStatistics(tpCode, subscribers);
+    print('[SUBSCRIBER REPO] Updated TP $tpCode statistics: $statistics');
   }
 
-  // Clear cache
-  void clearCache() {
-    _subscribersCache.clear();
-    _subscriberDetailsCache.clear();
-  }
-
-  // Refresh subscribers for TP
-  Future<List<SubscriberModel>> refreshSubscribers(String tpId) async {
-    // Remove from cache to force refresh
-    _subscribersCache.remove(tpId);
-    return getSubscribersByTp(tpId);
+  // Обновить список абонентов (для совместимости)
+  Future<List<SubscriberModel>> refreshSubscribers(String tpCode) async {
+    return getSubscribersByTp(tpCode);
   }
 }

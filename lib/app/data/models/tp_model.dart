@@ -2,20 +2,22 @@ class TpModel {
   final String id;
   final String number;
   final String name;
-  final String address;
-  final int totalSubscribers;
-  final int readingsCollected;
-  final int readingsAvailable;
-  final int readingsProcessing;
-  final int readingsCompleted;
-  final DateTime? lastUpdated;
+  final String fider; // Заменили address на fider
+
+  // Статистика - рассчитывается локально
+  int totalSubscribers;
+  int readingsCollected;
+  int readingsAvailable;
+  int readingsProcessing;
+  int readingsCompleted;
+  DateTime? lastUpdated;
 
   TpModel({
     required this.id,
     required this.number,
     required this.name,
-    required this.address,
-    required this.totalSubscribers,
+    required this.fider,
+    this.totalSubscribers = 0,
     this.readingsCollected = 0,
     this.readingsAvailable = 0,
     this.readingsProcessing = 0,
@@ -30,40 +32,33 @@ class TpModel {
   }
 
   // Check if all readings are collected
-  bool get isCompleted => readingsCollected == totalSubscribers;
+  bool get isCompleted => totalSubscribers > 0 && readingsCollected == totalSubscribers;
 
-  // Get status color based on progress
+  // Get status based on progress
   String get status {
+    if (totalSubscribers == 0) return 'not_started';
     if (isCompleted) return 'completed';
     if (readingsCollected > 0) return 'in_progress';
     return 'not_started';
   }
 
-  // From JSON
+  // From JSON - только базовые поля от API
   factory TpModel.fromJson(Map<String, dynamic> json) {
     return TpModel(
-      id: json['id']?.toString() ?? '',
+      id: json['id'] ?? '',
       number: json['number'] ?? '',
       name: json['name'] ?? '',
-      address: json['address'] ?? '',
-      totalSubscribers: json['total_subscribers'] ?? 0,
-      readingsCollected: json['readings_collected'] ?? 0,
-      readingsAvailable: json['readings_available'] ?? 0,
-      readingsProcessing: json['readings_processing'] ?? 0,
-      readingsCompleted: json['readings_completed'] ?? 0,
-      lastUpdated: json['last_updated'] != null
-          ? DateTime.tryParse(json['last_updated'])
-          : null,
+      fider: json['fider'] ?? '',
     );
   }
 
-  // To JSON
+  // To JSON - включаем все поля для локального использования
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'number': number,
       'name': name,
-      'address': address,
+      'fider': fider,
       'total_subscribers': totalSubscribers,
       'readings_collected': readingsCollected,
       'readings_available': readingsAvailable,
@@ -73,12 +68,12 @@ class TpModel {
     };
   }
 
-  // Copy with
+  // Copy with - для обновления статистики
   TpModel copyWith({
     String? id,
     String? number,
     String? name,
-    String? address,
+    String? fider,
     int? totalSubscribers,
     int? readingsCollected,
     int? readingsAvailable,
@@ -90,7 +85,7 @@ class TpModel {
       id: id ?? this.id,
       number: number ?? this.number,
       name: name ?? this.name,
-      address: address ?? this.address,
+      fider: fider ?? this.fider,
       totalSubscribers: totalSubscribers ?? this.totalSubscribers,
       readingsCollected: readingsCollected ?? this.readingsCollected,
       readingsAvailable: readingsAvailable ?? this.readingsAvailable,
@@ -98,5 +93,33 @@ class TpModel {
       readingsCompleted: readingsCompleted ?? this.readingsCompleted,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
+  }
+
+  // Обновить статистику на основе списка абонентов
+  void updateStatistics(List<dynamic> subscribers) {
+    totalSubscribers = subscribers.length;
+    readingsCollected = 0;
+    readingsAvailable = 0;
+    readingsProcessing = 0;
+    readingsCompleted = 0;
+
+    for (var subscriber in subscribers) {
+      final status = subscriber['readingStatus'] ?? 'available';
+      switch (status) {
+        case 'completed':
+          readingsCompleted++;
+          readingsCollected++;
+          break;
+        case 'processing':
+          readingsProcessing++;
+          readingsCollected++;
+          break;
+        case 'available':
+          readingsAvailable++;
+          break;
+      }
+    }
+
+    lastUpdated = DateTime.now();
   }
 }

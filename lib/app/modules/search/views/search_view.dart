@@ -410,7 +410,7 @@ class SearchView extends GetView<GlobalSearchController> {
                           ),
                           const SizedBox(width: Constants.paddingS),
                           Text(
-                            controller.getTpName(subscriber.tpId),
+                            subscriber.transformerPointName ?? 'Неизвестная ТП',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary,

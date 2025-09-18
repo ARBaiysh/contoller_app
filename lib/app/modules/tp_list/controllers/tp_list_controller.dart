@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/tp_model.dart';
 import '../../../data/repositories/tp_repository.dart';
@@ -9,21 +10,19 @@ class TpListController extends GetxController {
 
   // Observable states
   final _isLoading = false.obs;
+  final _isSyncing = false.obs;
   final _tpList = <TpModel>[].obs;
   final _filteredTpList = <TpModel>[].obs;
-  final _selectedFilter = 'all'.obs;
   final _searchQuery = ''.obs;
-  final _sortBy = 'default'.obs; // Добавляем состояние для сортировки
+  final _sortBy = 'default'.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isSyncing => _isSyncing.value;
   List<TpModel> get tpList => _filteredTpList;
-  String get selectedFilter => _selectedFilter.value;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
   int get totalTps => _tpList.length;
-  int get completedTps => _tpList.where((tp) => tp.isCompleted).length;
-  int get inProgressTps => _tpList.where((tp) => !tp.isCompleted).length;
 
   @override
   void onInit() {
@@ -32,16 +31,16 @@ class TpListController extends GetxController {
   }
 
   // Load TP list
-  Future<void> loadTpList() async {
+  Future<void> loadTpList({bool forceRefresh = false}) async {
     _isLoading.value = true;
     try {
-      final tps = await _tpRepository.getTpList();
+      final tps = await _tpRepository.getTpList(forceRefresh: forceRefresh);
       _tpList.value = tps;
-      applyFilter();
+      applyFiltersAndSort();
     } catch (e) {
       Get.snackbar(
         'Ошибка',
-        'Не удалось загрузить список ТП',
+        e.toString().replaceAll('Exception: ', ''),
         snackPosition: SnackPosition.TOP,
         backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
@@ -51,36 +50,51 @@ class TpListController extends GetxController {
     }
   }
 
-  // Refresh TP list
-  Future<void> refreshTpList() async {
-    await loadTpList();
+  // Sync TP abonents
+  Future<void> syncTpAbonents(String tpCode) async {
+    _isSyncing.value = true;
+    try {
+      final result = await _tpRepository.syncTpAbonents(tpCode);
+
+      Get.snackbar(
+        'Синхронизация завершена',
+        'Синхронизировано: ${result['synced'] ?? 0}, '
+            'Создано: ${result['created'] ?? 0}, '
+            'Обновлено: ${result['updated'] ?? 0}',
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
+        colorText: Colors.green,
+      );
+
+      // Перезагружаем список для обновления статистики
+      await loadTpList();
+    } catch (e) {
+      Get.snackbar(
+        'Ошибка синхронизации',
+        e.toString().replaceAll('Exception: ', ''),
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
+        colorText: Constants.error,
+      );
+    } finally {
+      _isSyncing.value = false;
+    }
   }
 
-  // Apply filter
-  void applyFilter() {
-    List<TpModel> filtered = List.from(_tpList);
+  // Refresh TP list
+  Future<void> refreshTpList() async {
+    await loadTpList(forceRefresh: true);
+  }
 
-    // Apply status filter
-    switch (_selectedFilter.value) {
-      case 'completed':
-        filtered = filtered.where((tp) => tp.isCompleted).toList();
-        break;
-      case 'in_progress':
-        filtered = filtered.where((tp) => !tp.isCompleted).toList();
-        break;
-      case 'all':
-      default:
-      // No filtering needed
-        break;
-    }
+  // Apply filters and sorting
+  void applyFiltersAndSort() {
+    var filtered = List<TpModel>.from(_tpList);
 
-    // Apply search filter
+    // Apply search
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((tp) {
         return tp.number.toLowerCase().contains(query) ||
             tp.name.toLowerCase().contains(query) ||
-            tp.address.toLowerCase().contains(query);
+            tp.fider.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -97,34 +111,24 @@ class TpListController extends GetxController {
         break;
       case 'default':
       default:
-      // Sort by progress (uncompleted first)
-        filtered.sort((a, b) {
-          if (a.isCompleted && !b.isCompleted) return 1;
-          if (!a.isCompleted && b.isCompleted) return -1;
-          return a.progressPercentage.compareTo(b.progressPercentage);
-        });
+      // Сортировка по умолчанию - по номеру
+        filtered.sort((a, b) => a.number.compareTo(b.number));
         break;
     }
 
     _filteredTpList.value = filtered;
   }
 
-  // Set filter
-  void setFilter(String filter) {
-    _selectedFilter.value = filter;
-    applyFilter();
-  }
-
   // Search TPs
   void searchTps(String query) {
     _searchQuery.value = query;
-    applyFilter();
+    applyFiltersAndSort();
   }
 
   // Set sorting
   void setSorting(String sort) {
     _sortBy.value = sort;
-    applyFilter();
+    applyFiltersAndSort();
   }
 
   // Navigate to subscribers
@@ -133,50 +137,19 @@ class TpListController extends GetxController {
       Routes.SUBSCRIBERS,
       arguments: {
         'tpId': tp.id,
+        'tpCode': tp.id, // Для API используем id как code
         'tpName': '${tp.number} ${tp.name}',
       },
     );
   }
 
-  // Get filter options
-  List<FilterOption> get filterOptions => [
-    FilterOption(
-      value: 'all',
-      label: 'Все ТП',
-      count: _tpList.length,
-    ),
-    FilterOption(
-      value: 'in_progress',
-      label: 'В работе',
-      count: inProgressTps,
-    ),
-    FilterOption(
-      value: 'completed',
-      label: 'Завершены',
-      count: completedTps,
-    ),
-  ];
-
-  // Get sort options
+  // Get sort options (упрощенные)
   List<SortOption> get sortOptions => [
     SortOption(value: 'default', label: 'По умолчанию'),
     SortOption(value: 'name', label: 'По названию'),
     SortOption(value: 'number', label: 'По номеру'),
     SortOption(value: 'progress', label: 'По прогрессу'),
   ];
-}
-
-// Filter option model
-class FilterOption {
-  final String value;
-  final String label;
-  final int count;
-
-  FilterOption({
-    required this.value,
-    required this.label,
-    required this.count,
-  });
 }
 
 // Sort option model

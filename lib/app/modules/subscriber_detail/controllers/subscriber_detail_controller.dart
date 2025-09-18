@@ -54,17 +54,18 @@ class SubscriberDetailController extends GetxController {
   // Load subscriber details
   Future<void> loadSubscriberDetails() async {
     _isLoading.value = true;
+
     try {
-      final sub = await _subscriberRepository.getSubscriberById(subscriberId);
-      _subscriber.value = sub;
-    } catch (e) {
+      // Временно создаем пустого абонента
+      // TODO: Реализовать после добавления endpoint
+      _subscriber.value = null;
+
       Get.snackbar(
-        'Ошибка',
-        'Не удалось загрузить данные абонента',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
+        'Информация',
+        'Загрузка данных абонента временно недоступна',
+        snackPosition: SnackPosition.BOTTOM,
       );
+    } catch (e) {
     } finally {
       _isLoading.value = false;
     }
@@ -72,7 +73,7 @@ class SubscriberDetailController extends GetxController {
 
   // Refresh subscriber details
   Future<void> refreshSubscriberDetails() async {
-    await loadSubscriberDetails();
+
   }
 
   // Validate reading
@@ -98,58 +99,29 @@ class SubscriberDetailController extends GetxController {
   }
 
   // Submit reading
-  Future<void> submitReading() async {
-    if (!formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (!canSubmitReading) {
-      Get.snackbar(
-        'Ошибка',
-        'Невозможно внести показание для данного абонента',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-      );
-      return;
-    }
+  Future<void> submitReading({
+    required double reading,
+    String comment = '',
+  }) async {
+    if (_subscriber.value == null) return;
 
     _isSubmitting.value = true;
 
     try {
-      final reading = int.parse(readingController.text);
-      final comment = commentController.text.trim();
-
-      final updatedSubscriber = await _subscriberRepository.submitReading(
-        subscriberId: subscriberId,
-        reading: reading,
-        comment: comment.isNotEmpty ? comment : null,
-      );
-
-      _subscriber.value = updatedSubscriber;
-
-      // Clear form
-      readingController.clear();
-      commentController.clear();
-
-      // Show success message
+      // Временно отключаем отправку
+      // TODO: Реализовать после добавления endpoint
       Get.snackbar(
-        'Успех',
-        Constants.readingSubmitted,
-        backgroundColor: Constants.success.withValues(alpha: 0.1),
-        colorText: Constants.success,
-        snackPosition: SnackPosition.TOP,
+        'Информация',
+        'Отправка показаний временно недоступна',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
       );
-
-      // Update previous screen
-      Get.back(result: true);
     } catch (e) {
       Get.snackbar(
         'Ошибка',
-        e.toString(),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
+        'Не удалось отправить показание',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       _isSubmitting.value = false;

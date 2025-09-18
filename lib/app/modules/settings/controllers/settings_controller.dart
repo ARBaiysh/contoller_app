@@ -116,63 +116,28 @@ class SettingsController extends GetxController {
 
   // Enable biometric authentication
   Future<void> _enableBiometric() async {
-    try {
-      final availableTypes = await _biometricService.availableBiometrics;
-      final biometricText = _biometricService.getBiometricTypeText(availableTypes);
+    // Временно отключаем биометрию
+    Get.snackbar(
+      'Информация',
+      'Биометрическая аутентификация временно недоступна',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+    return;
 
-      // Показываем диалог для ввода учетных данных
-      final credentials = await _showCredentialsDialog();
-      if (credentials == null) return;
-
-      final success = await _authRepository.setupBiometricAuth(
-        credentials['username']!,
-        credentials['password']!,
-      );
-
-      if (success) {
-        _biometricEnabled.value = true;
-        Get.snackbar(
-          'Успех',
-          '$biometricText успешно настроен',
-          backgroundColor: Constants.success.withValues(alpha: 0.1),
-          colorText: Constants.success,
-          snackPosition: SnackPosition.TOP,
-        );
-      } else {
-        Get.snackbar(
-          'Ошибка',
-          'Не удалось настроить $biometricText',
-          backgroundColor: Constants.error.withValues(alpha: 0.1),
-          colorText: Constants.error,
-          snackPosition: SnackPosition.TOP,
-        );
-      }
-    } catch (e) {
-      print('Error enabling biometric: $e');
-      Get.snackbar(
-        'Ошибка',
-        'Произошла ошибка при настройке биометрии',
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-        snackPosition: SnackPosition.TOP,
-      );
-    }
+    // TODO: Реализовать после добавления поддержки биометрии
+    // final success = await _authRepository.setupBiometricAuth();
+    // if (success) {
+    //   _biometricEnabled.value = true;
+    // }
   }
 
   // Disable biometric authentication
   Future<void> _disableBiometric() async {
-    try {
-      await _authRepository.disableBiometricAuth();
-      _biometricEnabled.value = false;
+    _biometricEnabled.value = false;
+    await _storage.write(Constants.biometricKey, false);
 
-      Get.snackbar(
-        'Настройки',
-        'Биометрическая аутентификация отключена',
-        snackPosition: SnackPosition.TOP,
-      );
-    } catch (e) {
-      print('Error disabling biometric: $e');
-    }
+    // TODO: Реализовать после добавления поддержки биометрии
+    // await _authRepository.disableBiometricAuth();
   }
 
   // Show credentials dialog for biometric setup

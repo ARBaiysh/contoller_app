@@ -1,209 +1,232 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import '../models/tp_model.dart';
-import '../models/subscriber_model.dart';
-import '../models/statistics_model.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
+import '../models/abonents_response_model.dart';
+import '../models/auth_response_model.dart';
+import '../models/region_model.dart';
+import '../models/tp_list_response_model.dart';
 
 class ApiProvider extends GetxService {
-  static const bool _useMockData = Constants.useMockData;
-  static const String _mockDataPath = Constants.mockDataPath;
-  static const String _baseUrl = Constants.baseUrl;
+  static const String baseUrl = 'http://212.42.113.48:8269/api';
+  late Dio _dio;
+  final GetStorage _storage = GetStorage();
 
-  // Mock data cache
-  Map<String, dynamic>? _mockData;
+  Dio get dio => _dio;
 
   @override
   void onInit() {
     super.onInit();
-    if (_useMockData) {
-      _loadMockData();
-    }
+    _initializeDio();
   }
 
-  // Load mock data from JSON file
-  Future<void> _loadMockData() async {
+  void _initializeDio() {
+    _dio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+
+    // Add interceptor for token management
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        // Add token to header if available
+        final token = _storage.read(Constants.tokenKey);
+        if (token != null && !options.path.contains('/auth/')) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+      onError: (error, handler) async {
+        // Handle 403 - token expired
+        if (error.response?.statusCode == 403 && !error.requestOptions.path.contains('/auth/')) {
+          // Try to refresh token
+          final refreshed = await _refreshToken();
+          if (refreshed) {
+            // Retry original request
+            final opts = Options(
+              method: error.requestOptions.method,
+              headers: error.requestOptions.headers,
+            );
+            opts.headers!['Authorization'] = 'Bearer ${_storage.read(Constants.tokenKey)}';
+
+            try {
+              final response = await _dio.request(
+                error.requestOptions.path,
+                options: opts,
+                data: error.requestOptions.data,
+                queryParameters: error.requestOptions.queryParameters,
+              );
+              return handler.resolve(response);
+            } catch (e) {
+              return handler.reject(error);
+            }
+          }
+        }
+        handler.next(error);
+      },
+    ));
+  }
+
+  // Refresh token by re-authenticating
+  Future<bool> _refreshToken() async {
     try {
-      final String jsonString = await rootBundle.loadString(_mockDataPath);
-      _mockData = json.decode(jsonString);
-    } catch (e) {
-      print('Error loading mock data: $e');
-    }
-  }
+      final username = _storage.read(Constants.usernameKey);
+      final password = _storage.read(Constants.passwordKey);
+      final regionCode = _storage.read(Constants.regionCodeKey);
 
-  // Generic method to handle API calls
-  Future<T> _handleApiCall<T>({
-    required String endpoint,
-    required T Function(Map<String, dynamic>) mockHandler,
-    Map<String, dynamic>? params,
-  }) async {
-    if (_useMockData) {
-      // Simulate network delay
-      await Future.delayed(Constants.networkDelay);
-
-      if (_mockData == null) {
-        await _loadMockData();
+      if (username == null || password == null || regionCode == null) {
+        return false;
       }
 
-      return mockHandler(_mockData ?? {});
-    } else {
-      // Real API implementation
-      // TODO: Implement real API calls using Dio
-      throw UnimplementedError('Real API not implemented yet');
+      final response = await _dio.post(
+        '/auth/login',
+        data: {
+          'username': username,
+          'password': password,
+          'regionCode': regionCode,
+        },
+      );
+
+      final authResponse = AuthResponseModel.fromJson(response.data);
+
+      if (authResponse.status == 'SUCCESS' && authResponse.token != null) {
+        await _storage.write(Constants.tokenKey, authResponse.token);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('Error refreshing token: $e');
+      return false;
     }
   }
 
   // Auth endpoints
-  Future<Map<String, dynamic>> login(String username, String pin) async {
-    return _handleApiCall(
-      endpoint: '/auth/login',
-      mockHandler: (data) {
-        final user = data['user'] as Map<String, dynamic>;
-        if (user['username'] == username && user['pin'] == pin) {
-          return {
-            'success': true,
-            'token': 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}',
-            'user': user,
-          };
-        }
-        throw Exception('Invalid credentials');
-      },
-    );
+  Future<List<RegionModel>> getRegions() async {
+    try {
+      final response = await _dio.get('/auth/regions');
+      final List<dynamic> data = response.data;
+      return data.map((json) => RegionModel.fromJson(json)).toList();
+    } catch (e) {
+      throw _handleError(e);
+    }
   }
 
-  // Statistics endpoints
-  Future<StatisticsModel> getStatistics() async {
-    return _handleApiCall(
-      endpoint: '/statistics',
-      mockHandler: (data) {
-        return StatisticsModel.fromJson(data['statistics']);
-      },
-    );
-  }
-
-  // TP endpoints
-  Future<List<TpModel>> getTpList() async {
-    return _handleApiCall(
-      endpoint: '/tps',
-      mockHandler: (data) {
-        final tpList = data['tps'] as List;
-        return tpList.map((tp) => TpModel.fromJson(tp)).toList();
-      },
-    );
-  }
-
-  Future<TpModel> getTpById(String tpId) async {
-    return _handleApiCall(
-      endpoint: '/tps/$tpId',
-      mockHandler: (data) {
-        final tpList = data['tps'] as List;
-        final tp = tpList.firstWhere(
-              (item) => item['id'] == tpId,
-          orElse: () => throw Exception('TP not found'),
-        );
-        return TpModel.fromJson(tp);
-      },
-    );
-  }
-
-  // Subscriber endpoints
-  Future<List<SubscriberModel>> getSubscribersByTp(String tpId) async {
-    return _handleApiCall(
-      endpoint: '/subscribers',
-      params: {'tp_id': tpId},
-      mockHandler: (data) {
-        final subscribers = data['subscribers'] as List;
-        return subscribers
-            .where((sub) => sub['tp_id'] == tpId)
-            .map((sub) => SubscriberModel.fromJson(sub))
-            .toList();
-      },
-    );
-  }
-
-  Future<SubscriberModel> getSubscriberById(String subscriberId) async {
-    return _handleApiCall(
-      endpoint: '/subscribers/$subscriberId',
-      mockHandler: (data) {
-        final subscribers = data['subscribers'] as List;
-        final subscriber = subscribers.firstWhere(
-              (item) => item['id'] == subscriberId,
-          orElse: () => throw Exception('Subscriber not found'),
-        );
-        return SubscriberModel.fromJson(subscriber);
-      },
-    );
-  }
-
-  // Search subscribers
-  Future<List<SubscriberModel>> searchSubscribers(String query) async {
-    return _handleApiCall(
-      endpoint: '/subscribers/search',
-      params: {'query': query},
-      mockHandler: (data) {
-        final subscribers = data['subscribers'] as List;
-        final lowerQuery = query.toLowerCase();
-
-        return subscribers
-            .where((sub) {
-          final accountNumber = sub['account_number']?.toString().toLowerCase() ?? '';
-          final fullName = sub['full_name']?.toString().toLowerCase() ?? '';
-          final address = sub['address']?.toString().toLowerCase() ?? '';
-
-          return accountNumber.contains(lowerQuery) ||
-              fullName.contains(lowerQuery) ||
-              address.contains(lowerQuery);
-        })
-            .map((sub) => SubscriberModel.fromJson(sub))
-            .toList();
-      },
-    );
-  }
-
-  // Submit reading
-  Future<SubscriberModel> submitReading({
-    required String subscriberId,
-    required int reading,
-    String? comment,
+  Future<AuthResponseModel> login({
+    required String username,
+    required String password,
+    required String regionCode,
   }) async {
-    return _handleApiCall(
-      endpoint: '/readings',
-      mockHandler: (data) {
-        // Simulate reading submission
-        final subscribers = data['subscribers'] as List;
-        final subscriberIndex = subscribers.indexWhere(
-              (item) => item['id'] == subscriberId,
-        );
-
-        if (subscriberIndex == -1) {
-          throw Exception('Subscriber not found');
-        }
-
-        final subscriber = subscribers[subscriberIndex];
-        final lastReading = subscriber['last_reading'] ?? 0;
-
-        // Update subscriber data
-        subscriber['current_reading'] = reading;
-        subscriber['consumption'] = (reading - lastReading).toDouble();
-        subscriber['amount_due'] = (reading - lastReading) * 1.5; // Mock calculation
-        subscriber['reading_status'] = 'processing';
-
-        return SubscriberModel.fromJson(subscriber);
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '/auth/login',
+        data: {
+          'username': username,
+          'password': password,
+          'regionCode': regionCode,
+        },
+      );
+      return AuthResponseModel.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
   }
 
-  // Get all subscribers for global search
-  Future<List<SubscriberModel>> getAllSubscribers() async {
-    return _handleApiCall(
-      endpoint: '/subscribers/all',
-      mockHandler: (data) {
-        final subscribers = data['subscribers'] as List;
-        return subscribers
-            .map((sub) => SubscriberModel.fromJson(sub))
-            .toList();
-      },
-    );
+  Future<AuthResponseModel> checkSyncStatus(int messageId) async {
+    try {
+      final response = await _dio.get('/auth/sync-status/$messageId');
+      return AuthResponseModel.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Error handling
+  Exception _handleError(dynamic error) {
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return Exception('Время ожидания истекло. Проверьте соединение.');
+        case DioExceptionType.badResponse:
+          final statusCode = error.response?.statusCode;
+          final message = error.response?.data?['message'] ?? 'Неизвестная ошибка';
+          return Exception('Ошибка $statusCode: $message');
+        case DioExceptionType.connectionError:
+          return Exception('Ошибка соединения. Проверьте интернет.');
+        default:
+          return Exception('Произошла ошибка: ${error.message}');
+      }
+    }
+    return Exception('Неизвестная ошибка');
+  }
+
+  Future<TpListResponseModel> getTransformerPoints() async {
+    try {
+      print('[API] Getting transformer points...');
+      final response = await _dio.get('/mobile/transformer-points');
+      print('[API] TP list response: ${response.data}');
+
+      return TpListResponseModel.fromJson(response.data);
+    } catch (e) {
+      print('[API] Error getting transformer points: $e');
+      throw _handleError(e);
+    }
+  }
+
+// Sync TP abonents
+  Future<Map<String, dynamic>> syncTpAbonents(String tpCode) async {
+    try {
+      print('[API] Syncing abonents for TP: $tpCode');
+      final response = await _dio.post('/internal/tp/$tpCode/abonents/sync');
+      print('[API] Sync response: ${response.data}');
+
+      return response.data;
+    } catch (e) {
+      print('[API] Error syncing TP abonents: $e');
+      throw _handleError(e);
+    }
+  }
+
+// Get abonents by TP (добавим позже, но объявим сейчас)
+  Future<AbonentsResponseModel> getAbonentsByTp(String tpCode) async {
+    try {
+      print('[API] Getting abonents for TP: $tpCode');
+      final response = await _dio.get('/mobile/transformer-points/$tpCode/abonents');
+      print('[API] Abonents response: ${response.data}');
+
+      return AbonentsResponseModel.fromJson(response.data);
+    } catch (e) {
+      print('[API] Error getting abonents: $e');
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> submitMeterReading({
+    required String accountNumber,
+    required int currentReading,
+  }) async {
+    try {
+      print('[API] Submitting meter reading for: $accountNumber, reading: $currentReading');
+      final response = await _dio.post(
+        '/mobile/meter-readings',
+        data: {
+          'accountNumber': accountNumber,
+          'currentReading': currentReading,
+        },
+      );
+      print('[API] Submit reading response: ${response.data}');
+
+      return response.data;
+    } catch (e) {
+      print('[API] Error submitting reading: $e');
+      throw _handleError(e);
+    }
   }
 }

@@ -15,6 +15,18 @@ class TpListView extends GetView<TpListController> {
       appBar: CustomAppBar(
         title: 'Список ТП',
         actions: [
+          // Индикатор синхронизации
+          Obx(() => controller.isSyncing
+              ? Container(
+            margin: const EdgeInsets.only(right: 12),
+            width: 20,
+            height: 20,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+              : const SizedBox.shrink()),
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: () => _showSortDialog(context),
@@ -23,18 +35,18 @@ class TpListView extends GetView<TpListController> {
         ],
       ),
       body: SafeArea(
-        top: false,    // AppBar уже учитывает верхнюю область
-        bottom: true,  // Защищаем от виртуальных кнопок внизу
-        left: true,    // Защищаем от вырезов по бокам
+        top: false, // AppBar уже учитывает верхнюю область
+        bottom: true, // Защищаем от виртуальных кнопок внизу
+        left: true, // Защищаем от вырезов по бокам
         right: true,
         child: Column(
           children: [
             // Search field
             _buildSearchField(context),
-        
-            // Summary cards
-            _buildSummaryCards(context),
-        
+
+            // Summary info (упрощенная версия)
+            _buildSummaryInfo(context),
+
             // TP List
             Expanded(
               child: Obx(() => _buildTpList(context)),
@@ -52,7 +64,7 @@ class TpListView extends GetView<TpListController> {
       child: TextField(
         onChanged: controller.searchTps,
         decoration: InputDecoration(
-          hintText: 'Поиск по номеру, названию или адресу',
+          hintText: 'Поиск по номеру, названию или фидеру',
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: Theme.of(context).cardColor,
@@ -69,136 +81,35 @@ class TpListView extends GetView<TpListController> {
     );
   }
 
-  Widget _buildSummaryCards(BuildContext context) {
+  Widget _buildSummaryInfo(BuildContext context) {
     return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
+      padding: const EdgeInsets.all(Constants.paddingM),
       child: Obx(() => Row(
         children: [
-          Expanded(
-            child: _buildClickableSummaryCard(
-              context: context,
-              title: 'Всего ТП',
-              value: '${controller.totalTps}',
-              color: AppColors.info,
-              icon: Icons.electrical_services,
-              filterValue: 'all',
-              isActive: controller.selectedFilter == 'all',
-            ),
+          Icon(
+            Icons.electrical_services,
+            color: AppColors.primary,
+            size: 20,
           ),
           const SizedBox(width: Constants.paddingS),
-          Expanded(
-            child: _buildClickableSummaryCard(
-              context: context,
-              title: 'В работе',
-              value: '${controller.inProgressTps}',
-              color: AppColors.warning,
-              icon: Icons.pending,
-              filterValue: 'in_progress',
-              isActive: controller.selectedFilter == 'in_progress',
+          Text(
+            'Всего ТП: ${controller.totalTps}',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: Constants.paddingS),
-          Expanded(
-            child: _buildClickableSummaryCard(
-              context: context,
-              title: 'Завершено',
-              value: '${controller.completedTps}',
-              color: AppColors.success,
-              icon: Icons.check_circle,
-              filterValue: 'completed',
-              isActive: controller.selectedFilter == 'completed',
+          const Spacer(),
+          if (controller.searchQuery.isNotEmpty)
+            TextButton.icon(
+              onPressed: () => controller.searchTps(''),
+              icon: const Icon(Icons.clear, size: 18),
+              label: const Text('Очистить'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
             ),
-          ),
         ],
       )),
-    );
-  }
-
-  Widget _buildClickableSummaryCard({
-    required BuildContext context,
-    required String title,
-    required String value,
-    required Color color,
-    required IconData icon,
-    required String filterValue,
-    required bool isActive,
-  }) {
-    return InkWell(
-      onTap: () => controller.setFilter(filterValue),
-      borderRadius: BorderRadius.circular(Constants.borderRadius),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(8), // Уменьшено с 12 до 8
-        decoration: BoxDecoration(
-          color: isActive
-              ? color.withValues(alpha: 0.2)
-              : Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-          border: Border.all(
-            color: isActive
-                ? color
-                : Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.transparent,
-            width: isActive ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isActive
-                  ? color.withValues(alpha: 0.3)
-                  : Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.05),
-              blurRadius: isActive ? 15 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 18, // Уменьшено с 20 до 18
-            ),
-            const SizedBox(height: 2), // Уменьшено с 4 до 2
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isActive ? color : null,
-                    fontSize: 16, // Явно указан размер
-                  ),
-                ),
-              ),
-            ),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isActive
-                        ? color
-                        : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                    fontSize: 10, // Уменьшено с 11 до 10
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -234,7 +145,6 @@ class TpListView extends GetView<TpListController> {
 
   Widget _buildEmptyState(BuildContext context) {
     final isSearching = controller.searchQuery.isNotEmpty;
-    final isFiltered = controller.selectedFilter != 'all';
 
     return Center(
       child: Padding(
@@ -249,33 +159,23 @@ class TpListView extends GetView<TpListController> {
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
-              isSearching
-                  ? 'Ничего не найдено'
-                  : 'Список ТП пуст',
+              isSearching ? 'Ничего не найдено' : 'Список ТП пуст',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: Constants.paddingS),
             Text(
               isSearching
                   ? 'Попробуйте изменить параметры поиска'
-                  : isFiltered
-                  ? 'Нет ТП с выбранным фильтром'
-                  : 'Нет доступных трансформаторных пунктов',
+                  : 'Потяните вниз для обновления',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color
+                    ?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
-            if (isSearching || isFiltered) ...[
-              const SizedBox(height: Constants.paddingL),
-              TextButton(
-                onPressed: () {
-                  controller.searchTps('');
-                  controller.setFilter('all');
-                },
-                child: const Text('Сбросить фильтры'),
-              ),
-            ],
           ],
         ),
       ),
@@ -283,56 +183,35 @@ class TpListView extends GetView<TpListController> {
   }
 
   void _showSortDialog(BuildContext context) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(Constants.paddingL),
-          child: Column(
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Сортировка'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Сортировка',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: Constants.paddingL),
-              Obx(() => Column(
-                children: controller.sortOptions.map((option) {
-                  return RadioListTile<String>(
-                    title: Text(option.label),
-                    value: option.value,
-                    groupValue: controller.sortBy,
-                    onChanged: (value) {
-                      controller.setSorting(value!);
-                      Get.back();
-                    },
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                  );
-                }).toList(),
-              )),
-              const SizedBox(height: Constants.paddingM),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Закрыть'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            children: controller.sortOptions.map((option) {
+              return RadioListTile<String>(
+                title: Text(option.label),
+                value: option.value,
+                groupValue: controller.sortBy,
+                onChanged: (value) {
+                  if (value != null) {
+                    controller.setSorting(value);
+                    Navigator.of(context).pop();
+                  }
+                },
+              );
+            }).toList(),
           ),
-        ),
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Отмена'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

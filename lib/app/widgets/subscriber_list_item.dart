@@ -89,11 +89,45 @@ class SubscriberListItem extends StatelessWidget {
                         Text(
                           subscriber.address,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
+                                ?.withValues(alpha: 0.7),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+
+                        // Meter serial number if available
+                        if (subscriber.meterSerialNumber != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.speed,
+                                size: 14,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Счетчик: ${subscriber.meterSerialNumber}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -124,41 +158,26 @@ class SubscriberListItem extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Meter info
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.electric_meter,
-                        size: 14,
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        subscriber.meterInfo.type,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                        ),
-                      ),
-                      if (subscriber.lastReading != null) ...[
-                        const SizedBox(width: Constants.paddingM),
-                        Icon(
-                          Icons.speed,
-                          size: 14,
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${subscriber.lastReading}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
+                  // Balance
+                  _buildInfoItem(
+                    context: context,
+                    icon: Icons.account_balance_wallet,
+                    label: 'Баланс',
+                    value: _formatBalance(subscriber.balance),
+                    valueColor: subscriber.balance >= 0 ? AppColors.success : AppColors.error,
                   ),
 
-                  // Balance or status
-                  _buildBalanceInfo(context),
+                  // Last reading
+                  if (subscriber.lastReading != null)
+                    _buildInfoItem(
+                      context: context,
+                      icon: Icons.electric_meter,
+                      label: 'Последнее',
+                      value: '${subscriber.lastReading}',
+                    ),
+
+                  // Status
+                  _buildReadingStatus(context),
                 ],
               ),
             ),
@@ -169,97 +188,106 @@ class SubscriberListItem extends StatelessWidget {
   }
 
   Widget _buildStatusIndicator(BuildContext context) {
-    Color color;
-    IconData icon;
-
-    switch (subscriber.readingStatus) {
-      case ReadingStatus.available:
-        color = AppColors.success;
-        icon = Icons.radio_button_unchecked;
-        break;
-      case ReadingStatus.processing:
-        color = AppColors.warning;
-        icon = Icons.pending;
-        break;
-      case ReadingStatus.completed:
-        color = Colors.grey;
-        icon = Icons.check_circle;
-        break;
-    }
+    final color = subscriber.canTakeReading ? AppColors.warning : AppColors.success;
+    final icon = subscriber.canTakeReading ? Icons.edit : Icons.check_circle;
 
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
         icon,
         color: color,
-        size: 24,
+        size: 20,
       ),
     );
   }
 
-  Widget _buildBalanceInfo(BuildContext context) {
-    if (subscriber.isDebtor) {
-      return Row(
-        children: [
-          Icon(
-            Icons.warning_amber,
-            size: 14,
-            color: AppColors.error,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '${subscriber.debtAmount.toStringAsFixed(0)} сом',
-            style: TextStyle(
-              color: AppColors.error,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      );
-    } else if (subscriber.balance > 0) {
-      return Row(
-        children: [
-          const Icon(
-            Icons.account_balance_wallet,
-            size: 14,
-            color: AppColors.success,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '+${subscriber.balance.toStringAsFixed(0)} сом',
-            style: const TextStyle(
-              color: AppColors.success,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      );
-    } else {
-      return Text(
-        subscriber.readingStatus.displayName,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontSize: 12,
-          color: _getStatusColor(),
+  Widget _buildInfoItem({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
         ),
-      );
-    }
+        const SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                color:
+                Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+              ),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
-  Color _getStatusColor() {
-    switch (subscriber.readingStatus) {
-      case ReadingStatus.available:
-        return AppColors.success;
-      case ReadingStatus.processing:
-        return AppColors.warning;
-      case ReadingStatus.completed:
-        return Colors.grey;
+  Widget _buildReadingStatus(BuildContext context) {
+    final status = subscriber.canTakeReading ? 'available' : 'completed';
+    final color = subscriber.canTakeReading ? AppColors.warning : AppColors.success;
+    final text = subscriber.canTakeReading ? 'Можно брать' : 'Обработан';
+    final icon = subscriber.canTakeReading ? Icons.edit : Icons.check;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Constants.paddingS,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatBalance(double balance) {
+    if (balance >= 0) {
+      return '${balance.toStringAsFixed(2)} сом';
+    } else {
+      return '-${balance.abs().toStringAsFixed(2)} сом';
     }
   }
 }

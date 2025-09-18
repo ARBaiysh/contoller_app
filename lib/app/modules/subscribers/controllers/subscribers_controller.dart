@@ -1,19 +1,21 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
+import '../../../data/repositories/tp_repository.dart';
 import '../../../routes/app_pages.dart';
-import '../../../core/values/constants.dart';
 
 class SubscribersController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
+  final TpRepository _tpRepository = Get.find<TpRepository>();
 
-  // TP data from arguments
-  late final String tpId;
-  late final String tpName;
+  // Arguments
+  late String tpId;
+  late String tpCode;
+  late String tpName;
 
   // Observable states
   final _isLoading = false.obs;
+  final _isSyncing = false.obs;
   final _subscribers = <SubscriberModel>[].obs;
   final _filteredSubscribers = <SubscriberModel>[].obs;
   final _selectedStatus = 'all'.obs;
@@ -22,6 +24,7 @@ class SubscribersController extends GetxController {
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isSyncing => _isSyncing.value;
   List<SubscriberModel> get subscribers => _filteredSubscribers;
   String get selectedStatus => _selectedStatus.value;
   String get searchQuery => _searchQuery.value;
@@ -29,76 +32,97 @@ class SubscribersController extends GetxController {
 
   // Statistics
   int get totalSubscribers => _subscribers.length;
-  int get availableCount => _subscribers.where((s) => s.readingStatus == ReadingStatus.available).length;
-  int get processingCount => _subscribers.where((s) => s.readingStatus == ReadingStatus.processing).length;
-  int get completedCount => _subscribers.where((s) => s.readingStatus == ReadingStatus.completed).length;
+  int get readingsCollected => _subscribers.where((s) => !s.canTakeReading).length;
+  int get readingsAvailable => _subscribers.where((s) => s.canTakeReading).length;
   int get debtorsCount => _subscribers.where((s) => s.isDebtor).length;
 
   @override
   void onInit() {
     super.onInit();
-    // Get arguments
-    final args = Get.arguments;
-    if (args != null) {
-      tpId = args['tpId'] ?? '';
-      tpName = args['tpName'] ?? 'ТП';
-    } else {
-      tpId = '';
-      tpName = 'ТП';
-    }
+
+    // Получаем параметры
+    final args = Get.arguments as Map<String, dynamic>;
+    tpId = args['tpId'] ?? '';
+    tpCode = args['tpCode'] ?? tpId; // Используем tpId как tpCode если не передан
+    tpName = args['tpName'] ?? 'ТП';
+
+    // Загружаем абонентов
     loadSubscribers();
   }
 
   // Load subscribers
-  Future<void> loadSubscribers() async {
+  Future<void> loadSubscribers({bool forceRefresh = false}) async {
     _isLoading.value = true;
     try {
-      final subs = await _subscriberRepository.getSubscribersByTp(tpId);
-      _subscribers.value = subs;
+      final subscribersList = await _subscriberRepository.getSubscribersByTp(
+        tpCode,
+        forceRefresh: forceRefresh,
+      );
+      _subscribers.value = subscribersList;
       applyFiltersAndSort();
     } catch (e) {
       Get.snackbar(
         'Ошибка',
-        'Не удалось загрузить список абонентов',
+        e.toString().replaceAll('Exception: ', ''),
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
       );
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Refresh subscribers
+  // Sync subscribers with 1C
+  Future<void> syncSubscribers() async {
+    _isSyncing.value = true;
+    try {
+      final result = await _tpRepository.syncTpAbonents(tpCode);
+
+      Get.snackbar(
+        'Синхронизация завершена',
+        'Синхронизировано: ${result['synced'] ?? 0}, '
+            'Создано: ${result['created'] ?? 0}, '
+            'Обновлено: ${result['updated'] ?? 0}',
+        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+        colorText: Get.theme.colorScheme.primary,
+      );
+
+      // Перезагружаем список
+      await loadSubscribers(forceRefresh: true);
+    } catch (e) {
+      Get.snackbar(
+        'Ошибка синхронизации',
+        e.toString().replaceAll('Exception: ', ''),
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.cardColor,
+      );
+    } finally {
+      _isSyncing.value = false;
+    }
+  }
+
+  // Refresh
   Future<void> refreshSubscribers() async {
-    await loadSubscribers();
+    await loadSubscribers(forceRefresh: true);
   }
 
   // Apply filters and sorting
   void applyFiltersAndSort() {
-    List<SubscriberModel> filtered = List.from(_subscribers);
+    var filtered = List<SubscriberModel>.from(_subscribers);
 
     // Apply status filter
     switch (_selectedStatus.value) {
       case 'available':
-        filtered = filtered.where((s) => s.readingStatus == ReadingStatus.available).toList();
-        break;
-      case 'processing':
-        filtered = filtered.where((s) => s.readingStatus == ReadingStatus.processing).toList();
+        filtered = filtered.where((s) => s.canTakeReading).toList();
         break;
       case 'completed':
-        filtered = filtered.where((s) => s.readingStatus == ReadingStatus.completed).toList();
+        filtered = filtered.where((s) => !s.canTakeReading).toList();
         break;
       case 'debtors':
         filtered = filtered.where((s) => s.isDebtor).toList();
         break;
-      case 'all':
-      default:
-      // No filtering needed
-        break;
     }
 
-    // Apply search filter
+    // Apply search
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((s) {
@@ -117,14 +141,14 @@ class SubscribersController extends GetxController {
         filtered.sort((a, b) => a.address.compareTo(b.address));
         break;
       case 'debt':
-        filtered.sort((a, b) => b.debtAmount.compareTo(a.debtAmount));
+        filtered.sort((a, b) => a.balance.compareTo(b.balance));
         break;
       case 'default':
       default:
-      // Sort by status (available first) and then by address
+      // Сортировка по статусу и адресу
         filtered.sort((a, b) {
-          if (a.readingStatus == ReadingStatus.available && b.readingStatus != ReadingStatus.available) return -1;
-          if (a.readingStatus != ReadingStatus.available && b.readingStatus == ReadingStatus.available) return 1;
+          if (a.canTakeReading && !b.canTakeReading) return -1;
+          if (!a.canTakeReading && b.canTakeReading) return 1;
           return a.address.compareTo(b.address);
         });
         break;
@@ -156,74 +180,55 @@ class SubscribersController extends GetxController {
     Get.toNamed(
       Routes.SUBSCRIBER_DETAIL,
       arguments: {
-        'subscriberId': subscriber.id,
+        'subscriber': subscriber,
         'tpName': tpName,
       },
     );
   }
 
   // Get status filter options
-  List<StatusFilterOption> get statusFilterOptions => [
-    StatusFilterOption(
+  List<FilterOption> get filterOptions => [
+    FilterOption(
       value: 'all',
-      label: 'Все абоненты',
-      count: totalSubscribers,
-      icon: Icons.people,
-      color: Constants.info,
+      label: 'Все',
+      count: _subscribers.length,
     ),
-    StatusFilterOption(
+    FilterOption(
       value: 'available',
       label: 'Можно брать',
-      count: availableCount,
-      icon: Icons.check_circle_outline,
-      color: Constants.success,
+      count: _subscribers.where((s) => s.canTakeReading).length,
     ),
-    StatusFilterOption(
-      value: 'processing',
-      label: 'Обрабатывается',
-      count: processingCount,
-      icon: Icons.pending,
-      color: Constants.warning,
-    ),
-    StatusFilterOption(
+    FilterOption(
       value: 'completed',
-      label: 'Обработан',
-      count: completedCount,
-      icon: Icons.check_circle,
-      color: Colors.grey,
+      label: 'Обработаны',
+      count: _subscribers.where((s) => !s.canTakeReading).length,
     ),
-    StatusFilterOption(
+    FilterOption(
       value: 'debtors',
       label: 'Должники',
-      count: debtorsCount,
-      icon: Icons.warning_amber_outlined,
-      color: Constants.error,
+      count: _subscribers.where((s) => s.isDebtor).length,
     ),
   ];
 
   // Get sort options
   List<SortOption> get sortOptions => [
     SortOption(value: 'default', label: 'По умолчанию'),
-    SortOption(value: 'name', label: 'По имени'),
+    SortOption(value: 'name', label: 'По ФИО'),
     SortOption(value: 'address', label: 'По адресу'),
-    SortOption(value: 'debt', label: 'По долгу'),
+    SortOption(value: 'debt', label: 'По балансу'),
   ];
 }
 
-// Status filter option model
-class StatusFilterOption {
+// Filter option model
+class FilterOption {
   final String value;
   final String label;
   final int count;
-  final IconData icon;
-  final Color color;
 
-  StatusFilterOption({
+  FilterOption({
     required this.value,
     required this.label,
     required this.count,
-    required this.icon,
-    required this.color,
   });
 }
 

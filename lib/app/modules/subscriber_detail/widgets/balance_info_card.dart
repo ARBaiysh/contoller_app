@@ -70,7 +70,7 @@ class BalanceInfoCard extends StatelessWidget {
             const SizedBox(height: Constants.paddingM),
             _InfoRow(
               label: 'Последняя оплата',
-              value: '${subscriber.lastPaymentAmount.toStringAsFixed(2)} сом',
+                value: '${subscriber.lastPaymentAmount?.toStringAsFixed(2) ?? "0.00"} сом',
             ),
             _InfoRow(
               label: 'Дата оплаты',

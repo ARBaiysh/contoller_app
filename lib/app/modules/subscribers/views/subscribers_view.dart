@@ -15,6 +15,22 @@ class SubscribersView extends GetView<SubscribersController> {
       appBar: CustomAppBar(
         title: controller.tpName,
         actions: [
+          // Кнопка синхронизации
+          Obx(() => controller.isSyncing
+              ? Container(
+            margin: const EdgeInsets.only(right: 12),
+            width: 20,
+            height: 20,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+              : IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: controller.syncSubscribers,
+            tooltip: 'Синхронизировать',
+          )),
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: () => _showSortDialog(context),
@@ -23,9 +39,9 @@ class SubscribersView extends GetView<SubscribersController> {
         ],
       ),
       body: SafeArea(
-        top: false,    // AppBar уже учитывает верхнюю область
-        bottom: true,  // Защищаем от виртуальных кнопок внизу
-        left: true,    // Защищаем от вырезов по бокам
+        top: false, // AppBar уже учитывает верхнюю область
+        bottom: true, // Защищаем от виртуальных кнопок внизу
+        left: true, // Защищаем от вырезов по бокам
         right: true,
         child: Column(
           children: [
@@ -76,10 +92,32 @@ class SubscribersView extends GetView<SubscribersController> {
       child: Obx(() => ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
-        itemCount: controller.statusFilterOptions.length,
+        itemCount: controller.filterOptions.length,
         itemBuilder: (context, index) {
-          final option = controller.statusFilterOptions[index];
+          final option = controller.filterOptions[index];
           final isSelected = controller.selectedStatus == option.value;
+
+          // Определяем цвет и иконку для каждого фильтра
+          Color chipColor = AppColors.primary;
+          IconData chipIcon = Icons.people;
+
+          switch (option.value) {
+            case 'available':
+              chipColor = AppColors.warning;
+              chipIcon = Icons.edit;
+              break;
+            case 'completed':
+              chipColor = AppColors.success;
+              chipIcon = Icons.check_circle;
+              break;
+            case 'debtors':
+              chipColor = AppColors.error;
+              chipIcon = Icons.warning;
+              break;
+            default:
+              chipColor = AppColors.info;
+              chipIcon = Icons.people;
+          }
 
           return Padding(
             padding: const EdgeInsets.only(right: Constants.paddingS),
@@ -88,9 +126,9 @@ class SubscribersView extends GetView<SubscribersController> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    option.icon,
+                    chipIcon,
                     size: 16,
-                    color: isSelected ? Colors.white : option.color,
+                    color: isSelected ? Colors.white : chipColor,
                   ),
                   const SizedBox(width: 4),
                   Text('${option.label} (${option.count})'),
@@ -98,15 +136,15 @@ class SubscribersView extends GetView<SubscribersController> {
               ),
               selected: isSelected,
               onSelected: (_) => controller.setStatusFilter(option.value),
-              backgroundColor: option.color.withValues(alpha: 0.1),
-              selectedColor: option.color,
+              backgroundColor: chipColor.withValues(alpha: 0.1),
+              selectedColor: chipColor,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : option.color,
+                color: isSelected ? Colors.white : chipColor,
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               side: BorderSide(
-                color: option.color.withValues(alpha: 0.3),
+                color: chipColor.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -163,9 +201,7 @@ class SubscribersView extends GetView<SubscribersController> {
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
-              isSearching
-                  ? 'Абоненты не найдены'
-                  : 'Список пуст',
+              isSearching ? 'Абоненты не найдены' : 'Список пуст',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: Constants.paddingS),
@@ -176,7 +212,8 @@ class SubscribersView extends GetView<SubscribersController> {
                   ? 'Нет абонентов с выбранным статусом'
                   : 'В данном ТП нет абонентов',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                color:
+                Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

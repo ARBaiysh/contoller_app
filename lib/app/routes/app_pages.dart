@@ -18,6 +18,7 @@ import '../modules/report_viewer/views/report_viewer_view.dart';
 import '../modules/reports/views/reports_view.dart';
 import '../modules/search/views/search_view.dart';
 import '../modules/settings/views/settings_view.dart';
+import '../modules/splash/controllers/splash_controller.dart';
 import '../modules/splash/views/splash_view.dart';
 import '../modules/subscriber_detail/views/subscriber_detail_view.dart';
 import '../modules/subscribers/views/subscribers_view.dart';
@@ -38,6 +39,9 @@ class AppPages {
     GetPage(
       name: _Paths.SPLASH,
       page: () => const SplashView(),
+      binding: BindingsBuilder(() {
+        Get.put(SplashController());
+      }),
       transition: Transition.fadeIn,
     ),
     GetPage(

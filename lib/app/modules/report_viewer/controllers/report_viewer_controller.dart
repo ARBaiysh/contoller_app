@@ -41,7 +41,7 @@ class ReportViewerController extends GetxController {
     switch (reportType) {
       case 'disconnections':
       case 'debtors':
-        return subscriber.debtAmount;
+        return subscriber.balance;
       case 'payments':
         return subscriber.balance;
       default:

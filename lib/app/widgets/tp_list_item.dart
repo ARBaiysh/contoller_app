@@ -84,7 +84,7 @@ class TpListItem extends StatelessWidget {
 
                       // Address
                       Text(
-                        tp.address,
+                        tp.fider,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                         ),
@@ -135,6 +135,29 @@ class TpListItem extends StatelessWidget {
   }
 
   Widget _buildStatusBadge(BuildContext context) {
+    // Если нет данных о количестве абонентов
+    if (tp.totalSubscribers == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          'Нет данных',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    // Существующая логика для ТП с данными
     final isCompleted = tp.isCompleted;
     final color = isCompleted ? AppColors.success : AppColors.warning;
     final text = isCompleted ? 'Завершен' : 'В работе';
@@ -187,6 +210,42 @@ class TpListItem extends StatelessWidget {
   }
 
   Widget _buildProgressBar(BuildContext context) {
+    // Если нет данных о количестве абонентов
+    if (tp.totalSubscribers == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: Constants.paddingS,
+          horizontal: Constants.paddingM,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: Constants.paddingS),
+            Expanded(
+              child: Text(
+                'Нет данных об абонентах',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Существующий код для отображения прогресс-бара
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

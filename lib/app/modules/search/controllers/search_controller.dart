@@ -229,19 +229,13 @@ class GlobalSearchController extends GetxController {
     }
   }
 
-  // Get TP name for subscriber
-  String getTpName(String tpId) {
-    final tp = _tpList.firstWhereOrNull((tp) => tp.id == tpId);
-    return tp != null ? '${tp.number} ${tp.name}' : 'ТП';
-  }
-
   // Navigate to subscriber detail
   void navigateToSubscriberDetail(SubscriberModel subscriber) {
     Get.toNamed(
       Routes.SUBSCRIBER_DETAIL,
       arguments: {
         'subscriberId': subscriber.id,
-        'tpName': getTpName(subscriber.tpId),
+        'tpName': subscriber.tpId,
       },
     );
   }

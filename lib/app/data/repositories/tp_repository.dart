@@ -7,145 +7,95 @@ class TpRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
 
-  // Cache for TP list
-  List<TpModel>? _tpListCache;
-  DateTime? _lastFetchTime;
+  // In-memory cache для статистики ТП
+  final Map<String, TpModel> _tpCache = {};
 
-  // Cache duration (5 minutes)
-  static const Duration _cacheDuration = Duration(minutes: 5);
-
-  // Get all TPs assigned to current user
+  // Get all TPs
   Future<List<TpModel>> getTpList({bool forceRefresh = false}) async {
     try {
-      // Check if cache is valid
-      if (!forceRefresh &&
-          _tpListCache != null &&
-          _lastFetchTime != null &&
-          DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
-        return _tpListCache!;
+      final response = await _apiProvider.getTransformerPoints();
+
+      // Преобразуем данные в модели
+      final tpList = response.data.map((json) => TpModel.fromJson(json)).toList();
+
+      // Обновляем кеш с сохранением статистики
+      for (var tp in tpList) {
+        if (_tpCache.containsKey(tp.id) && !forceRefresh) {
+          // Сохраняем существующую статистику
+          final cachedTp = _tpCache[tp.id]!;
+          tp.totalSubscribers = cachedTp.totalSubscribers;
+          tp.readingsCollected = cachedTp.readingsCollected;
+          tp.readingsAvailable = cachedTp.readingsAvailable;
+          tp.readingsProcessing = cachedTp.readingsProcessing;
+          tp.readingsCompleted = cachedTp.readingsCompleted;
+          tp.lastUpdated = cachedTp.lastUpdated;
+        }
+        _tpCache[tp.id] = tp;
       }
 
-      // Fetch from API
-      final allTps = await _apiProvider.getTpList();
+      // Проверяем статус синхронизации
+      if (response.syncing && response.syncMessageId != null) {
+        // TODO: Обработать синхронизацию когда будет готов механизм
+        print('[TP REPO] TP list is syncing, messageId: ${response.syncMessageId}');
+      }
 
-      // Filter by assigned TPs for current user
-      final assignedTpIds = _authRepository.assignedTps;
-      final userTps = allTps.where((tp) => assignedTpIds.contains(tp.id)).toList();
-
-      // Update cache
-      _tpListCache = userTps;
-      _lastFetchTime = DateTime.now();
-
-      return userTps;
+      return tpList;
     } catch (e) {
-      print('Error fetching TP list: $e');
+      print('[TP REPO] Error fetching TP list: $e');
       throw Exception('Не удалось загрузить список ТП');
     }
   }
 
   // Get TP by ID
-  Future<TpModel> getTpById(String tpId) async {
+  TpModel? getTpById(String tpId) {
+    return _tpCache[tpId];
+  }
+
+  // Sync TP abonents
+  Future<Map<String, dynamic>> syncTpAbonents(String tpCode) async {
     try {
-      // Check cache first
-      if (_tpListCache != null) {
-        final cachedTp = _tpListCache!.firstWhereOrNull((tp) => tp.id == tpId);
-        if (cachedTp != null) {
-          return cachedTp;
-        }
-      }
+      final result = await _apiProvider.syncTpAbonents(tpCode);
 
-      // Fetch from API
-      final tp = await _apiProvider.getTpById(tpId);
+      // После синхронизации нужно обновить список абонентов
+      // Это будет реализовано позже вместе с загрузкой абонентов
 
-      // Check if user has access to this TP
-      final assignedTpIds = _authRepository.assignedTps;
-      if (!assignedTpIds.contains(tp.id)) {
-        throw Exception('У вас нет доступа к данному ТП');
-      }
-
-      return tp;
+      return result;
     } catch (e) {
-      print('Error fetching TP details: $e');
-      throw Exception('Не удалось загрузить данные ТП');
+      print('[TP REPO] Error syncing TP abonents: $e');
+      throw Exception('Не удалось синхронизировать абонентов');
     }
   }
 
-  // Get TPs by status
-  Future<List<TpModel>> getTpsByStatus(String status) async {
-    try {
-      final allTps = await getTpList();
-      return allTps.where((tp) => tp.status == status).toList();
-    } catch (e) {
-      print('Error filtering TPs by status: $e');
-      throw Exception('Ошибка фильтрации');
+  // Update TP statistics (вызывается из SubscriberRepository)
+  void updateTpStatistics(String tpId, List<dynamic> subscribers) {
+    final tp = _tpCache[tpId];
+    if (tp != null) {
+      tp.updateStatistics(subscribers);
+      _tpCache[tpId] = tp;
+      print('[TP REPO] Updated statistics for TP $tpId: ${tp.totalSubscribers} subscribers');
     }
   }
 
-  // Get TP statistics
-  Future<Map<String, dynamic>> getTpStatistics(String tpId) async {
-    try {
-      final tp = await getTpById(tpId);
-
-      return {
-        'total_subscribers': tp.totalSubscribers,
-        'readings_collected': tp.readingsCollected,
-        'progress_percentage': tp.progressPercentage,
-        'is_completed': tp.isCompleted,
-        'readings_by_status': {
-          'available': tp.readingsAvailable,
-          'processing': tp.readingsProcessing,
-          'completed': tp.readingsCompleted,
-        },
-      };
-    } catch (e) {
-      print('Error getting TP statistics: $e');
-      throw Exception('Не удалось получить статистику ТП');
-    }
-  }
-
-  // Search TPs
-  Future<List<TpModel>> searchTps(String query) async {
-    try {
-      if (query.isEmpty) return [];
-
-      final allTps = await getTpList();
-      final lowerQuery = query.toLowerCase();
-
-      return allTps.where((tp) {
-        final number = tp.number.toLowerCase();
-        final name = tp.name.toLowerCase();
-        final address = tp.address.toLowerCase();
-
-        return number.contains(lowerQuery) ||
-            name.contains(lowerQuery) ||
-            address.contains(lowerQuery);
-      }).toList();
-    } catch (e) {
-      print('Error searching TPs: $e');
-      throw Exception('Ошибка поиска');
-    }
-  }
-
-  // Get TPs with uncollected readings
-  Future<List<TpModel>> getTpsWithUncollectedReadings() async {
-    try {
-      final allTps = await getTpList();
-      return allTps.where((tp) => !tp.isCompleted).toList()
-        ..sort((a, b) => a.progressPercentage.compareTo(b.progressPercentage));
-    } catch (e) {
-      print('Error getting TPs with uncollected readings: $e');
-      throw Exception('Ошибка получения данных');
-    }
+  // Recalculate all statistics (если понадобится)
+  Future<void> recalculateAllStatistics() async {
+    // TODO: Реализовать когда будет готов SubscriberRepository
+    print('[TP REPO] Recalculating all TP statistics...');
   }
 
   // Clear cache
   void clearCache() {
-    _tpListCache = null;
-    _lastFetchTime = null;
+    _tpCache.clear();
   }
 
-  // Refresh TP list
-  Future<List<TpModel>> refreshTpList() async {
-    return getTpList(forceRefresh: true);
+  // Search TPs
+  List<TpModel> searchTps(String query) {
+    if (query.isEmpty) return _tpCache.values.toList();
+
+    final lowerQuery = query.toLowerCase();
+    return _tpCache.values.where((tp) {
+      return tp.number.toLowerCase().contains(lowerQuery) ||
+          tp.name.toLowerCase().contains(lowerQuery) ||
+          tp.fider.toLowerCase().contains(lowerQuery);
+    }).toList();
   }
 }
