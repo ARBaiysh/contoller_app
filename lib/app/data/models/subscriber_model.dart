@@ -1,168 +1,125 @@
-
 class SubscriberModel {
-  final int id;
+  final String id;
   final String accountNumber;
   final String fullName;
   final String address;
-  final String? phone;
+  final String tpId;
+  final String tpNumber;
+  final MeterInfo meterInfo;
   final double balance;
-  final int? lastReading;
-  final DateTime? lastReadingDate;
-  final bool canTakeReading;
-  final String? meterType;
-  final String? meterSerialNumber;
-  final String? sealNumber;
-  final String? tariffName;
-  final double? lastPaymentAmount;
+  final double lastPaymentAmount;
   final DateTime? lastPaymentDate;
-  final String? transformerPointCode;
-  final String? transformerPointName;
-  final String? syncStatus;
-  final DateTime? lastSync;
-  final bool syncAvailable;
-
-  // Дополнительные поля для UI
-  int? currentReading;
-  double? consumption;
-  double? amountDue;
-
-  // Вычисляемые поля
-  bool get isDebtor => balance < 0;
-  double get debtAmount => balance < 0 ? balance.abs() : 0;
-
-  // Для совместимости со старым кодом
-  String? get tpId => transformerPointCode;
-  String? get tpNumber {
-    if (transformerPointCode != null && transformerPointCode!.startsWith('TP')) {
-      return '№${transformerPointCode!.substring(2)}';
-    }
-    return null;
-  }
-
-  // MeterInfo для совместимости
-  MeterInfo get meterInfo => MeterInfo(
-    type: meterType ?? 'нет ПУ',
-    serialNumber: meterSerialNumber ?? '',
-    sealNumber: sealNumber ?? '',
-    tariffCode: 1,
-  );
-
-  // Reading status based on sync status and canTakeReading
-  ReadingStatus get readingStatus {
-    if (!canTakeReading) return ReadingStatus.completed;
-    if (syncStatus == 'SYNCING') return ReadingStatus.processing;
-    return ReadingStatus.available;
-  }
+  final ReadingStatus readingStatus;
+  final int? lastReading;
+  final int? currentReading;
+  final DateTime? lastReadingDate;
+  final double? consumption;
+  final double? amountDue;
 
   SubscriberModel({
     required this.id,
     required this.accountNumber,
     required this.fullName,
     required this.address,
-    this.phone,
-    required this.balance,
-    this.lastReading,
-    this.lastReadingDate,
-    required this.canTakeReading,
-    this.meterType,
-    this.meterSerialNumber,
-    this.sealNumber,
-    this.tariffName,
-    this.lastPaymentAmount,
+    required this.tpId,
+    required this.tpNumber,
+    required this.meterInfo,
+    this.balance = 0.0,
+    this.lastPaymentAmount = 0.0,
     this.lastPaymentDate,
-    this.transformerPointCode,
-    this.transformerPointName,
-    this.syncStatus,
-    this.lastSync,
-    required this.syncAvailable,
+    this.readingStatus = ReadingStatus.available,
+    this.lastReading,
     this.currentReading,
+    this.lastReadingDate,
     this.consumption,
     this.amountDue,
   });
 
+  // Check if subscriber is debtor
+  bool get isDebtor => balance < 0;
+
+  // Get debt amount (positive value)
+  double get debtAmount => balance < 0 ? balance.abs() : 0;
+
+  // Check if reading can be taken
+  bool get canTakeReading => readingStatus == ReadingStatus.available;
+
+  // From JSON - ИСПРАВЛЕННАЯ ВЕРСИЯ
   factory SubscriberModel.fromJson(Map<String, dynamic> json) {
+    // Создаем meter_info из отдельных полей если нет объекта meter_info
+    final meterInfoData = json['meter_info'] ?? {
+      'type': json['meterType'] ?? 'СОЭ',
+      'serial_number': json['meterSerialNumber'] ?? '',
+      'seal_number': json['sealNumber'] ?? '',
+      'tariff_code': 1,
+    };
+
     return SubscriberModel(
-      id: json['id'] ?? 0,
-      accountNumber: json['accountNumber'] ?? '',
-      fullName: json['fullName'] ?? '',
+      id: json['id']?.toString() ?? '',
+      accountNumber: json['accountNumber'] ?? json['account_number'] ?? '',
+      fullName: json['fullName'] ?? json['full_name'] ?? '',
       address: json['address'] ?? '',
-      phone: json['phone'],
+      tpId: json['transformerPointCode'] ?? json['tp_id']?.toString() ?? '',
+      tpNumber: json['transformerPointName'] ?? json['tp_number'] ?? '',
+      meterInfo: MeterInfo.fromJson(meterInfoData),
       balance: (json['balance'] ?? 0).toDouble(),
-      lastReading: json['lastReading'],
-      lastReadingDate: json['lastReadingDate'] != null
-          ? DateTime.tryParse(json['lastReadingDate'])
-          : null,
-      canTakeReading: json['canTakeReading'] ?? false,
-      meterType: json['meterType'],
-      meterSerialNumber: json['meterSerialNumber'],
-      sealNumber: json['sealNumber'],
-      tariffName: json['tariffName'],
-      lastPaymentAmount: json['lastPaymentAmount'] != null
-          ? (json['lastPaymentAmount']).toDouble()
-          : null,
+      lastPaymentAmount: (json['lastPaymentAmount'] ?? json['last_payment_amount'] ?? 0).toDouble(),
       lastPaymentDate: json['lastPaymentDate'] != null
           ? DateTime.tryParse(json['lastPaymentDate'])
+          : json['last_payment_date'] != null
+          ? DateTime.tryParse(json['last_payment_date'])
           : null,
-      transformerPointCode: json['transformerPointCode'],
-      transformerPointName: json['transformerPointName'],
-      syncStatus: json['syncStatus'],
-      lastSync: json['lastSync'] != null
-          ? DateTime.tryParse(json['lastSync'])
+      readingStatus: ReadingStatus.fromString(json['readingStatus'] ?? json['reading_status'] ?? 'available'),
+      lastReading: json['lastReading'] ?? json['last_reading'],
+      currentReading: json['currentReading'] ?? json['current_reading'],
+      lastReadingDate: json['lastReadingDate'] != null
+          ? DateTime.tryParse(json['lastReadingDate'])
+          : json['last_reading_date'] != null
+          ? DateTime.tryParse(json['last_reading_date'])
           : null,
-      syncAvailable: json['syncAvailable'] ?? true,
+      consumption: json['consumption']?.toDouble(),
+      amountDue: json['amount_due']?.toDouble() ?? json['amountDue']?.toDouble(),
     );
   }
 
+  // To JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'accountNumber': accountNumber,
-      'fullName': fullName,
+      'account_number': accountNumber,
+      'full_name': fullName,
       'address': address,
-      'phone': phone,
+      'tp_id': tpId,
+      'tp_number': tpNumber,
+      'meter_info': meterInfo.toJson(),
       'balance': balance,
-      'lastReading': lastReading,
-      'lastReadingDate': lastReadingDate?.toIso8601String(),
-      'canTakeReading': canTakeReading,
-      'meterType': meterType,
-      'meterSerialNumber': meterSerialNumber,
-      'sealNumber': sealNumber,
-      'tariffName': tariffName,
-      'lastPaymentAmount': lastPaymentAmount,
-      'lastPaymentDate': lastPaymentDate?.toIso8601String(),
-      'transformerPointCode': transformerPointCode,
-      'transformerPointName': transformerPointName,
-      'syncStatus': syncStatus,
-      'lastSync': lastSync?.toIso8601String(),
-      'syncAvailable': syncAvailable,
-      'currentReading': currentReading,
+      'last_payment_amount': lastPaymentAmount,
+      'last_payment_date': lastPaymentDate?.toIso8601String(),
+      'reading_status': readingStatus.value,
+      'last_reading': lastReading,
+      'current_reading': currentReading,
+      'last_reading_date': lastReadingDate?.toIso8601String(),
       'consumption': consumption,
-      'amountDue': amountDue,
+      'amount_due': amountDue,
     };
   }
 
+  // Copy with
   SubscriberModel copyWith({
-    int? id,
+    String? id,
     String? accountNumber,
     String? fullName,
     String? address,
-    String? phone,
+    String? tpId,
+    String? tpNumber,
+    MeterInfo? meterInfo,
     double? balance,
-    int? lastReading,
-    DateTime? lastReadingDate,
-    bool? canTakeReading,
-    String? meterType,
-    String? meterSerialNumber,
-    String? sealNumber,
-    String? tariffName,
     double? lastPaymentAmount,
     DateTime? lastPaymentDate,
-    String? transformerPointCode,
-    String? transformerPointName,
-    String? syncStatus,
-    DateTime? lastSync,
-    bool? syncAvailable,
+    ReadingStatus? readingStatus,
+    int? lastReading,
     int? currentReading,
+    DateTime? lastReadingDate,
     double? consumption,
     double? amountDue,
   }) {
@@ -171,30 +128,23 @@ class SubscriberModel {
       accountNumber: accountNumber ?? this.accountNumber,
       fullName: fullName ?? this.fullName,
       address: address ?? this.address,
-      phone: phone ?? this.phone,
+      tpId: tpId ?? this.tpId,
+      tpNumber: tpNumber ?? this.tpNumber,
+      meterInfo: meterInfo ?? this.meterInfo,
       balance: balance ?? this.balance,
-      lastReading: lastReading ?? this.lastReading,
-      lastReadingDate: lastReadingDate ?? this.lastReadingDate,
-      canTakeReading: canTakeReading ?? this.canTakeReading,
-      meterType: meterType ?? this.meterType,
-      meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
-      sealNumber: sealNumber ?? this.sealNumber,
-      tariffName: tariffName ?? this.tariffName,
       lastPaymentAmount: lastPaymentAmount ?? this.lastPaymentAmount,
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
-      transformerPointCode: transformerPointCode ?? this.transformerPointCode,
-      transformerPointName: transformerPointName ?? this.transformerPointName,
-      syncStatus: syncStatus ?? this.syncStatus,
-      lastSync: lastSync ?? this.lastSync,
-      syncAvailable: syncAvailable ?? this.syncAvailable,
+      readingStatus: readingStatus ?? this.readingStatus,
+      lastReading: lastReading ?? this.lastReading,
       currentReading: currentReading ?? this.currentReading,
+      lastReadingDate: lastReadingDate ?? this.lastReadingDate,
       consumption: consumption ?? this.consumption,
       amountDue: amountDue ?? this.amountDue,
     );
   }
 }
 
-// MeterInfo class для совместимости
+// Meter Information
 class MeterInfo {
   final String type;
   final String serialNumber;
@@ -207,6 +157,15 @@ class MeterInfo {
     this.sealNumber = '',
     this.tariffCode = 1,
   });
+
+  factory MeterInfo.fromJson(Map<String, dynamic> json) {
+    return MeterInfo(
+      type: json['type'] ?? 'СОЭ',
+      serialNumber: json['serial_number'] ?? '',
+      sealNumber: json['seal_number'] ?? '',
+      tariffCode: json['tariff_code'] ?? 1,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {

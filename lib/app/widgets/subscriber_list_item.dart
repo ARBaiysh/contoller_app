@@ -100,7 +100,7 @@ class SubscriberListItem extends StatelessWidget {
                         ),
 
                         // Meter serial number if available
-                        if (subscriber.meterSerialNumber != null) ...[
+                        if (subscriber.meterInfo != null) ...[
                           const SizedBox(height: 4),
                           Row(
                             children: [
@@ -115,7 +115,7 @@ class SubscriberListItem extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Счетчик: ${subscriber.meterSerialNumber}',
+                                'Счетчик: ${subscriber.meterInfo}',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 12,
                                   color: Theme.of(context)

@@ -8,7 +8,7 @@ import '../models/region_model.dart';
 import '../models/tp_list_response_model.dart';
 
 class ApiProvider extends GetxService {
-  static const String baseUrl = 'http://212.42.113.48:8269/api';
+  static const String baseUrl = 'http://192.168.120.10:8269/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
