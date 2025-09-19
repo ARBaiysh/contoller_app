@@ -1,22 +1,22 @@
 class SyncStatusModel {
   final String messageType;
   final int messageId;
-  final String status; // NEW/PROCESSING/DONE/ERROR
-  final String? errorDetails;
+  final String status; // NEW/PROCESSING/DONE/ERROR/SYNCING
+  final String? result; // Заменили errorDetails на result
 
   SyncStatusModel({
     required this.messageType,
     required this.messageId,
     required this.status,
-    this.errorDetails,
+    this.result,
   });
 
   factory SyncStatusModel.fromJson(Map<String, dynamic> json) {
     return SyncStatusModel(
-      messageType: json['messageType'] ?? '',
+      messageType: json['messageType'] ?? 'UNKNOWN',
       messageId: json['messageId'] ?? 0,
       status: json['status'] ?? 'ERROR',
-      errorDetails: json['errorDetails'],
+      result: json['result'], // Новое поле
     );
   }
 
@@ -25,27 +25,31 @@ class SyncStatusModel {
       'messageType': messageType,
       'messageId': messageId,
       'status': status,
-      'errorDetails': errorDetails,
+      'result': result,
     };
   }
 
-  // Convenience getters
+  // Convenience getters (ОБНОВЛЕННЫЕ)
   bool get isSuccess => status == 'DONE';
   bool get isError => status == 'ERROR';
   bool get isSyncing => status == 'SYNCING' || status == 'NEW' || status == 'PROCESSING';
 
+  // Обновленные сообщения
   String get displayMessage {
     switch (status) {
-      case 'SUCCESS':
-        return 'Синхронизация завершена успешно';
+      case 'DONE':
+        return result ?? 'Синхронизация завершена успешно';
       case 'ERROR':
-        return errorDetails ?? 'Ошибка синхронизации';
+        return result ?? 'Ошибка синхронизации';
       case 'SYNCING':
       case 'NEW':
       case 'PROCESSING':
-        return 'Выполняется синхронизация с 1С...';
+        return 'Выполняется синхронизация...';
       default:
-        return 'Неизвестный статус: $status';
+        return result ?? 'Неизвестный статус: $status';
     }
   }
+
+  // Для ошибок - извлекаем детали из result
+  String? get errorDetails => isError ? result : null;
 }
