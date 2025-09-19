@@ -63,7 +63,7 @@ class SubscriberModel {
   String get formattedBalance {
     final absBalance = balance.abs();
     final formatted = absBalance.toStringAsFixed(2);
-    return balance < 0 ? '-$formatted руб.' : '+$formatted руб.';
+    return balance < 0 ? '-$formatted сом.' : '+$formatted сом.';
   }
 
   /// Статус для цветовой индикации

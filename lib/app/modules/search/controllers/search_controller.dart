@@ -147,17 +147,18 @@ class GlobalSearchController extends GetxController {
         filtered = filtered.where((s) => s.isDebtor).toList();
       }
 
+      // ИСПРАВЛЕНО: используем canTakeReading вместо ReadingStatus
       if (_filterByStatus.value != 'all') {
         switch (_filterByStatus.value) {
           case 'available':
-            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.available).toList();
-            break;
-          case 'processing':
-            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.processing).toList();
+          // Можно снимать показания
+            filtered = filtered.where((s) => s.canTakeReading).toList();
             break;
           case 'completed':
-            filtered = filtered.where((s) => s.readingStatus == ReadingStatus.completed).toList();
+          // Показания уже сняты (нельзя снимать)
+            filtered = filtered.where((s) => !s.canTakeReading).toList();
             break;
+        // Убрали case 'processing' так как в новой модели нет промежуточного состояния
         }
       }
 
@@ -166,12 +167,13 @@ class GlobalSearchController extends GetxController {
       // Add to recent searches
       addToRecentSearches(query);
     } catch (e) {
+      print('Search error: $e');
       Get.snackbar(
         'Ошибка',
         'Не удалось выполнить поиск',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        colorText: Get.theme.colorScheme.error,
       );
     } finally {
       _isLoading.value = false;
@@ -234,8 +236,9 @@ class GlobalSearchController extends GetxController {
     Get.toNamed(
       Routes.SUBSCRIBER_DETAIL,
       arguments: {
-        'subscriberId': subscriber.id,
-        'tpName': subscriber.tpId,
+        'subscriber': subscriber,
+        'tpName': subscriber.transformerPointName,
+        'tpCode': subscriber.transformerPointCode,
       },
     );
   }
@@ -257,5 +260,26 @@ class GlobalSearchController extends GetxController {
     }
 
     return suggestions.take(5).toList();
+  }
+
+  // ИСПРАВЛЕНО: обновленные опции фильтра под новую модель
+  List<Map<String, dynamic>> get statusFilterOptions {
+    return [
+      {
+        'value': 'all',
+        'label': 'Все',
+        'count': _searchResults.length,
+      },
+      {
+        'value': 'available',
+        'label': 'Можно брать',
+        'count': _searchResults.where((s) => s.canTakeReading).length,
+      },
+      {
+        'value': 'completed',
+        'label': 'Обработаны',
+        'count': _searchResults.where((s) => !s.canTakeReading).length,
+      },
+    ];
   }
 }

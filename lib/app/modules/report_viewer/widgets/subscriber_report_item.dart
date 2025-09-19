@@ -132,7 +132,7 @@ class SubscriberReportItem extends StatelessWidget {
               ),
               const SizedBox(width: Constants.paddingS),
               Text(
-                '${subscriber.tpNumber}',
+                '${subscriber.transformerPointName}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -185,7 +185,7 @@ class SubscriberReportItem extends StatelessWidget {
                 ),
                 const SizedBox(width: Constants.paddingS),
                 Text(
-                  'Последняя оплата: ${subscriber.lastPaymentAmount?.toStringAsFixed(0) ?? "0"} сом',
+                  'Последняя оплата: ${subscriber.lastPaymentAmount.toStringAsFixed(0)} сом',
                   style: TextStyle(
                     color: AppColors.success,
                     fontSize: 12,

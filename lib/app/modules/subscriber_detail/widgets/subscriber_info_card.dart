@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
@@ -32,8 +33,8 @@ class SubscriberInfoCard extends StatelessWidget {
               Text(
                 'Информация об абоненте',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -42,12 +43,14 @@ class SubscriberInfoCard extends StatelessWidget {
           _InfoRow(label: 'ФИО', value: subscriber.fullName),
           _InfoRow(label: 'Лицевой счет', value: subscriber.accountNumber),
           _InfoRow(label: 'Адрес', value: subscriber.address),
+          if (subscriber.phone != null && subscriber.phone!.isNotEmpty)
+            _InfoRow(label: 'Телефон', value: subscriber.phone!),
           _InfoRow(label: 'ТП', value: tpName),
 
           const SizedBox(height: Constants.paddingM),
 
-          // Status badge
-          _StatusBadge(status: subscriber.readingStatus),
+          // ИСПРАВЛЕНО: Status badge (используем новую модель)
+          _StatusBadge(status: subscriber.status),
         ],
       ),
     );
@@ -78,16 +81,17 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               '$label:',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: valueStyle ?? Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: valueStyle ??
+                  Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
             ),
           ),
         ],
@@ -96,8 +100,9 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+// ИСПРАВЛЕНО: StatusBadge использует новый SubscriberStatus
 class _StatusBadge extends StatelessWidget {
-  final ReadingStatus status;
+  final SubscriberStatus status;
 
   const _StatusBadge({
     Key? key,
@@ -142,23 +147,23 @@ class _StatusBadge extends StatelessWidget {
 
   Color _getStatusColor() {
     switch (status) {
-      case ReadingStatus.available:
+      case SubscriberStatus.normal:
         return AppColors.success;
-      case ReadingStatus.processing:
-        return AppColors.warning;
-      case ReadingStatus.completed:
+      case SubscriberStatus.debtor:
+        return AppColors.error;
+      case SubscriberStatus.disabled:
         return Colors.grey;
     }
   }
 
   IconData _getStatusIcon() {
     switch (status) {
-      case ReadingStatus.available:
+      case SubscriberStatus.normal:
         return Icons.check_circle_outline;
-      case ReadingStatus.processing:
-        return Icons.pending;
-      case ReadingStatus.completed:
-        return Icons.check_circle;
+      case SubscriberStatus.debtor:
+        return Icons.warning;
+      case SubscriberStatus.disabled:
+        return Icons.block;
     }
   }
 }

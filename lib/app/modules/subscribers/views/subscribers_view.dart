@@ -15,7 +15,7 @@ class SubscribersView extends GetView<SubscribersController> {
       appBar: CustomAppBar(
         title: controller.tpName,
         actions: [
-          // Кнопка синхронизации
+          // Кнопка синхронизации (ОБНОВЛЕНО: теперь с состояниями)
           Obx(() => controller.isSyncing
               ? Container(
             margin: const EdgeInsets.only(right: 12),
@@ -45,13 +45,16 @@ class SubscribersView extends GetView<SubscribersController> {
         right: true,
         child: Column(
           children: [
-            // Search field
+            // Search field (БЕЗ ИЗМЕНЕНИЙ)
             _buildSearchField(context),
 
-            // Status filter chips
+            // НОВОЕ: Индикатор прогресса синхронизации
+            _buildSyncProgress(context),
+
+            // Status filter chips (ОБНОВЛЕНО: использует новую статистику)
             _buildStatusChips(context),
 
-            // Subscribers list
+            // Subscribers list (БЕЗ ИЗМЕНЕНИЙ структуры)
             Expanded(
               child: Obx(() => _buildSubscribersList(context)),
             ),
@@ -60,6 +63,10 @@ class SubscribersView extends GetView<SubscribersController> {
       ),
     );
   }
+
+  // ========================================
+  // ПОИСК (БЕЗ ИЗМЕНЕНИЙ)
+  // ========================================
 
   Widget _buildSearchField(BuildContext context) {
     return Container(
@@ -85,6 +92,68 @@ class SubscribersView extends GetView<SubscribersController> {
     );
   }
 
+  // ========================================
+  // НОВОЕ: ПРОГРЕСС СИНХРОНИЗАЦИИ
+  // ========================================
+
+  Widget _buildSyncProgress(BuildContext context) {
+    return Obx(() {
+      if (!controller.isSyncing) {
+        return const SizedBox.shrink(); // Скрываем если не синхронизируемся
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingM,
+          vertical: Constants.paddingS,
+        ),
+        color: Get.theme.colorScheme.primary.withOpacity(0.1),
+        child: Row(
+          children: [
+            // Анимированная иконка синхронизации
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Get.theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: Constants.paddingS),
+
+            // Текст прогресса
+            Expanded(
+              child: Text(
+                controller.syncProgress.isNotEmpty
+                    ? controller.syncProgress
+                    : 'Синхронизация абонентов...',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Get.theme.colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // Таймер
+            Text(
+              controller.syncElapsedFormatted,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Get.theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // ========================================
+  // ФИЛЬТР ЧИПЫ (ОБНОВЛЕНО: новая статистика)
+  // ========================================
+
   Widget _buildStatusChips(BuildContext context) {
     return Container(
       height: 40,
@@ -92,32 +161,11 @@ class SubscribersView extends GetView<SubscribersController> {
       child: Obx(() => ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
-        itemCount: controller.filterOptions.length,
+        itemCount: controller.statusFilterOptions.length,
         itemBuilder: (context, index) {
-          final option = controller.filterOptions[index];
-          final isSelected = controller.selectedStatus == option.value;
-
-          // Определяем цвет и иконку для каждого фильтра
-          Color chipColor = AppColors.primary;
-          IconData chipIcon = Icons.people;
-
-          switch (option.value) {
-            case 'available':
-              chipColor = AppColors.warning;
-              chipIcon = Icons.edit;
-              break;
-            case 'completed':
-              chipColor = AppColors.success;
-              chipIcon = Icons.check_circle;
-              break;
-            case 'debtors':
-              chipColor = AppColors.error;
-              chipIcon = Icons.warning;
-              break;
-            default:
-              chipColor = AppColors.info;
-              chipIcon = Icons.people;
-          }
+          final option = controller.statusFilterOptions[index];
+          final isSelected = controller.selectedStatus == option['value'];
+          final chipColor = option['color'] as Color;
 
           return Padding(
             padding: const EdgeInsets.only(right: Constants.paddingS),
@@ -126,16 +174,16 @@ class SubscribersView extends GetView<SubscribersController> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    chipIcon,
+                    _getChipIcon(option['value']),
                     size: 16,
                     color: isSelected ? Colors.white : chipColor,
                   ),
                   const SizedBox(width: 4),
-                  Text('${option.label} (${option.count})'),
+                  Text('${option['label']} (${option['count']})'),
                 ],
               ),
               selected: isSelected,
-              onSelected: (_) => controller.setStatusFilter(option.value),
+              onSelected: (_) => controller.setStatusFilter(option['value']),
               backgroundColor: chipColor.withValues(alpha: 0.1),
               selectedColor: chipColor,
               labelStyle: TextStyle(
@@ -153,6 +201,24 @@ class SubscribersView extends GetView<SubscribersController> {
       )),
     );
   }
+
+  // Вспомогательный метод для иконок чипов
+  IconData _getChipIcon(String value) {
+    switch (value) {
+      case 'available':
+        return Icons.edit;
+      case 'completed':
+        return Icons.check_circle;
+      case 'debtors':
+        return Icons.warning;
+      default:
+        return Icons.people;
+    }
+  }
+
+  // ========================================
+  // СПИСОК АБОНЕНТОВ (БЕЗ ИЗМЕНЕНИЙ)
+  // ========================================
 
   Widget _buildSubscribersList(BuildContext context) {
     if (controller.isLoading) {
@@ -184,6 +250,10 @@ class SubscribersView extends GetView<SubscribersController> {
     );
   }
 
+  // ========================================
+  // ПУСТОЕ СОСТОЯНИЕ (БЕЗ ИЗМЕНЕНИЙ)
+  // ========================================
+
   Widget _buildEmptyState(BuildContext context) {
     final isSearching = controller.searchQuery.isNotEmpty;
     final isFiltered = controller.selectedStatus != 'all';
@@ -210,10 +280,9 @@ class SubscribersView extends GetView<SubscribersController> {
                   ? 'Попробуйте изменить параметры поиска'
                   : isFiltered
                   ? 'Нет абонентов с выбранным статусом'
-                  : 'В данном ТП нет абонентов',
+                  : 'Нажмите кнопку "Синхронизировать" для загрузки абонентов',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color:
-                Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -234,6 +303,14 @@ class SubscribersView extends GetView<SubscribersController> {
   }
 
   void _showSortDialog(BuildContext context) {
+    final sortOptions = [
+      {'value': 'default', 'label': 'По умолчанию'},
+      {'value': 'name', 'label': 'По имени'},
+      {'value': 'address', 'label': 'По адресу'},
+      {'value': 'account', 'label': 'По лицевому счету'},
+      {'value': 'debt', 'label': 'По задолженности'},
+    ];
+
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(
@@ -253,10 +330,10 @@ class SubscribersView extends GetView<SubscribersController> {
               ),
               const SizedBox(height: Constants.paddingL),
               Obx(() => Column(
-                children: controller.sortOptions.map((option) {
+                children: sortOptions.map((option) {
                   return RadioListTile<String>(
-                    title: Text(option.label),
-                    value: option.value,
+                    title: Text(option['label']!),
+                    value: option['value']!,
                     groupValue: controller.sortBy,
                     onChanged: (value) {
                       controller.setSorting(value!);

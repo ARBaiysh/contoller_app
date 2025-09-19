@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
-
 
 class ReadingHistoryCard extends StatelessWidget {
   final SubscriberModel subscriber;
@@ -54,18 +52,42 @@ class ReadingHistoryCard extends StatelessWidget {
             if (subscriber.lastReadingDate != null)
               _InfoRow(
                 label: 'Дата снятия',
-                value: DateFormat(Constants.dateFormat).format(subscriber.lastReadingDate!),
+                value: DateFormat('dd.MM.yyyy HH:mm').format(subscriber.lastReadingDate!),
               ),
-            if (subscriber.consumption != null)
+
+            // ИСПРАВЛЕНО: Убрали consumption и amountDue (их нет в новой модели)
+            // Показываем информацию о платежах вместо этого
+            if (subscriber.lastPaymentAmount > 0) ...[
+              const SizedBox(height: Constants.paddingS),
+              const Divider(),
+              const SizedBox(height: Constants.paddingS),
               _InfoRow(
-                label: 'Расход',
-                value: '${subscriber.consumption!.toStringAsFixed(0)} кВт·ч',
+                label: 'Последний платеж',
+                value: '${subscriber.lastPaymentAmount.toStringAsFixed(2)} сом.',
+                valueStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            if (subscriber.amountDue != null)
-              _InfoRow(
-                label: 'К оплате',
-                value: '${subscriber.amountDue!.toStringAsFixed(2)} сом',
+              if (subscriber.lastPaymentDate != null)
+                _InfoRow(
+                  label: 'Дата платежа',
+                  value: DateFormat('dd.MM.yyyy').format(subscriber.lastPaymentDate!),
+                ),
+            ],
+
+            // Показываем текущий баланс
+            const SizedBox(height: Constants.paddingS),
+            const Divider(),
+            const SizedBox(height: Constants.paddingS),
+            _InfoRow(
+              label: 'Текущий баланс',
+              value: subscriber.formattedBalance,
+              valueStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: subscriber.isDebtor ? AppColors.error : AppColors.success,
+                fontWeight: FontWeight.w600,
               ),
+            ),
           ] else
             Text(
               'Нет данных о предыдущих показаниях',

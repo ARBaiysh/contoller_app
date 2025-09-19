@@ -16,8 +16,24 @@ class TpListView extends GetView<TpListController> {
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Трансформаторные подстанции',
+        title: 'Список ТП',
         actions: [
+          // НОВОЕ: Кнопка синхронизации (аналогично абонентам)
+          Obx(() => controller.isSyncing
+              ? Container(
+            margin: const EdgeInsets.only(right: 12),
+            width: 20,
+            height: 20,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+              : IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: controller.syncTpList,
+            tooltip: 'Синхронизировать',
+          )),
           // Кнопка сортировки
           IconButton(
             icon: const Icon(Icons.sort),
@@ -36,7 +52,7 @@ class TpListView extends GetView<TpListController> {
             // Поиск
             _buildSearchField(context),
 
-            // Статус синхронизации
+            // НОВОЕ: Статус синхронизации (аналогично абонентам)
             _buildSyncStatus(context),
 
             // Список ТП
@@ -53,9 +69,7 @@ class TpListView extends GetView<TpListController> {
                 return _buildTpList(context, refreshController);
               }),
             ),
-
-            // Кнопка синхронизации внизу
-            _buildSyncButton(context),
+            // УБРАЛИ: Кнопку синхронизации внизу
           ],
         ),
       ),
@@ -97,7 +111,7 @@ class TpListView extends GetView<TpListController> {
   }
 
   // ========================================
-  // СТАТУС СИНХРОНИЗАЦИИ
+  // НОВОЕ: СТАТУС СИНХРОНИЗАЦИИ
   // ========================================
 
   Widget _buildSyncStatus(BuildContext context) {
@@ -105,47 +119,45 @@ class TpListView extends GetView<TpListController> {
       if (!controller.isSyncing) return const SizedBox.shrink();
 
       return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(Constants.paddingM),
-        margin: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
-        decoration: BoxDecoration(
-          color: AppColors.info.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-          border: Border.all(
-            color: AppColors.info.withValues(alpha: 0.3),
-            width: 1,
-          ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingM,
+          vertical: Constants.paddingS,
         ),
+        color: Get.theme.colorScheme.primary.withOpacity(0.1),
         child: Row(
           children: [
+            // Анимированная иконка синхронизации
             SizedBox(
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.info),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Get.theme.colorScheme.primary,
+                ),
               ),
             ),
-            const SizedBox(width: Constants.paddingM),
+            const SizedBox(width: Constants.paddingS),
+
+            // Текст прогресса
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    controller.syncProgress,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.info,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: Constants.paddingXS),
-                  Text(
-                    'Время: ${controller.syncElapsedFormatted} / 05:00',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.info.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
+              child: Text(
+                controller.syncProgress.isNotEmpty
+                    ? controller.syncProgress
+                    : 'Синхронизация ТП...',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Get.theme.colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // Таймер
+            Text(
+              controller.syncElapsedFormatted,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Get.theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -155,19 +167,12 @@ class TpListView extends GetView<TpListController> {
   }
 
   // ========================================
-  // СОСТОЯНИЯ
+  // СОСТОЯНИЯ ЗАГРУЗКИ
   // ========================================
 
   Widget _buildLoadingState(BuildContext context) {
     return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: Constants.paddingM),
-          Text('Загрузка списка ТП...'),
-        ],
-      ),
+      child: CircularProgressIndicator(),
     );
   }
 
@@ -192,7 +197,7 @@ class TpListView extends GetView<TpListController> {
             ),
             const SizedBox(height: Constants.paddingM),
             Text(
-              'Нажмите кнопку "Синхронизировать" внизу экрана для загрузки данных с сервера',
+              'Нажмите иконку синхронизации в верхней части экрана для загрузки данных с сервера',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
@@ -229,7 +234,7 @@ class TpListView extends GetView<TpListController> {
           left: Constants.paddingM,
           right: Constants.paddingM,
           top: Constants.paddingS,
-          bottom: Constants.paddingXL, // Отступ для кнопки синхронизации
+          bottom: Constants.paddingXL, // Убрали отступ для кнопки
         ),
         itemCount: controller.tpList.length,
         itemBuilder: (context, index) {
@@ -240,61 +245,6 @@ class TpListView extends GetView<TpListController> {
           );
         },
       ),
-    );
-  }
-
-  // ========================================
-  // КНОПКА СИНХРОНИЗАЦИИ
-  // ========================================
-
-  Widget _buildSyncButton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(Constants.paddingM),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Obx(() {
-        final isEnabled = !controller.isSyncing && !controller.isLoading;
-
-        return ElevatedButton.icon(
-          onPressed: isEnabled ? controller.syncTpList : null,
-          icon: controller.isSyncing
-              ? SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          )
-              : const Icon(Icons.sync),
-          label: Text(
-            controller.isSyncing ? 'Синхронизация...' : 'Синхронизировать',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isEnabled ? AppColors.primary : Colors.grey,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
-            disabledForegroundColor: Colors.grey.withValues(alpha: 0.6),
-            padding: const EdgeInsets.symmetric(vertical: Constants.paddingM),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Constants.borderRadius),
-            ),
-          ),
-        );
-      }),
     );
   }
 }

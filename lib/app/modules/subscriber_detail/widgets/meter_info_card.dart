@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
 
-
+// ИСПРАВЛЕНО: Убрали параметр MeterInfo, используем поля из SubscriberModel
 class MeterInfoCard extends StatelessWidget {
-  final MeterInfo meter;
+  final SubscriberModel subscriber;
 
   const MeterInfoCard({
     Key? key,
-    required this.meter,
+    required this.subscriber,
   }) : super(key: key);
 
   @override
@@ -42,11 +41,12 @@ class MeterInfoCard extends StatelessWidget {
           ),
           const SizedBox(height: Constants.paddingM),
 
-          _InfoRow(label: 'Тип', value: meter.type),
-          _InfoRow(label: 'Серийный номер', value: meter.serialNumber),
-          if (meter.sealNumber.isNotEmpty)
-            _InfoRow(label: 'Номер пломбы', value: meter.sealNumber),
-          _InfoRow(label: 'Код тарифа', value: meter.tariffCode.toString()),
+          // ИСПРАВЛЕНО: Используем поля из SubscriberModel
+          _InfoRow(label: 'Тип', value: subscriber.meterType),
+          _InfoRow(label: 'Серийный номер', value: subscriber.meterSerialNumber),
+          if (subscriber.sealNumber.isNotEmpty)
+            _InfoRow(label: 'Номер пломбы', value: subscriber.sealNumber),
+          _InfoRow(label: 'Тариф', value: subscriber.tariffName),
         ],
       ),
     );

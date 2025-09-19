@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
-import '../models/abonents_response_model.dart';
+import '../models/abonent_sync_response_model.dart';
 import '../models/auth_response_model.dart';
 import '../models/region_model.dart';
 import '../models/sync_status_model.dart';
@@ -107,7 +107,10 @@ class ApiProvider extends GetxService {
     }
   }
 
-  // Auth endpoints
+  // ========================================
+  // AUTH ENDPOINTS
+  // ========================================
+
   Future<List<RegionModel>> getRegions() async {
     try {
       final response = await _dio.get('/auth/regions');
@@ -191,26 +194,9 @@ class ApiProvider extends GetxService {
     }
   }
 
-  // Error handling
-  Exception _handleError(dynamic error) {
-    if (error is DioException) {
-      switch (error.type) {
-        case DioExceptionType.connectionTimeout:
-        case DioExceptionType.sendTimeout:
-        case DioExceptionType.receiveTimeout:
-          return Exception('Время ожидания истекло. Проверьте соединение.');
-        case DioExceptionType.badResponse:
-          final statusCode = error.response?.statusCode;
-          final message = error.response?.data?['message'] ?? 'Неизвестная ошибка';
-          return Exception('Ошибка $statusCode: $message');
-        case DioExceptionType.connectionError:
-          return Exception('Ошибка соединения. Проверьте интернет.');
-        default:
-          return Exception('Произошла ошибка: ${error.message}');
-      }
-    }
-    return Exception('Неизвестная ошибка');
-  }
+  // ========================================
+  // TRANSFORMER POINTS ENDPOINTS
+  // ========================================
 
   Future<List<Map<String, dynamic>>> getTransformerPoints() async {
     try {
@@ -236,12 +222,12 @@ class ApiProvider extends GetxService {
     } on DioException catch (e) {
       // СПЕЦИАЛЬНАЯ ОБРАБОТКА для 409 Conflict
       if (e.response?.statusCode == 409) {
-        print('[API] Got 409 - sync already in progress');
+        print('[API] Got 409 - TP sync already in progress');
         // Возвращаем модель с ошибкой для корректной обработки
         return TpSyncResponseModel(
           syncMessageId: null,
           status: 'ALREADY_RUNNING',
-          message: 'Синхронизация уже выполняется',
+          message: 'Синхронизация ТП уже выполняется',
         );
       }
 
@@ -253,33 +239,60 @@ class ApiProvider extends GetxService {
     }
   }
 
-// Sync TP abonents
-  Future<Map<String, dynamic>> syncTpAbonents(String tpCode) async {
-    try {
-      print('[API] Syncing abonents for TP: $tpCode');
-      final response = await _dio.post('/internal/tp/$tpCode/abonents/sync');
-      print('[API] Sync response: ${response.data}');
+  // ========================================
+  // ABONENTS ENDPOINTS (ОБНОВЛЕНО)
+  // ========================================
 
-      return response.data;
-    } catch (e) {
-      print('[API] Error syncing TP abonents: $e');
-      throw _handleError(e);
-    }
-  }
-
-// Get abonents by TP (добавим позже, но объявим сейчас)
-  Future<AbonentsResponseModel> getAbonentsByTp(String tpCode) async {
+  /// Получение списка абонентов по ТП
+  /// GET /api/mobile/transformer-points/{tpCode}/abonents
+  /// Возвращает прямой список абонентов (новая структура API)
+  Future<List<Map<String, dynamic>>> getAbonentsByTp(String tpCode) async {
     try {
       print('[API] Getting abonents for TP: $tpCode');
       final response = await _dio.get('/mobile/transformer-points/$tpCode/abonents');
       print('[API] Abonents response: ${response.data}');
 
-      return AbonentsResponseModel.fromJson(response.data);
+      // Новая структура API - ожидаем прямой список абонентов
+      return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
       print('[API] Error getting abonents: $e');
       throw _handleError(e);
     }
   }
+
+  /// Синхронизация абонентов по ТП
+  /// POST /api/mobile/transformer-points/{tpCode}/abonents/sync
+  /// Возвращает AbonentSyncResponseModel с messageId для мониторинга
+  Future<AbonentSyncResponseModel> syncAbonentsByTp(String tpCode) async {
+    try {
+      print('[API] Starting abonents sync for TP: $tpCode');
+      final response = await _dio.post('/mobile/transformer-points/$tpCode/abonents/sync');
+      print('[API] Abonents sync response (${response.statusCode}): ${response.data}');
+
+      return AbonentSyncResponseModel.fromJson(response.data);
+    } on DioException catch (e) {
+      // СПЕЦИАЛЬНАЯ ОБРАБОТКА для 409 Conflict
+      if (e.response?.statusCode == 409) {
+        print('[API] Got 409 - abonents sync already in progress for TP: $tpCode');
+        // Возвращаем модель с ошибкой для корректной обработки
+        return AbonentSyncResponseModel(
+          syncMessageId: null,
+          status: 'ALREADY_RUNNING',
+          message: 'Синхронизация абонентов уже выполняется',
+        );
+      }
+
+      print('[API] Error syncing abonents for TP $tpCode: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error syncing abonents for TP $tpCode: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
+  // METER READINGS ENDPOINTS
+  // ========================================
 
   Future<Map<String, dynamic>> submitMeterReading({
     required String accountNumber,
@@ -301,5 +314,29 @@ class ApiProvider extends GetxService {
       print('[API] Error submitting reading: $e');
       throw _handleError(e);
     }
+  }
+
+  // ========================================
+  // ERROR HANDLING
+  // ========================================
+
+  Exception _handleError(dynamic error) {
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return Exception('Время ожидания истекло. Проверьте соединение.');
+        case DioExceptionType.badResponse:
+          final statusCode = error.response?.statusCode;
+          final message = error.response?.data?['message'] ?? 'Неизвестная ошибка';
+          return Exception('Ошибка $statusCode: $message');
+        case DioExceptionType.connectionError:
+          return Exception('Ошибка соединения. Проверьте интернет.');
+        default:
+          return Exception('Произошла ошибка: ${error.message}');
+      }
+    }
+    return Exception('Неизвестная ошибка');
   }
 }

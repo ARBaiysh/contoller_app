@@ -51,8 +51,8 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                   if (controller.canSubmitReading)
                     ReadingFormCard(controller: controller),
 
-                  // Meter info card
-                  MeterInfoCard(meter: controller.subscriber!.meterInfo),
+                  // ИСПРАВЛЕНО: Meter info card (передаем subscriber)
+                  MeterInfoCard(subscriber: controller.subscriber!),
 
                   // Balance info card
                   BalanceInfoCard(subscriber: controller.subscriber!),

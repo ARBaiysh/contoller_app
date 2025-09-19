@@ -80,47 +80,34 @@ class SearchView extends GetView<GlobalSearchController> {
               ),
             ],
           ),
+
           const SizedBox(height: Constants.paddingM),
 
           // Search field
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(Constants.borderRadius),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                width: 1,
+          Obx(() => TextField(
+            controller: controller.searchTextController,
+            onChanged: controller.search,
+            decoration: InputDecoration(
+              hintText: 'ФИО, адрес или лицевой счет',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: controller.searchQuery.isNotEmpty
+                  ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: controller.clearSearch,
+              )
+                  : null,
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Constants.borderRadius),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: Constants.paddingM,
+                vertical: Constants.paddingM,
               ),
             ),
-            child: TextField(
-              controller: controller.searchTextController,
-              onChanged: controller.search,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'ФИО, адрес или лицевой счет',
-                hintStyle: TextStyle(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.primary,
-                ),
-                suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: controller.clearSearch,
-                  tooltip: 'Очистить',
-                )
-                    : const SizedBox.shrink()),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: Constants.paddingM,
-                  vertical: Constants.paddingM,
-                ),
-              ),
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ),
+          )),
         ],
       ),
     );
@@ -129,21 +116,13 @@ class SearchView extends GetView<GlobalSearchController> {
   Widget _buildFilters(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(Constants.paddingM),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-          ),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Debtor filter toggle
-          Obx(() => SwitchListTile(
+          // Debtor filter
+          Obx(() => CheckboxListTile(
             title: const Text('Только должники'),
-            subtitle: controller.filterByDebtor && controller.debtorResults > 0
+            subtitle: controller.filterByDebtor
                 ? Text(
               'Найдено: ${controller.debtorResults}',
               style: TextStyle(
@@ -161,7 +140,7 @@ class SearchView extends GetView<GlobalSearchController> {
 
           const SizedBox(height: Constants.paddingS),
 
-          // Status filter chips
+          // ИСПРАВЛЕНО: Status filter chips (убран 'processing')
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Obx(() => Row(
@@ -175,25 +154,17 @@ class SearchView extends GetView<GlobalSearchController> {
                 const SizedBox(width: Constants.paddingS),
                 _buildFilterChip(
                   context: context,
-                  label: 'Можно брать',
+                  label: 'Можно снимать',
                   value: 'available',
                   isSelected: controller.filterByStatus == 'available',
                   color: AppColors.success,
                   icon: Icons.check_circle_outline,
                 ),
                 const SizedBox(width: Constants.paddingS),
+                // УБРАЛИ processing фильтр
                 _buildFilterChip(
                   context: context,
-                  label: 'Обрабатывается',
-                  value: 'processing',
-                  isSelected: controller.filterByStatus == 'processing',
-                  color: AppColors.warning,
-                  icon: Icons.pending,
-                ),
-                const SizedBox(width: Constants.paddingS),
-                _buildFilterChip(
-                  context: context,
-                  label: 'Обработан',
+                  label: 'Показания сняты',
                   value: 'completed',
                   isSelected: controller.filterByStatus == 'completed',
                   color: Colors.grey,
@@ -302,10 +273,10 @@ class SearchView extends GetView<GlobalSearchController> {
                 ),
               ),
               SizedBox(
-                width: 120, // Фиксированная ширина
+                width: 120,
                 child: TextButton(
                   onPressed: controller.clearRecentSearches,
-                  child: const Text('Очистить все'),
+                  child: const Text('Очистить'),
                 ),
               ),
             ],
@@ -314,10 +285,9 @@ class SearchView extends GetView<GlobalSearchController> {
           Wrap(
             spacing: Constants.paddingS,
             runSpacing: Constants.paddingS,
-            children: controller.recentSearches.map((query) {
-              return InkWell(
-                onTap: () => controller.search(query),
-                borderRadius: BorderRadius.circular(20),
+            children: controller.recentSearches.map((search) {
+              return GestureDetector(
+                onTap: () => controller.search(search),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: Constants.paddingM,
@@ -325,21 +295,30 @@ class SearchView extends GetView<GlobalSearchController> {
                   ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(Constants.borderRadius),
                     border: Border.all(
                       color: Theme.of(context).dividerColor,
+                      width: 1,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.history, size: 16),
+                      Icon(
+                        Icons.history,
+                        size: 16,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                       const SizedBox(width: Constants.paddingS),
-                      Text(query),
+                      Text(search),
                       const SizedBox(width: Constants.paddingS),
                       GestureDetector(
-                        onTap: () => controller.removeFromRecent(query),
-                        child: const Icon(Icons.close, size: 16),
+                        onTap: () => controller.removeFromRecent(search),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
                       ),
                     ],
                   ),
@@ -355,26 +334,30 @@ class SearchView extends GetView<GlobalSearchController> {
   Widget _buildSearchResults(BuildContext context) {
     return Column(
       children: [
-        // Results count header
+        // Results count
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(Constants.paddingM),
-          color: Theme.of(context).scaffoldBackgroundColor,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Constants.paddingM,
+            vertical: Constants.paddingS,
+          ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Найдено результатов: ${controller.totalResults}',
+                'Найдено: ${controller.totalResults}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              if (controller.totalResults > 0)
-                Icon(
-                  Icons.list,
-                  size: 20,
-                  color: Theme.of(context).textTheme.bodySmall?.color,
+              if (controller.filterByDebtor) ...[
+                const Spacer(),
+                Text(
+                  'Должники: ${controller.debtorResults}',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+              ],
             ],
           ),
         ),
@@ -391,32 +374,23 @@ class SearchView extends GetView<GlobalSearchController> {
               final subscriber = controller.searchResults[index];
               return Column(
                 children: [
-                  // TP name header
+                  // TP header (if different from previous)
                   if (index == 0 ||
-                      subscriber.tpId != controller.searchResults[index - 1].tpId)
+                      controller.searchResults[index - 1].transformerPointCode != subscriber.transformerPointCode)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
                         horizontal: Constants.paddingM,
                         vertical: Constants.paddingS,
                       ),
-                      color: AppColors.primary.withValues(alpha: 0.05),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.electrical_services,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: Constants.paddingS),
-                          Text(
-                            subscriber.tpId,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                      margin: const EdgeInsets.only(top: Constants.paddingS),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      child: Text(
+                        subscriber.transformerPointName,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).primaryColor,
+                        ),
                       ),
                     ),
 

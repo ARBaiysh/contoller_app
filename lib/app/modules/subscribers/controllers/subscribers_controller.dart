@@ -1,12 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
-import '../../../data/repositories/tp_repository.dart';
+import '../../../core/values/constants.dart';
 import '../../../routes/app_pages.dart';
 
 class SubscribersController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
-  final TpRepository _tpRepository = Get.find<TpRepository>();
 
   // Arguments
   late String tpId;
@@ -16,6 +16,8 @@ class SubscribersController extends GetxController {
   // Observable states
   final _isLoading = false.obs;
   final _isSyncing = false.obs;
+  final _syncProgress = ''.obs;
+  final _syncElapsed = Duration.zero.obs;
   final _subscribers = <SubscriberModel>[].obs;
   final _filteredSubscribers = <SubscriberModel>[].obs;
   final _selectedStatus = 'all'.obs;
@@ -25,10 +27,22 @@ class SubscribersController extends GetxController {
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isSyncing => _isSyncing.value;
+  String get syncProgress => _syncProgress.value;
+  Duration get syncElapsed => _syncElapsed.value;
   List<SubscriberModel> get subscribers => _filteredSubscribers;
   String get selectedStatus => _selectedStatus.value;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
+  bool get isEmpty => _subscribers.isEmpty;
+  bool get hasData => _subscribers.isNotEmpty;
+
+  // Форматированное время синхронизации MM:SS / MAX_TIME
+  String get syncElapsedFormatted {
+    final minutes = _syncElapsed.value.inMinutes;
+    final seconds = _syncElapsed.value.inSeconds % 60;
+    final maxMinutes = Constants.abonentsSyncTimeout.inMinutes;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')} / ${maxMinutes.toString().padLeft(2, '0')}:00';
+  }
 
   // Statistics
   int get totalSubscribers => _subscribers.length;
@@ -36,34 +50,80 @@ class SubscribersController extends GetxController {
   int get readingsAvailable => _subscribers.where((s) => s.canTakeReading).length;
   int get debtorsCount => _subscribers.where((s) => s.isDebtor).length;
 
+  // Status filter options with counts for UI
+  List<Map<String, dynamic>> get statusFilterOptions {
+    return [
+      {
+        'value': 'all',
+        'label': 'Все',
+        'count': totalSubscribers,
+        'color': Colors.grey[600] ?? Colors.grey,
+      },
+      {
+        'value': 'available',
+        'label': 'Доступны',
+        'count': readingsAvailable,
+        'color': Colors.green,
+      },
+      {
+        'value': 'completed',
+        'label': 'Завершены',
+        'count': readingsCollected,
+        'color': Colors.blue,
+      },
+      {
+        'value': 'debtors',
+        'label': 'Должники',
+        'count': debtorsCount,
+        'color': Colors.red,
+      },
+    ];
+  }
+
   @override
   void onInit() {
     super.onInit();
 
     // Получаем параметры
-    final args = Get.arguments as Map<String, dynamic>;
+    final args = Get.arguments as Map<String, dynamic>? ?? {};
     tpId = args['tpId'] ?? '';
     tpCode = args['tpCode'] ?? tpId; // Используем tpId как tpCode если не передан
     tpName = args['tpName'] ?? 'ТП';
+
+    print('[SUBSCRIBERS CONTROLLER] Initialized for TP: $tpCode ($tpName)');
 
     // Загружаем абонентов
     loadSubscribers();
   }
 
-  // Load subscribers
+  // ========================================
+  // ОСНОВНЫЕ МЕТОДЫ ЗАГРУЗКИ
+  // ========================================
+
+  /// Загрузка списка абонентов
   Future<void> loadSubscribers({bool forceRefresh = false}) async {
-    _isLoading.value = true;
+    if (_isSyncing.value) return; // Не загружаем во время синхронизации
+
     try {
+      _isLoading.value = true;
+      print('[SUBSCRIBERS CONTROLLER] Loading subscribers for TP: $tpCode');
+
       final subscribersList = await _subscriberRepository.getSubscribersByTp(
         tpCode,
         forceRefresh: forceRefresh,
       );
+
       _subscribers.value = subscribersList;
+      print('[SUBSCRIBERS CONTROLLER] Loaded ${subscribersList.length} subscribers');
+
       applyFiltersAndSort();
     } catch (e) {
+      print('[SUBSCRIBERS CONTROLLER] Error loading subscribers: $e');
       Get.snackbar(
         'Ошибка',
         e.toString().replaceAll('Exception: ', ''),
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
       );
     } finally {
@@ -71,45 +131,103 @@ class SubscribersController extends GetxController {
     }
   }
 
-  // Sync subscribers with 1C
-  Future<void> syncSubscribers() async {
-    _isSyncing.value = true;
-    try {
-      // final result = await _tpRepository.syncTpAbonents(tpCode);
-      //
-      // Get.snackbar(
-      //   'Синхронизация завершена',
-      //   'Синхронизировано: ${result['synced'] ?? 0}, '
-      //       'Создано: ${result['created'] ?? 0}, '
-      //       'Обновлено: ${result['updated'] ?? 0}',
-      //   backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-      //   colorText: Get.theme.colorScheme.primary,
-      // );
-
-      // Перезагружаем список
-      await loadSubscribers(forceRefresh: true);
-    } catch (e) {
-      Get.snackbar(
-        'Ошибка синхронизации',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Get.theme.cardColor,
-      );
-    } finally {
-      _isSyncing.value = false;
-    }
-  }
-
-  // Refresh
+  /// Pull-to-refresh
   Future<void> refreshSubscribers() async {
     await loadSubscribers(forceRefresh: true);
   }
 
-  // Apply filters and sorting
+  // ========================================
+  // СИНХРОНИЗАЦИЯ С ПРОГРЕССОМ
+  // ========================================
+
+  /// Запуск синхронизации абонентов с SyncService
+  Future<void> syncSubscribers() async {
+    if (_isSyncing.value || _isLoading.value) return;
+
+    print('[SUBSCRIBERS CONTROLLER] Starting abonents sync for TP: $tpCode');
+
+    await _subscriberRepository.syncAbonentsList(
+      tpCode,
+      onSyncStarted: _onSyncStarted,
+      onProgress: _onSyncProgress,
+      onSuccess: _onSyncSuccess,
+      onError: _onSyncError,
+    );
+  }
+
+  /// Колбэк: синхронизация запущена
+  void _onSyncStarted() {
+    _isSyncing.value = true;
+    _syncProgress.value = 'Запуск синхронизации абонентов...';
+    _syncElapsed.value = Duration.zero;
+
+    print('[SUBSCRIBERS CONTROLLER] Abonents sync started for TP: $tpCode');
+
+    Get.snackbar(
+      'Синхронизация',
+      'Запущена синхронизация абонентов для $tpName',
+      backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+      colorText: Get.theme.colorScheme.primary,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  /// Колбэк: прогресс синхронизации с таймером
+  void _onSyncProgress(String message, Duration elapsed) {
+    _syncProgress.value = message;
+    _syncElapsed.value = elapsed;
+    print('[SUBSCRIBERS CONTROLLER] Abonents sync progress: $message (${elapsed.inSeconds}s)');
+  }
+
+  /// Колбэк: синхронизация завершена успешно
+  void _onSyncSuccess() async {
+    _isSyncing.value = false;
+    _syncProgress.value = '';
+    _syncElapsed.value = Duration.zero;
+
+    print('[SUBSCRIBERS CONTROLLER] Abonents sync completed successfully for TP: $tpCode');
+
+    Get.snackbar(
+      'Успешно',
+      'Синхронизация абонентов завершена',
+      backgroundColor: Colors.green.withOpacity(0.1),
+      colorText: Colors.green,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
+
+    // Автообновление списка после успешной синхронизации
+    await loadSubscribers(forceRefresh: true);
+  }
+
+  /// Колбэк: ошибка синхронизации
+  void _onSyncError(String error) {
+    _isSyncing.value = false;
+    _syncProgress.value = '';
+    _syncElapsed.value = Duration.zero;
+
+    print('[SUBSCRIBERS CONTROLLER] Abonents sync failed for TP $tpCode: $error');
+
+    Get.snackbar(
+      'Ошибка синхронизации',
+      error,
+      backgroundColor: Get.theme.colorScheme.error,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 5),
+    );
+  }
+
+  // ========================================
+  // ФИЛЬТРАЦИЯ И СОРТИРОВКА
+  // ========================================
+
+  /// Применение фильтров и сортировки
   void applyFiltersAndSort() {
     var filtered = List<SubscriberModel>.from(_subscribers);
 
-    // Apply status filter
+    // Применяем фильтр по статусу
     switch (_selectedStatus.value) {
       case 'available':
         filtered = filtered.where((s) => s.canTakeReading).toList();
@@ -120,9 +238,13 @@ class SubscribersController extends GetxController {
       case 'debtors':
         filtered = filtered.where((s) => s.isDebtor).toList();
         break;
+      case 'all':
+      default:
+      // Показываем всех
+        break;
     }
 
-    // Apply search
+    // Применяем поиск
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((s) {
@@ -132,7 +254,7 @@ class SubscribersController extends GetxController {
       }).toList();
     }
 
-    // Apply sorting
+    // Применяем сортировку
     switch (_sortBy.value) {
       case 'name':
         filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
@@ -143,102 +265,80 @@ class SubscribersController extends GetxController {
       case 'debt':
         filtered.sort((a, b) => a.balance.compareTo(b.balance));
         break;
+      case 'account':
+        filtered.sort((a, b) => a.accountNumber.compareTo(b.accountNumber));
+        break;
       case 'default':
       default:
-      // Сортировка по статусу и адресу
+      // Сортировка по статусу (сначала доступные для снятия показаний, потом по адресу)
         filtered.sort((a, b) {
+          // Сначала сортируем по возможности снятия показаний
           if (a.canTakeReading && !b.canTakeReading) return -1;
           if (!a.canTakeReading && b.canTakeReading) return 1;
+
+          // Затем по адресу
           return a.address.compareTo(b.address);
         });
         break;
     }
 
     _filteredSubscribers.value = filtered;
+    print('[SUBSCRIBERS CONTROLLER] Applied filters: ${_selectedStatus.value}, '
+        'search: "${_searchQuery.value}", sort: ${_sortBy.value}. '
+        'Result: ${filtered.length}/${_subscribers.length}');
   }
 
-  // Set status filter
+  /// Установка фильтра по статусу
   void setStatusFilter(String status) {
     _selectedStatus.value = status;
     applyFiltersAndSort();
+    print('[SUBSCRIBERS CONTROLLER] Status filter changed to: $status');
   }
 
-  // Search subscribers
+  /// Поиск абонентов
   void searchSubscribers(String query) {
     _searchQuery.value = query;
     applyFiltersAndSort();
+    print('[SUBSCRIBERS CONTROLLER] Search query changed to: "$query"');
   }
 
-  // Set sorting
+  /// Установка сортировки
   void setSorting(String sort) {
     _sortBy.value = sort;
     applyFiltersAndSort();
+    print('[SUBSCRIBERS CONTROLLER] Sort changed to: $sort');
   }
 
-  // Navigate to subscriber detail
+  // ========================================
+  // НАВИГАЦИЯ
+  // ========================================
+
+  /// Переход к детальной информации абонента
   void navigateToSubscriberDetail(SubscriberModel subscriber) {
+    print('[SUBSCRIBERS CONTROLLER] Navigating to subscriber detail: ${subscriber.accountNumber}');
+
     Get.toNamed(
       Routes.SUBSCRIBER_DETAIL,
       arguments: {
-        'subscriber': subscriber,
+        'subscriber': subscriber, // ИСПРАВЛЕНО: Передаем объект целиком
         'tpName': tpName,
+        'tpCode': tpCode,
       },
     );
   }
 
-  // Get status filter options
-  List<FilterOption> get filterOptions => [
-    FilterOption(
-      value: 'all',
-      label: 'Все',
-      count: _subscribers.length,
-    ),
-    FilterOption(
-      value: 'available',
-      label: 'Можно брать',
-      count: _subscribers.where((s) => s.canTakeReading).length,
-    ),
-    FilterOption(
-      value: 'completed',
-      label: 'Обработаны',
-      count: _subscribers.where((s) => !s.canTakeReading).length,
-    ),
-    FilterOption(
-      value: 'debtors',
-      label: 'Должники',
-      count: _subscribers.where((s) => s.isDebtor).length,
-    ),
-  ];
+  // ========================================
+  // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+  // ========================================
 
-  // Get sort options
-  List<SortOption> get sortOptions => [
-    SortOption(value: 'default', label: 'По умолчанию'),
-    SortOption(value: 'name', label: 'По ФИО'),
-    SortOption(value: 'address', label: 'По адресу'),
-    SortOption(value: 'debt', label: 'По балансу'),
-  ];
-}
-
-// Filter option model
-class FilterOption {
-  final String value;
-  final String label;
-  final int count;
-
-  FilterOption({
-    required this.value,
-    required this.label,
-    required this.count,
-  });
-}
-
-// Sort option model
-class SortOption {
-  final String value;
-  final String label;
-
-  SortOption({
-    required this.value,
-    required this.label,
-  });
+  /// Получение статистики для отображения в UI
+  Map<String, dynamic> getStatistics() {
+    return {
+      'total': totalSubscribers,
+      'available': readingsAvailable,
+      'completed': readingsCollected,
+      'debtors': debtorsCount,
+      'progress': totalSubscribers > 0 ? (readingsCollected / totalSubscribers) * 100 : 0,
+    };
+  }
 }
