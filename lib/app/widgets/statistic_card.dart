@@ -14,7 +14,7 @@ class StatisticCard extends StatelessWidget {
   final double? progressValue;
 
   const StatisticCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     this.subtitle,
@@ -24,7 +24,7 @@ class StatisticCard extends StatelessWidget {
     this.onTap,
     this.showProgress = false,
     this.progressValue,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +96,7 @@ class StatisticCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).textTheme.bodyLarge?.color,
-                        fontSize: 22,
+                        fontSize: 25,
                       ),
                       maxLines: 1,
                     ),
