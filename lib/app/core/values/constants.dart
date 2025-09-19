@@ -59,6 +59,7 @@ class Constants {
 
   // UI Constants
   static const double borderRadius = 12.0;
+  static const double borderRadiusMin = 8.0;
   static const double cardElevation = 0.0;
   static const double buttonHeight = 52.0;
   static const double inputHeight = 56.0;

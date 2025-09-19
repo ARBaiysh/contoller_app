@@ -57,7 +57,7 @@ class SubscribersController extends GetxController {
         'value': 'all',
         'label': 'Все',
         'count': totalSubscribers,
-        'color': Colors.grey[600] ?? Colors.grey,
+        'color': Colors.blueAccent,
       },
       {
         'value': 'available',
