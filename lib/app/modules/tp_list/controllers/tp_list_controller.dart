@@ -11,6 +11,8 @@ class TpListController extends GetxController {
   // Observable states
   final _isLoading = false.obs;
   final _isSyncing = false.obs;
+  final _syncProgress = ''.obs;
+  final _syncElapsed = Duration.zero.obs;
   final _tpList = <TpModel>[].obs;
   final _filteredTpList = <TpModel>[].obs;
   final _searchQuery = ''.obs;
@@ -19,10 +21,20 @@ class TpListController extends GetxController {
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isSyncing => _isSyncing.value;
+  String get syncProgress => _syncProgress.value;
+  Duration get syncElapsed => _syncElapsed.value;
   List<TpModel> get tpList => _filteredTpList;
+  bool get isEmpty => _tpList.isEmpty;
+  bool get hasData => _tpList.isNotEmpty;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
-  int get totalTps => _tpList.length;
+
+  // Форматированное время синхронизации
+  String get syncElapsedFormatted {
+    final minutes = _syncElapsed.value.inMinutes;
+    final seconds = _syncElapsed.value.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   void onInit() {
@@ -30,65 +42,146 @@ class TpListController extends GetxController {
     loadTpList();
   }
 
-  // Load TP list
+  // ========================================
+  // ОСНОВНЫЕ МЕТОДЫ
+  // ========================================
+
+  /// Загрузка списка ТП
   Future<void> loadTpList({bool forceRefresh = false}) async {
-    _isLoading.value = true;
+    if (_isSyncing.value) return; // Не загружаем во время синхронизации
+
     try {
-      final tps = await _tpRepository.getTpList(forceRefresh: forceRefresh);
-      _tpList.value = tps;
+      _isLoading.value = true;
+      print('[TP CONTROLLER] Loading TP list...');
+
+      final tpList = await _tpRepository.getTpList(forceRefresh: forceRefresh);
+      _tpList.value = tpList;
+
+      print('[TP CONTROLLER] Loaded ${tpList.length} TPs');
       applyFiltersAndSort();
+
     } catch (e) {
+      print('[TP CONTROLLER] Error loading TP list: $e');
       Get.snackbar(
         'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
+        'Не удалось загрузить список ТП',
         backgroundColor: Constants.error.withValues(alpha: 0.1),
         colorText: Constants.error,
+        snackPosition: SnackPosition.TOP,
       );
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Sync TP abonents
-  Future<void> syncTpAbonents(String tpCode) async {
-    _isSyncing.value = true;
-    try {
-      final result = await _tpRepository.syncTpAbonents(tpCode);
-
-      Get.snackbar(
-        'Синхронизация завершена',
-        'Синхронизировано: ${result['synced'] ?? 0}, '
-            'Создано: ${result['created'] ?? 0}, '
-            'Обновлено: ${result['updated'] ?? 0}',
-        backgroundColor: Colors.green.withValues(alpha: 0.1),
-        colorText: Colors.green,
-      );
-
-      // Перезагружаем список для обновления статистики
-      await loadTpList();
-    } catch (e) {
-      Get.snackbar(
-        'Ошибка синхронизации',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-      );
-    } finally {
-      _isSyncing.value = false;
-    }
-  }
-
-  // Refresh TP list
+  /// Pull-to-refresh
   Future<void> refreshTpList() async {
     await loadTpList(forceRefresh: true);
   }
 
-  // Apply filters and sorting
+  // ========================================
+  // СИНХРОНИЗАЦИЯ
+  // ========================================
+
+  /// Запуск синхронизации ТП
+  Future<void> syncTpList() async {
+    if (_isSyncing.value || _isLoading.value) return;
+
+    print('[TP CONTROLLER] Starting TP sync...');
+
+    await _tpRepository.syncTpList(
+      onSyncStarted: _onSyncStarted,
+      onProgress: _onSyncProgress,
+      onSuccess: _onSyncSuccess,
+      onError: _onSyncError,
+    );
+  }
+
+  /// Колбэк: синхронизация запущена
+  void _onSyncStarted() {
+    _isSyncing.value = true;
+    _syncProgress.value = 'Запуск синхронизации...';
+    _syncElapsed.value = Duration.zero;
+
+    print('[TP CONTROLLER] Sync started');
+
+    Get.snackbar(
+      'Синхронизация',
+      'Запущена синхронизация списка ТП',
+      backgroundColor: Constants.info.withValues(alpha: 0.1),
+      colorText: Constants.info,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  /// Колбэк: прогресс синхронизации
+  void _onSyncProgress(String message, Duration elapsed) {
+    _syncProgress.value = message;
+    _syncElapsed.value = elapsed;
+    print('[TP CONTROLLER] Sync progress: $message (${elapsed.inSeconds}s)');
+  }
+
+  /// Колбэк: синхронизация завершена успешно
+  void _onSyncSuccess() async {
+    _isSyncing.value = false;
+    _syncProgress.value = '';
+    _syncElapsed.value = Duration.zero;
+
+    print('[TP CONTROLLER] Sync completed successfully');
+
+    Get.snackbar(
+      'Успешно',
+      'Синхронизация завершена',
+      backgroundColor: Constants.success.withValues(alpha: 0.1),
+      colorText: Constants.success,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
+    );
+
+    // Автоматически обновляем список после успешной синхронизации
+    await loadTpList(forceRefresh: true);
+  }
+
+  /// Колбэк: ошибка синхронизации
+  void _onSyncError(String error) {
+    _isSyncing.value = false;
+    _syncProgress.value = '';
+    _syncElapsed.value = Duration.zero;
+
+    print('[TP CONTROLLER] Sync failed: $error');
+
+    Get.snackbar(
+      'Ошибка синхронизации',
+      error,
+      backgroundColor: Constants.error.withValues(alpha: 0.1),
+      colorText: Constants.error,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
+  // ========================================
+  // ПОИСК И ФИЛЬТРАЦИЯ
+  // ========================================
+
+  /// Поиск ТП
+  void searchTps(String query) {
+    _searchQuery.value = query;
+    applyFiltersAndSort();
+  }
+
+  /// Установка сортировки
+  void setSorting(String sort) {
+    _sortBy.value = sort;
+    applyFiltersAndSort();
+  }
+
+  /// Применение фильтров и сортировки
   void applyFiltersAndSort() {
     var filtered = List<TpModel>.from(_tpList);
 
-    // Apply search
+    // Поиск
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((tp) {
@@ -98,7 +191,7 @@ class TpListController extends GetxController {
       }).toList();
     }
 
-    // Apply sorting
+    // Сортировка
     switch (_sortBy.value) {
       case 'name':
         filtered.sort((a, b) => a.name.compareTo(b.name));
@@ -106,12 +199,11 @@ class TpListController extends GetxController {
       case 'number':
         filtered.sort((a, b) => a.number.compareTo(b.number));
         break;
-      case 'progress':
-        filtered.sort((a, b) => b.progressPercentage.compareTo(a.progressPercentage));
+      case 'fider':
+        filtered.sort((a, b) => a.fider.compareTo(b.fider));
         break;
       case 'default':
       default:
-      // Сортировка по умолчанию - по номеру
         filtered.sort((a, b) => a.number.compareTo(b.number));
         break;
     }
@@ -119,40 +211,76 @@ class TpListController extends GetxController {
     _filteredTpList.value = filtered;
   }
 
-  // Search TPs
-  void searchTps(String query) {
-    _searchQuery.value = query;
-    applyFiltersAndSort();
-  }
+  // ========================================
+  // НАВИГАЦИЯ
+  // ========================================
 
-  // Set sorting
-  void setSorting(String sort) {
-    _sortBy.value = sort;
-    applyFiltersAndSort();
-  }
-
-  // Navigate to subscribers
+  /// Переход к списку абонентов ТП
   void navigateToSubscribers(TpModel tp) {
     Get.toNamed(
       Routes.SUBSCRIBERS,
       arguments: {
         'tpId': tp.id,
-        'tpCode': tp.id, // Для API используем id как code
+        'tpCode': tp.id,
         'tpName': '${tp.number} ${tp.name}',
       },
     );
   }
 
-  // Get sort options (упрощенные)
+  // ========================================
+  // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+  // ========================================
+
+  /// Опции сортировки
   List<SortOption> get sortOptions => [
     SortOption(value: 'default', label: 'По умолчанию'),
     SortOption(value: 'name', label: 'По названию'),
     SortOption(value: 'number', label: 'По номеру'),
-    SortOption(value: 'progress', label: 'По прогрессу'),
+    SortOption(value: 'fider', label: 'По фидеру'),
   ];
+
+  /// Показать диалог сортировки
+  void showSortDialog() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(Constants.paddingM),
+        decoration: BoxDecoration(
+          color: Get.theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(Constants.borderRadius),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Сортировка',
+              style: Get.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: Constants.paddingM),
+            ...sortOptions.map((option) => Obx(() => RadioListTile<String>(
+              title: Text(option.label),
+              value: option.value,
+              groupValue: _sortBy.value,
+              onChanged: (value) {
+                if (value != null) {
+                  setSorting(value);
+                  Get.back();
+                }
+              },
+            ))),
+            const SizedBox(height: Constants.paddingS),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// Sort option model
+// Модель опции сортировки
 class SortOption {
   final String value;
   final String label;

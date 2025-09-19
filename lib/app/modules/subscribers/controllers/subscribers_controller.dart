@@ -75,16 +75,16 @@ class SubscribersController extends GetxController {
   Future<void> syncSubscribers() async {
     _isSyncing.value = true;
     try {
-      final result = await _tpRepository.syncTpAbonents(tpCode);
-
-      Get.snackbar(
-        'Синхронизация завершена',
-        'Синхронизировано: ${result['synced'] ?? 0}, '
-            'Создано: ${result['created'] ?? 0}, '
-            'Обновлено: ${result['updated'] ?? 0}',
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.primary,
-      );
+      // final result = await _tpRepository.syncTpAbonents(tpCode);
+      //
+      // Get.snackbar(
+      //   'Синхронизация завершена',
+      //   'Синхронизировано: ${result['synced'] ?? 0}, '
+      //       'Создано: ${result['created'] ?? 0}, '
+      //       'Обновлено: ${result['updated'] ?? 0}',
+      //   backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+      //   colorText: Get.theme.colorScheme.primary,
+      // );
 
       // Перезагружаем список
       await loadSubscribers(forceRefresh: true);

@@ -1,44 +1,24 @@
 import 'package:get/get.dart';
 import '../models/tp_model.dart';
+import '../models/tp_sync_response_model.dart';
 import '../providers/api_provider.dart';
-import 'auth_repository.dart';
+import '../../core/services/sync_service.dart';
+import '../../core/values/constants.dart';
 
 class TpRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
-  final AuthRepository _authRepository = Get.find<AuthRepository>();
+  final SyncService _syncService = Get.find<SyncService>();
 
-  // In-memory cache для статистики ТП
-  final Map<String, TpModel> _tpCache = {};
-
-  // Get all TPs
+  /// Получение списка ТП (простая загрузка, без кеширования)
   Future<List<TpModel>> getTpList({bool forceRefresh = false}) async {
     try {
-      final response = await _apiProvider.getTransformerPoints();
+      print('[TP REPO] Getting TP list...');
+      final responseData = await _apiProvider.getTransformerPoints();
 
       // Преобразуем данные в модели
-      final tpList = response.data.map((json) => TpModel.fromJson(json)).toList();
+      final tpList = responseData.map((json) => TpModel.fromJson(json)).toList();
 
-      // Обновляем кеш с сохранением статистики
-      for (var tp in tpList) {
-        if (_tpCache.containsKey(tp.id) && !forceRefresh) {
-          // Сохраняем существующую статистику
-          final cachedTp = _tpCache[tp.id]!;
-          tp.totalSubscribers = cachedTp.totalSubscribers;
-          tp.readingsCollected = cachedTp.readingsCollected;
-          tp.readingsAvailable = cachedTp.readingsAvailable;
-          tp.readingsProcessing = cachedTp.readingsProcessing;
-          tp.readingsCompleted = cachedTp.readingsCompleted;
-          tp.lastUpdated = cachedTp.lastUpdated;
-        }
-        _tpCache[tp.id] = tp;
-      }
-
-      // Проверяем статус синхронизации
-      if (response.syncing && response.syncMessageId != null) {
-        // TODO: Обработать синхронизацию когда будет готов механизм
-        print('[TP REPO] TP list is syncing, messageId: ${response.syncMessageId}');
-      }
-
+      print('[TP REPO] Loaded ${tpList.length} transformer points');
       return tpList;
     } catch (e) {
       print('[TP REPO] Error fetching TP list: $e');
@@ -46,56 +26,104 @@ class TpRepository {
     }
   }
 
-  // Get TP by ID
-  TpModel? getTpById(String tpId) {
-    return _tpCache[tpId];
-  }
-
-  // Sync TP abonents
-  Future<Map<String, dynamic>> syncTpAbonents(String tpCode) async {
+  /// Синхронизация списка ТП с колбэками для UI
+  Future<void> syncTpList({
+    required Function() onSyncStarted,
+    required Function(String message, Duration elapsed) onProgress,
+    required Function() onSuccess,
+    required Function(String error) onError,
+  }) async {
     try {
-      final result = await _apiProvider.syncTpAbonents(tpCode);
+      print('[TP REPO] Starting TP sync...');
 
-      // После синхронизации нужно обновить список абонентов
-      // Это будет реализовано позже вместе с загрузкой абонентов
+      // Запускаем синхронизацию
+      final syncResponse = await _apiProvider.syncTransformerPoints();
 
-      return result;
+      if (syncResponse.isAlreadyRunning) {
+        // 409 Conflict - синхронизация уже идет
+        print('[TP REPO] Sync already running');
+        onError(syncResponse.displayMessage);
+        return;
+      }
+
+      if (syncResponse.isError) {
+        // Ошибка запуска синхронизации
+        print('[TP REPO] Sync initiation failed: ${syncResponse.displayMessage}');
+        onError(syncResponse.displayMessage);
+        return;
+      }
+
+      if (syncResponse.isInitiated && syncResponse.syncMessageId != null) {
+        // Синхронизация успешно запущена - начинаем мониторинг
+        print('[TP REPO] Sync initiated with messageId: ${syncResponse.syncMessageId}');
+        onSyncStarted();
+
+        await _syncService.monitorSync(
+          messageId: syncResponse.syncMessageId!,
+          timeout: Constants.tpSyncTimeout,           // 5 минут
+          checkInterval: Constants.tpSyncCheckInterval, // 3 секунды
+          onSuccess: (syncStatus) {
+            print('[TP REPO] Sync completed successfully');
+            onSuccess();
+          },
+          onError: (error) {
+            print('[TP REPO] Sync failed: $error');
+            onError(error);
+          },
+          onProgress: (message, elapsed) {
+            print('[TP REPO] Sync progress: $message (${elapsed.inSeconds}s)');
+            onProgress(message, elapsed);
+          },
+        );
+      } else {
+        // Неожиданный ответ
+        print('[TP REPO] Unexpected sync response: ${syncResponse.status}');
+        onError('Неожиданный ответ сервера при запуске синхронизации');
+      }
+
     } catch (e) {
-      print('[TP REPO] Error syncing TP abonents: $e');
-      throw Exception('Не удалось синхронизировать абонентов');
+      print('[TP REPO] Error starting TP sync: $e');
+      onError('Не удалось запустить синхронизацию ТП');
     }
   }
 
-  // Update TP statistics (вызывается из SubscriberRepository)
+  /// Получить ТП по ID (простой поиск в списке)
+  Future<TpModel?> getTpById(String id) async {
+    try {
+      final tpList = await getTpList();
+      return tpList.firstWhereOrNull((tp) => tp.id == id);
+    } catch (e) {
+      print('[TP REPO] Error getting TP by ID: $e');
+      return null;
+    }
+  }
+
+  /// Поиск ТП по запросу
+  Future<List<TpModel>> searchTp(String query) async {
+    if (query.isEmpty) return [];
+
+    try {
+      final tpList = await getTpList();
+      final lowerQuery = query.toLowerCase();
+
+      return tpList.where((tp) {
+        return tp.number.toLowerCase().contains(lowerQuery) ||
+            tp.name.toLowerCase().contains(lowerQuery) ||
+            tp.fider.toLowerCase().contains(lowerQuery);
+      }).toList();
+    } catch (e) {
+      print('[TP REPO] Error searching TP: $e');
+      return [];
+    }
+  }
+
+  /// Обновить статистику ТП на основе списка абонентов
   void updateTpStatistics(String tpId, List<dynamic> subscribers) {
-    final tp = _tpCache[tpId];
-    if (tp != null) {
-      tp.updateStatistics(subscribers);
-      _tpCache[tpId] = tp;
-      print('[TP REPO] Updated statistics for TP $tpId: ${tp.totalSubscribers} subscribers');
-    }
-  }
+    // Эта функция может быть использована другими репозиториями
+    // для обновления статистики ТП после загрузки абонентов
+    print('[TP REPO] Updating statistics for TP $tpId with ${subscribers.length} subscribers');
 
-  // Recalculate all statistics (если понадобится)
-  Future<void> recalculateAllStatistics() async {
-    // TODO: Реализовать когда будет готов SubscriberRepository
-    print('[TP REPO] Recalculating all TP statistics...');
-  }
-
-  // Clear cache
-  void clearCache() {
-    _tpCache.clear();
-  }
-
-  // Search TPs
-  List<TpModel> searchTps(String query) {
-    if (query.isEmpty) return _tpCache.values.toList();
-
-    final lowerQuery = query.toLowerCase();
-    return _tpCache.values.where((tp) {
-      return tp.number.toLowerCase().contains(lowerQuery) ||
-          tp.name.toLowerCase().contains(lowerQuery) ||
-          tp.fider.toLowerCase().contains(lowerQuery);
-    }).toList();
+    // В новой архитектуре статистика не кешируется
+    // Каждый раз загружается с сервера
   }
 }

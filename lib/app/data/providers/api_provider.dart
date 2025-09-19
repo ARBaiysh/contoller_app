@@ -5,7 +5,8 @@ import '../../core/values/constants.dart';
 import '../models/abonents_response_model.dart';
 import '../models/auth_response_model.dart';
 import '../models/region_model.dart';
-import '../models/tp_list_response_model.dart';
+import '../models/sync_status_model.dart';
+import '../models/tp_sync_response_model.dart';
 
 class ApiProvider extends GetxService {
   static const String baseUrl = 'http://192.168.120.10:8269/api';
@@ -137,11 +138,55 @@ class ApiProvider extends GetxService {
     }
   }
 
-  Future<AuthResponseModel> checkSyncStatus(int messageId) async {
+  Future<SyncStatusModel> checkSyncStatus(int messageId) async {
     try {
+      print('[API] Checking sync status for messageId: $messageId');
       final response = await _dio.get('/auth/sync-status/$messageId');
+      print('[API] Sync status response (${response.statusCode}): ${response.data}');
+
+      return SyncStatusModel.fromJson(response.data);
+    } on DioException catch (e) {
+      // Обработка HTTP 202 для SYNCING статуса
+      if (e.response?.statusCode == 202 && e.requestOptions.path.contains('/auth/sync-status/')) {
+        print('[API] Got 202 (Accepted) for sync-status - process is still running');
+        if (e.response?.data != null) {
+          try {
+            return SyncStatusModel.fromJson(e.response!.data);
+          } catch (parseError) {
+            print('[API] Failed to parse 202 response: $parseError');
+            throw Exception('Ошибка обработки ответа сервера');
+          }
+        }
+      }
+
+      print('[API] Error checking sync status: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error checking sync status: $e');
+      throw _handleError(e);
+    }
+  }
+
+  Future<AuthResponseModel> retryLogin({
+    required String username,
+    required String password,
+    required String regionCode,
+  }) async {
+    try {
+      print('[API] Retrying login after sync...');
+      final response = await _dio.post(
+        '/auth/login',
+        data: {
+          'username': username,
+          'password': password,
+          'regionCode': regionCode,
+        },
+      );
+      print('[API] Retry login response: ${response.data}');
+
       return AuthResponseModel.fromJson(response.data);
     } catch (e) {
+      print('[API] Error in retry login: $e');
       throw _handleError(e);
     }
   }
@@ -167,15 +212,43 @@ class ApiProvider extends GetxService {
     return Exception('Неизвестная ошибка');
   }
 
-  Future<TpListResponseModel> getTransformerPoints() async {
+  Future<List<Map<String, dynamic>>> getTransformerPoints() async {
     try {
       print('[API] Getting transformer points...');
       final response = await _dio.get('/mobile/transformer-points');
       print('[API] TP list response: ${response.data}');
 
-      return TpListResponseModel.fromJson(response.data);
+      // Теперь ожидаем прямой список без обертки
+      return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
       print('[API] Error getting transformer points: $e');
+      throw _handleError(e);
+    }
+  }
+
+  Future<TpSyncResponseModel> syncTransformerPoints() async {
+    try {
+      print('[API] Starting TP sync...');
+      final response = await _dio.post('/mobile/transformer-points/sync');
+      print('[API] TP sync response (${response.statusCode}): ${response.data}');
+
+      return TpSyncResponseModel.fromJson(response.data);
+    } on DioException catch (e) {
+      // СПЕЦИАЛЬНАЯ ОБРАБОТКА для 409 Conflict
+      if (e.response?.statusCode == 409) {
+        print('[API] Got 409 - sync already in progress');
+        // Возвращаем модель с ошибкой для корректной обработки
+        return TpSyncResponseModel(
+          syncMessageId: null,
+          status: 'ALREADY_RUNNING',
+          message: 'Синхронизация уже выполняется',
+        );
+      }
+
+      print('[API] Error syncing TP: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error syncing TP: $e');
       throw _handleError(e);
     }
   }

@@ -74,6 +74,7 @@ class AuthView extends GetView<AuthController> {
 
                   // Login button
                   _buildLoginButton(context),
+                  _buildSyncStatus(context),
                   const SizedBox(height: Constants.paddingM),
 
                   const SizedBox(height: Constants.paddingM),
@@ -259,19 +260,70 @@ class AuthView extends GetView<AuthController> {
   }
 
   Widget _buildLoginButton(BuildContext context) {
-    return Obx(() => ElevatedButton(
-      onPressed: controller.isLoading ? null : controller.login,
-      child: controller.isLoading
-          ? const SizedBox(
-        height: 20,
-        width: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+    return Obx(() {
+      final isButtonEnabled = controller.isFormValid && !controller.isSyncing;
+
+      return ElevatedButton(
+        onPressed: isButtonEnabled ? controller.login : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isButtonEnabled ? AppColors.primary : Colors.grey,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+          disabledForegroundColor: Colors.grey.withValues(alpha: 0.6),
+          padding: const EdgeInsets.symmetric(vertical: Constants.paddingM),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Constants.borderRadius),
+          ),
         ),
-      )
-          : const Text('Войти'),
-    ));
+        child: SizedBox(
+          height: 24,
+          child: controller.isLoading
+              ? const SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+              : Text(
+            controller.isSyncing ? 'Синхронизация...' : 'Войти',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildSyncStatus(BuildContext context) {
+    return Obx(() {
+      if (!controller.isSyncing) return const SizedBox.shrink();
+
+      return Padding(
+        padding: const EdgeInsets.only(top: Constants.paddingM),
+        child: Column(
+          children: [
+            Text(
+              controller.syncMessage,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: Constants.paddingXS),
+            Text(
+              'Пожалуйста, подождите...',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildCompanyInfo(BuildContext context) {

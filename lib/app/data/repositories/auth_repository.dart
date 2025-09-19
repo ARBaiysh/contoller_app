@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../models/sync_status_model.dart';
 import '../providers/api_provider.dart';
 import '../models/region_model.dart';
 import '../models/auth_response_model.dart';
@@ -90,11 +91,12 @@ class AuthRepository {
   }
 
   // Check sync status
-  Future<AuthResponseModel> checkSyncStatus(int messageId) async {
+  Future<SyncStatusModel> checkSyncStatus(int messageId) async {
     try {
+      print('[AUTH REPO] Checking sync status for messageId: $messageId');
       return await _apiProvider.checkSyncStatus(messageId);
     } catch (e) {
-      print('Check sync status error: $e');
+      print('[AUTH REPO] Check sync status error: $e');
       throw e;
     }
   }

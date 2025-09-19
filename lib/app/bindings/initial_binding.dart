@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../core/controllers/theme_controller.dart';
 import '../core/services/biometric_service.dart';
+import '../core/services/sync_service.dart';
 import '../data/providers/api_provider.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/statistics_repository.dart';
@@ -28,11 +29,14 @@ class InitialBinding extends Bindings {
     Get.put(BiometricService(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
 
-    // Repositories - Lazy loaded but kept in memory
+    // Repositories СНАЧАЛА - Lazy loaded but kept in memory
     Get.lazyPut<AuthRepository>(() => AuthRepository(), fenix: true);
     Get.lazyPut<SubscriberRepository>(() => SubscriberRepository(), fenix: true);
     Get.lazyPut<TpRepository>(() => TpRepository(), fenix: true);
     Get.lazyPut<StatisticsRepository>(() => StatisticsRepository(), fenix: true);
+
+    // SyncService ПОСЛЕ репозиториев
+    Get.put(SyncService(), permanent: true);
 
     // Controllers - Lazy loaded with fenix for auto-recreation
     Get.lazyPut<SplashController>(() => SplashController(), fenix: true);

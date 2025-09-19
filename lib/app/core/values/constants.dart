@@ -11,8 +11,32 @@ class Constants {
 // API timeouts (новые)
   static const Duration networkTimeout = Duration(seconds: 30);
   static const Duration syncTimeout = Duration(seconds: 60);
-  static const Duration syncCheckInterval = Duration(seconds: 5);
-  static const Duration maxSyncWaitTime = Duration(minutes: 5);
+  static const Duration syncCheckInterval = Duration(seconds: 3);
+  static const Duration maxSyncWaitTime = Duration(minutes: 2);
+
+
+  // ========================================
+  // КОНСТАНТЫ СИНХРОНИЗАЦИИ
+  // ========================================
+
+  // Авторизация
+  static const Duration authSyncTimeout = Duration(minutes: 2);
+  static const Duration authSyncCheckInterval = Duration(seconds: 3);
+
+  // Трансформаторные подстанции
+  static const Duration tpSyncTimeout = Duration(minutes: 5);
+  static const Duration tpSyncCheckInterval = Duration(seconds: 3);
+
+  // Абоненты (для будущего использования)
+  static const Duration abonentsSyncTimeout = Duration(minutes: 3);
+  static const Duration abonentsSyncCheckInterval = Duration(seconds: 3);
+
+  // Общие настройки синхронизации
+  static const Duration defaultSyncTimeout = Duration(minutes: 2);
+  static const Duration defaultSyncCheckInterval = Duration(seconds: 3);
+  static const int maxConcurrentSyncs = 3;
+
+
   // API Configuration
   static const bool useMockData = false;
   static const String biometricKey = 'biometric_enabled';

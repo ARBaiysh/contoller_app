@@ -4,14 +4,17 @@ import 'package:get/get.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/region_model.dart';
 import '../../../data/models/auth_response_model.dart';
+import '../../../data/models/sync_status_model.dart';
 import '../../../routes/app_pages.dart';
 import '../../../core/values/constants.dart';
 import '../../../core/services/biometric_service.dart';
+import '../../../core/services/sync_service.dart';
 import 'package:get_storage/get_storage.dart';
 
 class AuthController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final BiometricService _biometricService = Get.find<BiometricService>();
+  final SyncService _syncService = Get.find<SyncService>();
   final GetStorage _storage = GetStorage();
 
   // Form key
@@ -31,10 +34,7 @@ class AuthController extends GetxController {
   final _rememberMe = false.obs;
   final _showBiometricOption = false.obs;
   final _isBiometricLoading = false.obs;
-
-  // Timer for sync status checking
-  Timer? _syncTimer;
-  int? _currentSyncMessageId;
+  final _isFormValid = false.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -46,6 +46,7 @@ class AuthController extends GetxController {
   bool get rememberMe => _rememberMe.value;
   bool get showBiometricOption => _showBiometricOption.value;
   bool get isBiometricLoading => _isBiometricLoading.value;
+  bool get isFormValid => _isFormValid.value;
 
   @override
   void onInit() {
@@ -53,17 +54,40 @@ class AuthController extends GetxController {
     _loadRegions();
     _checkBiometricAvailability();
     _loadSavedCredentials();
+    _setupFormValidation();
   }
 
   @override
   void onClose() {
+    usernameController.removeListener(_validateForm);
+    passwordController.removeListener(_validateForm);
     usernameController.dispose();
     passwordController.dispose();
-    _syncTimer?.cancel();
     super.onClose();
   }
 
-  // Load regions
+  // ========================================
+  // FORM VALIDATION
+  // ========================================
+
+  void _setupFormValidation() {
+    usernameController.addListener(_validateForm);
+    passwordController.addListener(_validateForm);
+    _selectedRegion.listen((_) => _validateForm());
+  }
+
+  void _validateForm() {
+    final isUsernameValid = usernameController.text.trim().isNotEmpty;
+    final isPasswordValid = passwordController.text.trim().isNotEmpty;
+    final isRegionSelected = _selectedRegion.value != null;
+
+    _isFormValid.value = isUsernameValid && isPasswordValid && isRegionSelected && !_isLoading.value && !_isSyncing.value;
+  }
+
+  // ========================================
+  // INITIALIZATION
+  // ========================================
+
   Future<void> _loadRegions() async {
     try {
       print('[AUTH] Loading regions...');
@@ -97,16 +121,14 @@ class AuthController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+      _validateForm();
     }
   }
 
-  // Check biometric availability
   Future<void> _checkBiometricAvailability() async {
-    // Временно отключаем биометрию
     _showBiometricOption.value = false;
   }
 
-  // Load saved credentials
   void _loadSavedCredentials() {
     if (_storage.read('remember_me') == true) {
       _rememberMe.value = true;
@@ -114,22 +136,23 @@ class AuthController extends GetxController {
     }
   }
 
-  // Select region
+  // ========================================
+  // FORM ACTIONS
+  // ========================================
+
   void selectRegion(RegionModel? region) {
     _selectedRegion.value = region;
+    _validateForm();
   }
 
-  // Toggle password visibility
   void togglePasswordVisibility() {
     _isPasswordVisible.value = !_isPasswordVisible.value;
   }
 
-  // Toggle remember me
   void toggleRememberMe() {
     _rememberMe.value = !_rememberMe.value;
   }
 
-  // Form validation
   String? validateUsername(String? value) {
     if (value == null || value.isEmpty) {
       return 'Введите логин';
@@ -144,10 +167,13 @@ class AuthController extends GetxController {
     return null;
   }
 
-  // Login
-  Future<void> login() async {
-    if (!formKey.currentState!.validate()) return;
+  // ========================================
+  // LOGIN LOGIC
+  // ========================================
 
+  Future<void> login() async {
+    if (!_isFormValid.value) return;
+    if (!formKey.currentState!.validate()) return;
     if (_selectedRegion.value == null) {
       Get.snackbar(
         'Ошибка',
@@ -160,6 +186,7 @@ class AuthController extends GetxController {
 
     try {
       _isLoading.value = true;
+      _validateForm();
 
       final response = await _authRepository.login(
         username: usernameController.text.trim(),
@@ -188,10 +215,10 @@ class AuthController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+      _validateForm();
     }
   }
 
-  // Login with biometrics (stub for now)
   Future<void> loginWithBiometrics() async {
     _isBiometricLoading.value = true;
     await Future.delayed(const Duration(seconds: 1));
@@ -204,12 +231,14 @@ class AuthController extends GetxController {
     );
   }
 
-  // Get biometric button text
   Future<String> getBiometricButtonText() async {
     return 'биометрии';
   }
 
-  // Handle login response
+  // ========================================
+  // SYNC LOGIC (USING SYNCSERVICE)
+  // ========================================
+
   Future<void> _handleLoginResponse(AuthResponseModel response) async {
     switch (response.status) {
       case 'SUCCESS':
@@ -224,7 +253,7 @@ class AuthController extends GetxController {
 
       case 'SYNCING':
         if (response.syncMessageId != null) {
-          _startSyncProcess(response.syncMessageId!);
+          await _startSyncProcess(response.syncMessageId!);
         }
         break;
 
@@ -236,60 +265,85 @@ class AuthController extends GetxController {
     }
   }
 
-  // Start sync process
-  void _startSyncProcess(int syncMessageId) {
+  Future<void> _startSyncProcess(int syncMessageId) async {
     _isSyncing.value = true;
     _syncMessage.value = 'Идет синхронизация с 1С...';
-    _currentSyncMessageId = syncMessageId;
+    _validateForm();
 
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(Constants.syncCheckInterval, (_) {
-      _checkSyncStatus();
-    });
+    print('[AUTH] Starting sync monitoring for messageId: $syncMessageId');
 
-    Future.delayed(Constants.maxSyncWaitTime, () {
-      if (_isSyncing.value) {
-        _syncTimer?.cancel();
-        _isSyncing.value = false;
-        _syncMessage.value = '';
-        Get.snackbar(
-          'Ошибка',
-          'Время ожидания синхронизации истекло',
-          backgroundColor: Get.theme.colorScheme.error,
-          colorText: Colors.white,
-        );
-      }
-    });
+    await _syncService.monitorSync(
+      messageId: syncMessageId,
+      timeout: Constants.authSyncTimeout,        // 2 минуты
+      checkInterval: Constants.authSyncCheckInterval, // 3 секунды
+      onSuccess: _onSyncSuccess,
+      onError: _onSyncError,
+      onProgress: _onSyncProgress,
+    );
   }
 
-  // Check sync status
-  Future<void> _checkSyncStatus() async {
-    if (_currentSyncMessageId == null) return;
+  void _onSyncProgress(String message, Duration elapsed) {
+    _syncMessage.value = message;
+    print('[AUTH] Sync progress: $message (${elapsed.inSeconds}s)');
+  }
+
+  Future<void> _onSyncSuccess(SyncStatusModel syncStatus) async {
+    _isSyncing.value = false;
+    _syncMessage.value = '';
+    _validateForm();
+
+    print('[AUTH] Sync completed successfully, retrying login...');
 
     try {
-      final response = await _authRepository.checkSyncStatus(_currentSyncMessageId!);
+      _isLoading.value = true;
+      _validateForm();
+
+      // Повторный запрос авторизации после успешной синхронизации
+      final response = await _authRepository.login(
+        username: usernameController.text.trim(),
+        password: passwordController.text.trim(),
+        regionCode: _selectedRegion.value!.code,
+      );
 
       if (response.status == 'SUCCESS') {
-        _syncTimer?.cancel();
-        _isSyncing.value = false;
-        _syncMessage.value = '';
-        await login();
-      } else if (response.status == 'ERROR') {
-        _syncTimer?.cancel();
-        _isSyncing.value = false;
-        _syncMessage.value = '';
-        throw Exception(response.message ?? 'Ошибка синхронизации');
+        print('[AUTH] Retry login successful!');
+        Get.offAllNamed(Routes.NAVBAR);
+        Get.snackbar(
+          'Успешно',
+          'Добро пожаловать, ${response.fullName ?? ""}!',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        throw Exception(response.message ?? 'Повторная авторизация не удалась');
       }
     } catch (e) {
-      _syncTimer?.cancel();
-      _isSyncing.value = false;
-      _syncMessage.value = '';
+      print('[AUTH] Retry login failed: $e');
       Get.snackbar(
-        'Ошибка',
-        'Ошибка при проверке статуса синхронизации',
+        'Ошибка повторной авторизации',
+        e.toString().replaceAll('Exception: ', ''),
         backgroundColor: Get.theme.colorScheme.error,
         colorText: Colors.white,
       );
+    } finally {
+      _isLoading.value = false;
+      _validateForm();
     }
+  }
+
+  void _onSyncError(String error) {
+    _isSyncing.value = false;
+    _syncMessage.value = '';
+    _validateForm();
+
+    print('[AUTH] Sync failed: $error');
+
+    Get.snackbar(
+      'Ошибка синхронизации',
+      error,
+      backgroundColor: Get.theme.colorScheme.error,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 5),
+    );
   }
 }

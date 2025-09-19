@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../controllers/tp_list_controller.dart';
+import '../widgets/tp_item_card.dart';
 import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/tp_list_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 
@@ -11,51 +12,59 @@ class TpListView extends GetView<TpListController> {
 
   @override
   Widget build(BuildContext context) {
+    final refreshController = RefreshController(initialRefresh: false);
+
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Список ТП',
+        title: 'Трансформаторные подстанции',
         actions: [
-          // Индикатор синхронизации
-          Obx(() => controller.isSyncing
-              ? Container(
-            margin: const EdgeInsets.only(right: 12),
-            width: 20,
-            height: 20,
-            child: const CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          )
-              : const SizedBox.shrink()),
+          // Кнопка сортировки
           IconButton(
             icon: const Icon(Icons.sort),
-            onPressed: () => _showSortDialog(context),
+            onPressed: controller.showSortDialog,
             tooltip: 'Сортировка',
           ),
         ],
       ),
       body: SafeArea(
-        top: false, // AppBar уже учитывает верхнюю область
-        bottom: true, // Защищаем от виртуальных кнопок внизу
-        left: true, // Защищаем от вырезов по бокам
+        top: false,
+        bottom: true,
+        left: true,
         right: true,
         child: Column(
           children: [
-            // Search field
+            // Поиск
             _buildSearchField(context),
 
-            // Summary info (упрощенная версия)
-            _buildSummaryInfo(context),
+            // Статус синхронизации
+            _buildSyncStatus(context),
 
-            // TP List
+            // Список ТП
             Expanded(
-              child: Obx(() => _buildTpList(context)),
+              child: Obx(() {
+                if (controller.isLoading && controller.tpList.isEmpty) {
+                  return _buildLoadingState(context);
+                }
+
+                if (controller.isEmpty && !controller.isLoading) {
+                  return _buildEmptyState(context);
+                }
+
+                return _buildTpList(context, refreshController);
+              }),
             ),
+
+            // Кнопка синхронизации внизу
+            _buildSyncButton(context),
           ],
         ),
       ),
     );
   }
+
+  // ========================================
+  // ПОИСК
+  // ========================================
 
   Widget _buildSearchField(BuildContext context) {
     return Container(
@@ -66,6 +75,12 @@ class TpListView extends GetView<TpListController> {
         decoration: InputDecoration(
           hintText: 'Поиск по номеру, названию или фидеру',
           prefixIcon: const Icon(Icons.search),
+          suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
+              ? IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: () => controller.searchTps(''),
+          )
+              : const SizedBox.shrink()),
           filled: true,
           fillColor: Theme.of(context).cardColor,
           border: OutlineInputBorder(
@@ -81,60 +96,145 @@ class TpListView extends GetView<TpListController> {
     );
   }
 
-  Widget _buildSummaryInfo(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(Constants.paddingM),
-      child: Obx(() => Row(
-        children: [
-          Icon(
-            Icons.electrical_services,
-            color: AppColors.primary,
-            size: 20,
+  // ========================================
+  // СТАТУС СИНХРОНИЗАЦИИ
+  // ========================================
+
+  Widget _buildSyncStatus(BuildContext context) {
+    return Obx(() {
+      if (!controller.isSyncing) return const SizedBox.shrink();
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Constants.paddingM),
+        margin: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
+        decoration: BoxDecoration(
+          color: AppColors.info.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(Constants.borderRadius),
+          border: Border.all(
+            color: AppColors.info.withValues(alpha: 0.3),
+            width: 1,
           ),
-          const SizedBox(width: Constants.paddingS),
-          Text(
-            'Всего ТП: ${controller.totalTps}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          if (controller.searchQuery.isNotEmpty)
-            TextButton.icon(
-              onPressed: () => controller.searchTps(''),
-              icon: const Icon(Icons.clear, size: 18),
-              label: const Text('Очистить'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.info),
               ),
             ),
+            const SizedBox(width: Constants.paddingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    controller.syncProgress,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: Constants.paddingXS),
+                  Text(
+                    'Время: ${controller.syncElapsedFormatted} / 05:00',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.info.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // ========================================
+  // СОСТОЯНИЯ
+  // ========================================
+
+  Widget _buildLoadingState(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: Constants.paddingM),
+          Text('Загрузка списка ТП...'),
         ],
-      )),
+      ),
     );
   }
 
-  Widget _buildTpList(BuildContext context) {
-    if (controller.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(Constants.paddingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.electrical_services_outlined,
+              size: 64,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: Constants.paddingL),
+            Text(
+              'Список ТП пуст',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: Constants.paddingM),
+            Text(
+              'Нажмите кнопку "Синхронизировать" внизу экрана для загрузки данных с сервера',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    if (controller.tpList.isEmpty) {
-      return _buildEmptyState(context);
-    }
+  // ========================================
+  // СПИСОК ТП
+  // ========================================
 
-    return RefreshIndicator(
-      onRefresh: controller.refreshTpList,
+  Widget _buildTpList(BuildContext context, RefreshController refreshController) {
+    return SmartRefresher(
+      controller: refreshController,
+      enablePullDown: true,
+      enablePullUp: false,
+      header: WaterDropHeader(
+        complete: Text(
+          'Обновлено',
+          style: TextStyle(color: AppColors.primary),
+        ),
+        waterDropColor: AppColors.primary,
+      ),
+      onRefresh: () async {
+        await controller.refreshTpList();
+        refreshController.refreshCompleted();
+      },
       child: ListView.builder(
         padding: const EdgeInsets.only(
+          left: Constants.paddingM,
+          right: Constants.paddingM,
           top: Constants.paddingS,
-          bottom: Constants.paddingL,
+          bottom: Constants.paddingXL, // Отступ для кнопки синхронизации
         ),
         itemCount: controller.tpList.length,
         itemBuilder: (context, index) {
           final tp = controller.tpList[index];
-          return TpListItem(
+          return TpItemCard(
             tp: tp,
             onTap: () => controller.navigateToSubscribers(tp),
           );
@@ -143,75 +243,58 @@ class TpListView extends GetView<TpListController> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final isSearching = controller.searchQuery.isNotEmpty;
+  // ========================================
+  // КНОПКА СИНХРОНИЗАЦИИ
+  // ========================================
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(Constants.paddingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSearching ? Icons.search_off : Icons.electrical_services_outlined,
-              size: 64,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: Constants.paddingM),
-            Text(
-              isSearching ? 'Ничего не найдено' : 'Список ТП пуст',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: Constants.paddingS),
-            Text(
-              isSearching
-                  ? 'Попробуйте изменить параметры поиска'
-                  : 'Потяните вниз для обновления',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.color
-                    ?.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showSortDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Сортировка'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: controller.sortOptions.map((option) {
-              return RadioListTile<String>(
-                title: Text(option.label),
-                value: option.value,
-                groupValue: controller.sortBy,
-                onChanged: (value) {
-                  if (value != null) {
-                    controller.setSorting(value);
-                    Navigator.of(context).pop();
-                  }
-                },
-              );
-            }).toList(),
+  Widget _buildSyncButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(Constants.paddingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Отмена'),
+        ],
+      ),
+      child: Obx(() {
+        final isEnabled = !controller.isSyncing && !controller.isLoading;
+
+        return ElevatedButton.icon(
+          onPressed: isEnabled ? controller.syncTpList : null,
+          icon: controller.isSyncing
+              ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
-          ],
+          )
+              : const Icon(Icons.sync),
+          label: Text(
+            controller.isSyncing ? 'Синхронизация...' : 'Синхронизировать',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isEnabled ? AppColors.primary : Colors.grey,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+            disabledForegroundColor: Colors.grey.withValues(alpha: 0.6),
+            padding: const EdgeInsets.symmetric(vertical: Constants.paddingM),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Constants.borderRadius),
+            ),
+          ),
         );
-      },
+      }),
     );
   }
 }
