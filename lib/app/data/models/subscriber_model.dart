@@ -1,197 +1,222 @@
 class SubscriberModel {
-  final String id;
+  final int id;
   final String accountNumber;
   final String fullName;
   final String address;
-  final String tpId;
-  final String tpNumber;
-  final MeterInfo meterInfo;
+  final String? phone; // НОВОЕ ПОЛЕ
   final double balance;
+  final int? lastReading;
+  final DateTime? lastReadingDate;
+  final bool canTakeReading; // ОБНОВЛЕНО: заменили ReadingStatus
+
+  // Информация о счетчике (ОБНОВЛЕНО)
+  final String meterType;
+  final String meterSerialNumber;
+  final String sealNumber;
+  final String tariffName; // НОВОЕ ПОЛЕ
+
+  // Информация о платежах
   final double lastPaymentAmount;
   final DateTime? lastPaymentDate;
-  final ReadingStatus readingStatus;
-  final int? lastReading;
-  final int? currentReading;
-  final DateTime? lastReadingDate;
-  final double? consumption;
-  final double? amountDue;
+
+  // Информация о ТП (НОВЫЕ ПОЛЯ)
+  final String transformerPointCode;
+  final String transformerPointName;
 
   SubscriberModel({
     required this.id,
     required this.accountNumber,
     required this.fullName,
     required this.address,
-    required this.tpId,
-    required this.tpNumber,
-    required this.meterInfo,
+    this.phone,
     this.balance = 0.0,
+    this.lastReading,
+    this.lastReadingDate,
+    this.canTakeReading = true,
+    required this.meterType,
+    required this.meterSerialNumber,
+    this.sealNumber = '',
+    required this.tariffName,
     this.lastPaymentAmount = 0.0,
     this.lastPaymentDate,
-    this.readingStatus = ReadingStatus.available,
-    this.lastReading,
-    this.currentReading,
-    this.lastReadingDate,
-    this.consumption,
-    this.amountDue,
+    required this.transformerPointCode,
+    required this.transformerPointName,
   });
 
-  // Check if subscriber is debtor
+  // ========================================
+  // COMPUTED PROPERTIES
+  // ========================================
+
+  /// Проверка, является ли абонент должником
   bool get isDebtor => balance < 0;
 
-  // Get debt amount (positive value)
+  /// Сумма долга (положительное значение)
   double get debtAmount => balance < 0 ? balance.abs() : 0;
 
-  // Check if reading can be taken
-  bool get canTakeReading => readingStatus == ReadingStatus.available;
+  /// Можно ли снимать показания
+  bool get canTakeReadings => canTakeReading;
 
-  // From JSON - ИСПРАВЛЕННАЯ ВЕРСИЯ
+  /// Краткая информация о счетчике
+  String get meterInfo => '$meterType №$meterSerialNumber';
+
+  /// Форматированный баланс с валютой
+  String get formattedBalance {
+    final absBalance = balance.abs();
+    final formatted = absBalance.toStringAsFixed(2);
+    return balance < 0 ? '-$formatted руб.' : '+$formatted руб.';
+  }
+
+  /// Статус для цветовой индикации
+  SubscriberStatus get status {
+    if (!canTakeReading) return SubscriberStatus.disabled;
+    if (isDebtor) return SubscriberStatus.debtor;
+    return SubscriberStatus.normal;
+  }
+
+  // ========================================
+  // JSON SERIALIZATION
+  // ========================================
+
   factory SubscriberModel.fromJson(Map<String, dynamic> json) {
-    // Создаем meter_info из отдельных полей если нет объекта meter_info
-    final meterInfoData = json['meter_info'] ?? {
-      'type': json['meterType'] ?? 'СОЭ',
-      'serial_number': json['meterSerialNumber'] ?? '',
-      'seal_number': json['sealNumber'] ?? '',
-      'tariff_code': 1,
-    };
-
     return SubscriberModel(
-      id: json['id']?.toString() ?? '',
-      accountNumber: json['accountNumber'] ?? json['account_number'] ?? '',
-      fullName: json['fullName'] ?? json['full_name'] ?? '',
+      id: json['id'] ?? 0,
+      accountNumber: json['accountNumber'] ?? '',
+      fullName: json['fullName'] ?? '',
       address: json['address'] ?? '',
-      tpId: json['transformerPointCode'] ?? json['tp_id']?.toString() ?? '',
-      tpNumber: json['transformerPointName'] ?? json['tp_number'] ?? '',
-      meterInfo: MeterInfo.fromJson(meterInfoData),
+      phone: json['phone'],
       balance: (json['balance'] ?? 0).toDouble(),
-      lastPaymentAmount: (json['lastPaymentAmount'] ?? json['last_payment_amount'] ?? 0).toDouble(),
-      lastPaymentDate: json['lastPaymentDate'] != null
-          ? DateTime.tryParse(json['lastPaymentDate'])
-          : json['last_payment_date'] != null
-          ? DateTime.tryParse(json['last_payment_date'])
-          : null,
-      readingStatus: ReadingStatus.fromString(json['readingStatus'] ?? json['reading_status'] ?? 'available'),
-      lastReading: json['lastReading'] ?? json['last_reading'],
-      currentReading: json['currentReading'] ?? json['current_reading'],
+      lastReading: json['lastReading'],
       lastReadingDate: json['lastReadingDate'] != null
           ? DateTime.tryParse(json['lastReadingDate'])
-          : json['last_reading_date'] != null
-          ? DateTime.tryParse(json['last_reading_date'])
           : null,
-      consumption: json['consumption']?.toDouble(),
-      amountDue: json['amount_due']?.toDouble() ?? json['amountDue']?.toDouble(),
+      canTakeReading: json['canTakeReading'] ?? true,
+      meterType: json['meterType'] ?? 'СОЭ',
+      meterSerialNumber: json['meterSerialNumber'] ?? '',
+      sealNumber: json['sealNumber'] ?? '',
+      tariffName: json['tariffName'] ?? 'Обычный',
+      lastPaymentAmount: (json['lastPaymentAmount'] ?? 0).toDouble(),
+      lastPaymentDate: json['lastPaymentDate'] != null
+          ? DateTime.tryParse(json['lastPaymentDate'])
+          : null,
+      transformerPointCode: json['transformerPointCode'] ?? '',
+      transformerPointName: json['transformerPointName'] ?? '',
     );
   }
 
-  // To JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'account_number': accountNumber,
-      'full_name': fullName,
+      'accountNumber': accountNumber,
+      'fullName': fullName,
       'address': address,
-      'tp_id': tpId,
-      'tp_number': tpNumber,
-      'meter_info': meterInfo.toJson(),
+      'phone': phone,
       'balance': balance,
-      'last_payment_amount': lastPaymentAmount,
-      'last_payment_date': lastPaymentDate?.toIso8601String(),
-      'reading_status': readingStatus.value,
-      'last_reading': lastReading,
-      'current_reading': currentReading,
-      'last_reading_date': lastReadingDate?.toIso8601String(),
-      'consumption': consumption,
-      'amount_due': amountDue,
+      'lastReading': lastReading,
+      'lastReadingDate': lastReadingDate?.toIso8601String(),
+      'canTakeReading': canTakeReading,
+      'meterType': meterType,
+      'meterSerialNumber': meterSerialNumber,
+      'sealNumber': sealNumber,
+      'tariffName': tariffName,
+      'lastPaymentAmount': lastPaymentAmount,
+      'lastPaymentDate': lastPaymentDate?.toIso8601String(),
+      'transformerPointCode': transformerPointCode,
+      'transformerPointName': transformerPointName,
     };
   }
 
-  // Copy with
+  // ========================================
+  // COPY WITH
+  // ========================================
+
   SubscriberModel copyWith({
-    String? id,
+    int? id,
     String? accountNumber,
     String? fullName,
     String? address,
-    String? tpId,
-    String? tpNumber,
-    MeterInfo? meterInfo,
+    String? phone,
     double? balance,
+    int? lastReading,
+    DateTime? lastReadingDate,
+    bool? canTakeReading,
+    String? meterType,
+    String? meterSerialNumber,
+    String? sealNumber,
+    String? tariffName,
     double? lastPaymentAmount,
     DateTime? lastPaymentDate,
-    ReadingStatus? readingStatus,
-    int? lastReading,
-    int? currentReading,
-    DateTime? lastReadingDate,
-    double? consumption,
-    double? amountDue,
+    String? transformerPointCode,
+    String? transformerPointName,
   }) {
     return SubscriberModel(
       id: id ?? this.id,
       accountNumber: accountNumber ?? this.accountNumber,
       fullName: fullName ?? this.fullName,
       address: address ?? this.address,
-      tpId: tpId ?? this.tpId,
-      tpNumber: tpNumber ?? this.tpNumber,
-      meterInfo: meterInfo ?? this.meterInfo,
+      phone: phone ?? this.phone,
       balance: balance ?? this.balance,
+      lastReading: lastReading ?? this.lastReading,
+      lastReadingDate: lastReadingDate ?? this.lastReadingDate,
+      canTakeReading: canTakeReading ?? this.canTakeReading,
+      meterType: meterType ?? this.meterType,
+      meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
+      sealNumber: sealNumber ?? this.sealNumber,
+      tariffName: tariffName ?? this.tariffName,
       lastPaymentAmount: lastPaymentAmount ?? this.lastPaymentAmount,
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
-      readingStatus: readingStatus ?? this.readingStatus,
-      lastReading: lastReading ?? this.lastReading,
-      currentReading: currentReading ?? this.currentReading,
-      lastReadingDate: lastReadingDate ?? this.lastReadingDate,
-      consumption: consumption ?? this.consumption,
-      amountDue: amountDue ?? this.amountDue,
+      transformerPointCode: transformerPointCode ?? this.transformerPointCode,
+      transformerPointName: transformerPointName ?? this.transformerPointName,
     );
   }
+
+  @override
+  String toString() {
+    return 'SubscriberModel(id: $id, accountNumber: $accountNumber, fullName: $fullName, balance: $balance)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SubscriberModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-// Meter Information
-class MeterInfo {
-  final String type;
-  final String serialNumber;
-  final String sealNumber;
-  final int tariffCode;
+// ========================================
+// ENUMS AND HELPERS
+// ========================================
 
-  MeterInfo({
-    required this.type,
-    required this.serialNumber,
-    this.sealNumber = '',
-    this.tariffCode = 1,
-  });
-
-  factory MeterInfo.fromJson(Map<String, dynamic> json) {
-    return MeterInfo(
-      type: json['type'] ?? 'СОЭ',
-      serialNumber: json['serial_number'] ?? '',
-      sealNumber: json['seal_number'] ?? '',
-      tariffCode: json['tariff_code'] ?? 1,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'serial_number': serialNumber,
-      'seal_number': sealNumber,
-      'tariff_code': tariffCode,
-    };
-  }
+/// Статус абонента для цветовой индикации
+enum SubscriberStatus {
+  normal,    // Обычный (зеленый/нейтральный)
+  debtor,    // Должник (красный)
+  disabled,  // Нельзя снимать показания (серый)
 }
 
-// Reading Status Enum
-enum ReadingStatus {
-  available('available', 'Можно брать'),
-  processing('processing', 'Обрабатывается'),
-  completed('completed', 'Обработан');
+extension SubscriberStatusExtension on SubscriberStatus {
+  /// Цветовая индикация для UI
+  String get displayName {
+    switch (this) {
+      case SubscriberStatus.normal:
+        return 'Обычный';
+      case SubscriberStatus.debtor:
+        return 'Должник';
+      case SubscriberStatus.disabled:
+        return 'Заблокирован';
+    }
+  }
 
-  final String value;
-  final String displayName;
-
-  const ReadingStatus(this.value, this.displayName);
-
-  static ReadingStatus fromString(String value) {
-    return ReadingStatus.values.firstWhere(
-          (status) => status.value == value,
-      orElse: () => ReadingStatus.available,
-    );
+  /// Описание статуса
+  String get description {
+    switch (this) {
+      case SubscriberStatus.normal:
+        return 'Можно снимать показания';
+      case SubscriberStatus.debtor:
+        return 'Отрицательный баланс';
+      case SubscriberStatus.disabled:
+        return 'Показания заблокированы';
+    }
   }
 }

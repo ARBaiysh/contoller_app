@@ -27,7 +27,7 @@ class Constants {
   static const Duration tpSyncTimeout = Duration(minutes: 5);
   static const Duration tpSyncCheckInterval = Duration(seconds: 3);
 
-  // Абоненты (для будущего использования)
+  // Абоненты
   static const Duration abonentsSyncTimeout = Duration(minutes: 3);
   static const Duration abonentsSyncCheckInterval = Duration(seconds: 3);
 
