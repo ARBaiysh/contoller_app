@@ -1,6 +1,8 @@
+// lib/app/data/repositories/tp_repository.dart
+
+import 'dart:async';
 import 'package:get/get.dart';
 import '../models/tp_model.dart';
-import '../models/tp_sync_response_model.dart';
 import '../providers/api_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/values/constants.dart';
@@ -9,22 +11,32 @@ class TpRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
   final SyncService _syncService = Get.find<SyncService>();
 
-  /// Получение списка ТП (простая загрузка, без кеширования)
+  // ========================================
+  // ОСНОВНЫЕ МЕТОДЫ
+  // ========================================
+
+  /// Получение списка ТП с сервера
   Future<List<TpModel>> getTpList({bool forceRefresh = false}) async {
     try {
-      print('[TP REPO] Getting TP list...');
+      print('[TP REPO] Fetching TP list...');
+
+      // Получаем данные с сервера
       final responseData = await _apiProvider.getTransformerPoints();
 
-      // Преобразуем данные в модели
+      // Преобразуем в модели
       final tpList = responseData.map((json) => TpModel.fromJson(json)).toList();
 
-      print('[TP REPO] Loaded ${tpList.length} transformer points');
+      print('[TP REPO] Loaded ${tpList.length} TPs');
       return tpList;
     } catch (e) {
       print('[TP REPO] Error fetching TP list: $e');
       throw Exception('Не удалось загрузить список ТП');
     }
   }
+
+  // ========================================
+  // СИНХРОНИЗАЦИЯ
+  // ========================================
 
   /// Синхронизация списка ТП с колбэками для UI
   Future<void> syncTpList({
@@ -34,68 +46,36 @@ class TpRepository {
     required Function(String error) onError,
   }) async {
     try {
-      print('[TP REPO] Starting TP sync...');
+      onSyncStarted();
 
-      // Запускаем синхронизацию
-      final syncResponse = await _apiProvider.syncTransformerPoints();
+      final stopwatch = Stopwatch()..start();
+      Timer? progressTimer;
 
-      if (syncResponse.isAlreadyRunning) {
-        // 409 Conflict - синхронизация уже идет
-        print('[TP REPO] Sync already running');
-        onError(syncResponse.displayMessage);
-        return;
-      }
+      // Обновляем прогресс каждые 3 секунды
+      progressTimer = Timer.periodic(Constants.tpSyncCheckInterval, (timer) {
+        final elapsed = stopwatch.elapsed;
+        onProgress('Синхронизация ТП...', elapsed);
+      });
 
-      if (syncResponse.isError) {
-        // Ошибка запуска синхронизации
-        print('[TP REPO] Sync initiation failed: ${syncResponse.displayMessage}');
-        onError(syncResponse.displayMessage);
-        return;
-      }
+      // Загружаем данные
+      final tpList = await getTpList(forceRefresh: true);
 
-      if (syncResponse.isInitiated && syncResponse.syncMessageId != null) {
-        // Синхронизация успешно запущена - начинаем мониторинг
-        print('[TP REPO] Sync initiated with messageId: ${syncResponse.syncMessageId}');
-        onSyncStarted();
+      progressTimer?.cancel();
+      stopwatch.stop();
 
-        await _syncService.monitorSync(
-          messageId: syncResponse.syncMessageId!,
-          timeout: Constants.tpSyncTimeout,           // 5 минут
-          checkInterval: Constants.tpSyncCheckInterval, // 3 секунды
-          onSuccess: (syncStatus) {
-            print('[TP REPO] Sync completed successfully');
-            onSuccess();
-          },
-          onError: (error) {
-            print('[TP REPO] Sync failed: $error');
-            onError(error);
-          },
-          onProgress: (message, elapsed) {
-            print('[TP REPO] Sync progress: $message (${elapsed.inSeconds}s)');
-            onProgress(message, elapsed);
-          },
-        );
-      } else {
-        // Неожиданный ответ
-        print('[TP REPO] Unexpected sync response: ${syncResponse.status}');
-        onError('Неожиданный ответ сервера при запуске синхронизации');
-      }
+      onProgress('Загружено ${tpList.length} ТП', stopwatch.elapsed);
+      onSuccess();
 
     } catch (e) {
-      print('[TP REPO] Error starting TP sync: $e');
-      onError('Не удалось запустить синхронизацию ТП');
+      print('[TP REPO] Sync error: $e');
+      onError(e.toString());
+      throw e;
     }
   }
 
-  /// Получить ТП по ID (простой поиск в списке)
-  Future<TpModel?> getTpById(String id) async {
-    try {
-      final tpList = await getTpList();
-      return tpList.firstWhereOrNull((tp) => tp.id == id);
-    } catch (e) {
-      print('[TP REPO] Error getting TP by ID: $e');
-      return null;
-    }
+  /// Принудительное обновление списка ТП
+  Future<List<TpModel>> refreshTpList() async {
+    return getTpList(forceRefresh: true);
   }
 
   /// Поиск ТП по запросу
@@ -117,13 +97,14 @@ class TpRepository {
     }
   }
 
-  /// Обновить статистику ТП на основе списка абонентов
-  void updateTpStatistics(String tpId, List<dynamic> subscribers) {
-    // Эта функция может быть использована другими репозиториями
-    // для обновления статистики ТП после загрузки абонентов
-    print('[TP REPO] Updating statistics for TP $tpId with ${subscribers.length} subscribers');
-
-    // В новой архитектуре статистика не кешируется
-    // Каждый раз загружается с сервера
+  /// Получить ТП по ID
+  Future<TpModel?> getTpById(String id) async {
+    try {
+      final tpList = await getTpList();
+      return tpList.firstWhereOrNull((tp) => tp.id == id);
+    } catch (e) {
+      print('[TP REPO] Error getting TP by ID: $e');
+      return null;
+    }
   }
 }

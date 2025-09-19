@@ -1,3 +1,5 @@
+// lib/app/modules/tp_list/widgets/tp_item_card.dart
+
 import 'package:flutter/material.dart';
 import '../../../data/models/tp_model.dart';
 import '../../../core/theme/app_colors.dart';
@@ -15,16 +17,6 @@ class TpItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Временные данные пока нет из бэкенда
-    final totalCount = 10;
-    final collectedCount = 8;
-    final remainingCount = 2;
-    final progressPercent = (collectedCount / totalCount * 100).round();
-
-    // Определяем цвет статуса
-    final statusColor = progressPercent == 100 ? Colors.green : Colors.orange;
-    final statusText = progressPercent == 100 ? 'Завершено' : 'В работе';
-
     return Container(
       margin: const EdgeInsets.only(bottom: Constants.paddingM),
       decoration: BoxDecoration(
@@ -41,14 +33,13 @@ class TpItemCard extends StatelessWidget {
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(Constants.borderRadius),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(Constants.borderRadius),
@@ -57,30 +48,16 @@ class TpItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Заголовок с иконкой и кнопкой
+                // Header with TP info and status
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Иконка ТП
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.electrical_services,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: Constants.paddingM),
-
-                    // Название ТП
+                    // TP Info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // TP Number and Name
                           Text(
                             '${tp.number} ${tp.name}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -89,10 +66,12 @@ class TpItemCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 4),
+                          // Fider
                           Text(
                             tp.fider,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -100,97 +79,89 @@ class TpItemCard extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // Статус "В работе"
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Constants.paddingS,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    // Status Badge
+                    _buildStatusBadge(context),
                   ],
                 ),
-
                 const SizedBox(height: Constants.paddingM),
 
-                // Статистика
+                // Statistics
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildStatItem(
                       context: context,
                       label: 'Абоненты',
-                      value: totalCount.toString(),
-                      color: null,
+                      value: '${tp.totalSubscribers}',
                     ),
                     _buildStatItem(
                       context: context,
                       label: 'Собрано',
-                      value: collectedCount.toString(),
-                      color: Colors.green,
+                      value: '${tp.readingsCollected}',
+                      color: AppColors.success,
                     ),
                     _buildStatItem(
                       context: context,
-                      label: 'Осталось',
-                      value: remainingCount.toString(),
-                      color: Colors.orange,
+                      label: 'Доступно',
+                      value: '${tp.readingsAvailable}',
+                      color: AppColors.warning,
                     ),
                   ],
                 ),
-
                 const SizedBox(height: Constants.paddingM),
 
-                // Прогресс бар
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Прогресс сбора',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
-                          ),
-                        ),
-                        Text(
-                          '${progressPercent.toStringAsFixed(1)}%',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: Constants.paddingXS),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progressPercent / 100,
-                        minHeight: 8,
-                        backgroundColor: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey[800]
-                            : Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                      ),
-                    ),
-                  ],
-                ),
+                // Progress Bar
+                _buildProgressBar(context),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(BuildContext context) {
+    // Если нет абонентов
+    if (tp.totalSubscribers == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          'Нет абонентов',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    final isCompleted = tp.isCompleted;
+    final color = isCompleted ? AppColors.success : AppColors.warning;
+    final text = isCompleted ? 'Завершено' : 'В работе';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Constants.paddingS,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -203,22 +174,60 @@ class TpItemCard extends StatelessWidget {
     Color? color,
   }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: color ?? Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
-            fontSize: 12,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontSize: 16,
+      ],
+    );
+  }
+
+  Widget _buildProgressBar(BuildContext context) {
+    final progress = tp.progressPercentage / 100;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Прогресс',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '${tp.progressPercentage.toStringAsFixed(0)}%',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progress,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.black.withOpacity(0.05),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            tp.isCompleted ? AppColors.success : AppColors.primary,
           ),
+          minHeight: 6,
         ),
       ],
     );

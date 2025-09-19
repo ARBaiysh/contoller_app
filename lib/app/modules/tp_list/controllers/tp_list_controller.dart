@@ -83,7 +83,6 @@ class TpListController extends GetxController {
   // СИНХРОНИЗАЦИЯ
   // ========================================
 
-  /// Запуск синхронизации ТП
   Future<void> syncTpList() async {
     if (_isSyncing.value || _isLoading.value) return;
 
@@ -92,8 +91,8 @@ class TpListController extends GetxController {
     await _tpRepository.syncTpList(
       onSyncStarted: _onSyncStarted,
       onProgress: _onSyncProgress,
-      onSuccess: _onSyncSuccess,
-      onError: _onSyncError,
+      onSuccess: _onSyncSuccess,      // Изменено с onSyncCompleted
+      onError: _onSyncError,          // Изменено с onSyncError
     );
   }
 

@@ -1,3 +1,5 @@
+// lib/app/widgets/tp_list_item.dart
+
 import 'package:flutter/material.dart';
 import '../data/models/tp_model.dart';
 import '../core/theme/app_colors.dart';
@@ -29,15 +31,15 @@ class TpListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(Constants.borderRadius),
           border: Theme.of(context).brightness == Brightness.dark
               ? Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Colors.white.withOpacity(0.1),
             width: 1,
           )
               : null,
           boxShadow: [
             BoxShadow(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.05),
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -55,7 +57,7 @@ class TpListItem extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _getStatusColor().withValues(alpha: 0.1),
+                    color: _getStatusColor().withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -82,11 +84,11 @@ class TpListItem extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
 
-                      // Address
+                      // Fider
                       Text(
                         tp.fider,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -118,8 +120,8 @@ class TpListItem extends StatelessWidget {
                 ),
                 _buildStatItem(
                   context: context,
-                  label: 'Осталось',
-                  value: '${tp.totalSubscribers - tp.readingsCollected}',
+                  label: 'Доступно',
+                  value: '${tp.readingsAvailable}',
                   color: AppColors.warning,
                 ),
               ],
@@ -134,8 +136,14 @@ class TpListItem extends StatelessWidget {
     );
   }
 
+  Color _getStatusColor() {
+    if (tp.totalSubscribers == 0) return Colors.grey;
+    if (tp.isCompleted) return AppColors.success;
+    if (tp.readingsCollected > 0) return AppColors.warning;
+    return AppColors.primary;
+  }
+
   Widget _buildStatusBadge(BuildContext context) {
-    // Если нет данных о количестве абонентов
     if (tp.totalSubscribers == 0) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -143,13 +151,13 @@ class TpListItem extends StatelessWidget {
           vertical: 4,
         ),
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
+          color: Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
-          'Нет данных',
+          'Нет абонентов',
           style: TextStyle(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -157,7 +165,6 @@ class TpListItem extends StatelessWidget {
       );
     }
 
-    // Существующая логика для ТП с данными
     final isCompleted = tp.isCompleted;
     final color = isCompleted ? AppColors.success : AppColors.warning;
     final text = isCompleted ? 'Завершен' : 'В работе';
@@ -168,7 +175,7 @@ class TpListItem extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -194,7 +201,7 @@ class TpListItem extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
           ),
         ),
         const SizedBox(height: 2),
@@ -210,7 +217,6 @@ class TpListItem extends StatelessWidget {
   }
 
   Widget _buildProgressBar(BuildContext context) {
-    // Если нет данных о количестве абонентов
     if (tp.totalSubscribers == 0) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -219,33 +225,23 @@ class TpListItem extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey.withValues(alpha: 0.1)
-              : Colors.grey.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(8),
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 16,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+        child: Center(
+          child: Text(
+            'Нет данных для отображения',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
             ),
-            const SizedBox(width: Constants.paddingS),
-            Expanded(
-              child: Text(
-                'Нет данных об абонентах',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    // Существующий код для отображения прогресс-бара
+    final progress = tp.progressPercentage / 100;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -253,35 +249,32 @@ class TpListItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Прогресс сбора',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Text(
-              '${tp.progressPercentage.toStringAsFixed(1)}%',
+              'Прогресс',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: _getStatusColor(),
+              ),
+            ),
+            Text(
+              '${tp.progressPercentage.toStringAsFixed(0)}%',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
               ),
             ),
           ],
         ),
-        const SizedBox(height: Constants.paddingS),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: tp.progressPercentage / 100,
-            backgroundColor: Colors.grey.withValues(alpha: 0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor()),
-            minHeight: 8,
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progress,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.black.withOpacity(0.05),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            tp.isCompleted ? AppColors.success : AppColors.primary,
           ),
+          minHeight: 6,
         ),
       ],
     );
-  }
-
-  Color _getStatusColor() {
-    if (tp.isCompleted) return AppColors.success;
-    if (tp.progressPercentage > 0) return AppColors.warning;
-    return AppColors.info;
   }
 }
