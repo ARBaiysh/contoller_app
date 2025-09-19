@@ -54,9 +54,6 @@ class HomeView extends GetView<HomeController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStatisticsGrid(context),
-            const SizedBox(height: Constants.paddingL),
-            _buildQuickActions(context),
-            const SizedBox(height: Constants.paddingXL),
           ],
         ),
       ),
