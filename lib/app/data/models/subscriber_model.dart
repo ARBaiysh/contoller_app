@@ -48,7 +48,7 @@ class SubscriberModel {
   // ========================================
 
   /// Проверка, является ли абонент должником
-  bool get isDebtor => balance < 0;
+  bool get isDebtor => balance > 0;
 
   /// Сумма долга (положительное значение)
   double get debtAmount => balance < 0 ? balance.abs() : 0;
@@ -63,7 +63,7 @@ class SubscriberModel {
   String get formattedBalance {
     final absBalance = balance.abs();
     final formatted = absBalance.toStringAsFixed(2);
-    return balance < 0 ? '-$formatted сом.' : '+$formatted сом.';
+    return balance > 0 ? '$formatted сом.' : '$formatted сом.';
   }
 
   /// Статус для цветовой индикации

@@ -20,33 +20,35 @@ class SubscriberDetailController extends GetxController {
   // Observable states
   final _isLoading = false.obs;
   final _isSubmitting = false.obs;
-  final _subscriber = Rxn<SubscriberModel>();
+  Rxn<SubscriberModel> _subscriber = Rxn<SubscriberModel>();
   final _isSyncing = false.obs;
   final _syncMessage = ''.obs;
   final _submissionMessage = ''.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
+
   bool get isSubmitting => _isSubmitting.value;
+
   SubscriberModel? get subscriber => _subscriber.value;
+
   bool get isSyncing => _isSyncing.value;
+
   String get syncMessage => _syncMessage.value;
+
   String get submissionMessage => _submissionMessage.value;
+
   bool get canSubmitReading {
+    if (_isSyncing.value) return false;
     if (subscriber == null) return false;
     if (!subscriber!.canTakeReading) return false;
-
-    // Проверяем, есть ли показание в текущем месяце
     if (subscriber!.lastReadingDate != null) {
       final now = DateTime.now();
       final lastReading = subscriber!.lastReadingDate!;
-
-      // Если показание в том же месяце и году - запрещаем
       if (lastReading.year == now.year && lastReading.month == now.month) {
         return false;
       }
     }
-
     return true;
   }
 
@@ -120,8 +122,12 @@ class SubscriberDetailController extends GetxController {
       onProgress: (message) {
         _syncMessage.value = message.toLowerCase();
       },
-      onSuccess: (updatedSubscriber) {
+      onSuccess: (updatedSubscriber) async {
+        _subscriber.value = null;
+        await Future.delayed(const Duration(milliseconds: 10));
         _subscriber.value = updatedSubscriber;
+        update();
+
         _isSyncing.value = false;
         _syncMessage.value = '';
 
@@ -178,6 +184,7 @@ class SubscriberDetailController extends GetxController {
   }
 
   // Submit meter reading
+  // Submit meter reading
   Future<void> submitReading() async {
     if (!formKey.currentState!.validate() || _subscriber.value == null) return;
 
@@ -193,12 +200,10 @@ class SubscriberDetailController extends GetxController {
       currentReading: reading,
       onSubmitStarted: () {
         _submissionMessage.value = 'Отправка показания...';
-        // Блокируем форму сразу после успешной отправки
-        _subscriber.update((val) {
-          if (val != null) {
-            val = val.copyWith(canTakeReading: false);
-          }
-        });
+        // ИСПРАВЛЕНО: Правильное обновление Rxn
+        if (_subscriber.value != null) {
+          _subscriber.value = _subscriber.value!.copyWith(canTakeReading: false);
+        }
       },
       onProgress: (message) {
         _submissionMessage.value = message;
@@ -226,12 +231,10 @@ class SubscriberDetailController extends GetxController {
         _isSubmitting.value = false;
         _submissionMessage.value = '';
 
-        // Возвращаем возможность отправки при ошибке
-        _subscriber.update((val) {
-          if (val != null) {
-            val = val.copyWith(canTakeReading: true);
-          }
-        });
+        // ИСПРАВЛЕНО: Правильное обновление Rxn при ошибке
+        if (_subscriber.value != null) {
+          _subscriber.value = _subscriber.value!.copyWith(canTakeReading: true);
+        }
 
         Get.snackbar(
           'Ошибка отправки',

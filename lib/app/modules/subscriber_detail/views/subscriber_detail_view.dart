@@ -47,24 +47,22 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Subscriber info card
-                  SubscriberInfoCard(
-                    subscriber: controller.subscriber!,
-                    tpName: controller.tpName,
-                  ),
+                  // Subscriber info card - оборачиваем в Obx
+                  const SubscriberInfoCard(),
 
-                  // New reading form - PRIORITY FOR CONTROLLER
-                  if (controller.canSubmitReading)
-                    ReadingFormCard(controller: controller),
+                  // New reading form - оборачиваем в Obx
+                  Obx(() => controller.canSubmitReading
+                      ? ReadingFormCard(controller: controller)
+                      : const SizedBox.shrink()),
 
-                  // ИСПРАВЛЕНО: Meter info card (передаем subscriber)
-                  MeterInfoCard(subscriber: controller.subscriber!),
+                  // Meter info card
+                  const MeterInfoCard(),
 
                   // Balance info card
-                  BalanceInfoCard(subscriber: controller.subscriber!),
+                  const BalanceInfoCard(),
 
                   // Reading history card
-                  ReadingHistoryCard(subscriber: controller.subscriber!),
+                  const ReadingHistoryCard(),
 
                   const SizedBox(height: Constants.paddingXL),
                 ],

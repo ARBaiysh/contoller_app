@@ -161,7 +161,7 @@ class SubscriberListItem extends StatelessWidget {
                     icon: Icons.account_balance_wallet,
                     label: 'Баланс',
                     value: _formatBalance(subscriber.balance),
-                    valueColor: subscriber.balance >= 0 ? AppColors.success : AppColors.error,
+                    valueColor: subscriber.balance <= 0 ? AppColors.success : AppColors.error,
                   ),
 
                   // Last reading
@@ -225,10 +225,45 @@ class SubscriberListItem extends StatelessWidget {
   }
 
   Widget _buildReadingStatus(BuildContext context) {
-    final status = subscriber.canTakeReading ? 'available' : 'completed';
-    final color = subscriber.canTakeReading ? AppColors.warning : AppColors.success;
+    // Проверяем, есть ли показание в текущем месяце
+    final hasCurrentMonthReading = _hasReadingInCurrentMonth();
+
+    if (hasCurrentMonthReading) {
+      // Показание уже есть в текущем месяце
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 12,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Занесено',
+              style: TextStyle(
+                color: AppColors.success,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final color = subscriber.canTakeReading ? AppColors.info : AppColors.warning;
     final text = subscriber.canTakeReading ? 'Можно брать' : 'Обработан';
-    final icon = subscriber.canTakeReading ? Icons.edit : Icons.check;
+    final icon = subscriber.canTakeReading ? Icons.edit : Icons.lock;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -259,6 +294,16 @@ class SubscriberListItem extends StatelessWidget {
         ],
       ),
     );
+  }
+
+// Добавьте вспомогательный метод
+  bool _hasReadingInCurrentMonth() {
+    if (subscriber.lastReadingDate == null) return false;
+
+    final now = DateTime.now();
+    final lastReading = subscriber.lastReadingDate!;
+
+    return lastReading.year == now.year && lastReading.month == now.month;
   }
 
   String _formatBalance(double balance) {

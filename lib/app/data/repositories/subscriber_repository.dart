@@ -300,12 +300,16 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Fetching subscriber data: $accountNumber');
 
+      // Добавляем небольшую задержку, чтобы бэкенд успел обновить данные
+      await Future.delayed(const Duration(seconds: 1));
+
       final responseData = await _apiProvider.getAbonentByAccount(accountNumber);
 
-      // Преобразуем в модель
-      final subscriber = SubscriberModel.fromJson(responseData);
+      // ВАЖНО: Создаем НОВЫЙ объект из JSON
+      final subscriber = SubscriberModel.fromJson(Map<String, dynamic>.from(responseData));
 
       print('[SUBSCRIBER REPO] Successfully fetched subscriber: ${subscriber.fullName}');
+      print('[SUBSCRIBER REPO] New data - Balance: ${subscriber.balance}, LastReading: ${subscriber.lastReading}');
       return subscriber;
 
     } catch (e) {
@@ -313,5 +317,4 @@ class SubscriberRepository {
       throw Exception('Не удалось получить данные абонента');
     }
   }
-
 }

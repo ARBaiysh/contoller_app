@@ -1,55 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
-import '../../../data/models/subscriber_model.dart';
+import '../controllers/subscriber_detail_controller.dart';
 
-// ИСПРАВЛЕНО: Убрали параметр MeterInfo, используем поля из SubscriberModel
 class MeterInfoCard extends StatelessWidget {
-  final SubscriberModel subscriber;
-
-  const MeterInfoCard({
-    Key? key,
-    required this.subscriber,
-  }) : super(key: key);
+  const MeterInfoCard({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: Constants.paddingM,
-        vertical: Constants.paddingS,
-      ),
-      padding: const EdgeInsets.all(Constants.paddingM),
-      decoration: Constants.getCardDecoration(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.electric_meter,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: Constants.paddingS),
-              Text(
-                'Данные счетчика',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Constants.paddingM),
+    final controller = Get.find<SubscriberDetailController>();
 
-          // ИСПРАВЛЕНО: Используем поля из SubscriberModel
-          _InfoRow(label: 'Тип', value: subscriber.meterType),
-          _InfoRow(label: 'Серийный номер', value: subscriber.meterSerialNumber),
-          if (subscriber.sealNumber.isNotEmpty)
-            _InfoRow(label: 'Номер пломбы', value: subscriber.sealNumber),
-          _InfoRow(label: 'Тариф', value: subscriber.tariffName),
-        ],
-      ),
-    );
+    return Obx(() {
+      final subscriber = controller.subscriber;
+      if (subscriber == null) return const SizedBox.shrink();
+
+      return Container(
+        margin: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingM,
+          vertical: Constants.paddingS,
+        ),
+        padding: const EdgeInsets.all(Constants.paddingM),
+        decoration: Constants.getCardDecoration(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.electric_meter,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: Constants.paddingS),
+                Text(
+                  'Данные счетчика',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Constants.paddingM),
+
+            _InfoRow(label: 'Тип', value: subscriber.meterType),
+            _InfoRow(label: 'Серийный номер', value: subscriber.meterSerialNumber),
+            if (subscriber.sealNumber.isNotEmpty)
+              _InfoRow(label: 'Номер пломбы', value: subscriber.sealNumber),
+            _InfoRow(label: 'Тариф', value: subscriber.tariffName),
+          ],
+        ),
+      );
+    });
   }
 }
 
