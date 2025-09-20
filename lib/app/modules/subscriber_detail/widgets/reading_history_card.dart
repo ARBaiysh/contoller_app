@@ -46,7 +46,7 @@ class ReadingHistoryCard extends StatelessWidget {
             if (subscriber.lastReading != null) ...[
               _InfoRow(
                 label: 'Последнее показание',
-                value: '${subscriber.lastReading} кВт·ч',
+                value: '${subscriber.lastReading}',
                 valueStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

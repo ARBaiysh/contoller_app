@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
-import '../controllers/tp_list_controller.dart';
-import '../widgets/tp_item_card.dart';
-import '../../../widgets/custom_app_bar.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
+import '../../../widgets/custom_app_bar.dart';
+import '../controllers/tp_list_controller.dart';
+import '../widgets/tp_item_card.dart';
 
 class TpListView extends GetView<TpListController> {
   const TpListView({Key? key}) : super(key: key);
@@ -69,9 +70,6 @@ class TpListView extends GetView<TpListController> {
               // Поиск показываем только если есть данные
               if (controller.hasData) _buildSearchField(context),
 
-              // Кнопки фильтрации - показываем только если есть данные
-              if (controller.hasData) _buildFilterButtons(context),
-
               // Статус синхронизации (улучшенный дизайн)
               _buildSyncStatus(context),
 
@@ -80,8 +78,8 @@ class TpListView extends GetView<TpListController> {
                 child: controller.isLoading && controller.tpList.isEmpty
                     ? _buildLoadingState(context)
                     : controller.isEmpty && !controller.isLoading
-                    ? _buildEmptyState(context)
-                    : _buildTpList(context, refreshController),
+                        ? _buildEmptyState(context)
+                        : _buildTpList(context, refreshController),
               ),
             ],
           );
@@ -105,9 +103,9 @@ class TpListView extends GetView<TpListController> {
           prefixIcon: const Icon(Icons.search),
           suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () => controller.searchTps(''),
-          )
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => controller.searchTps(''),
+                )
               : const SizedBox.shrink()),
           filled: true,
           fillColor: Theme.of(context).cardColor,
@@ -120,156 +118,6 @@ class TpListView extends GetView<TpListController> {
             vertical: Constants.paddingM,
           ),
         ),
-      ),
-    );
-  }
-
-  // ========================================
-  // КНОПКИ ФИЛЬТРАЦИИ
-  // ========================================
-
-  Widget _buildFilterButtons(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(Constants.paddingM),
-      child: Row(
-        children: [
-          // Кнопка "Все ТП"
-          Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // TODO: Фильтр все ТП
-                },
-                borderRadius: BorderRadius.circular(Constants.borderRadius),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: Constants.paddingM,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(Constants.borderRadius),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '5',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Всего ТП',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: Constants.paddingS),
-
-          // Кнопка "В работе"
-          Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // TODO: Фильтр в работе
-                },
-                borderRadius: BorderRadius.circular(Constants.borderRadius),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: Constants.paddingM,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey[800]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(Constants.borderRadius),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '4',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'В работе',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: Constants.paddingS),
-
-          // Кнопка "Завершено"
-          Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // TODO: Фильтр завершено
-                },
-                borderRadius: BorderRadius.circular(Constants.borderRadius),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: Constants.paddingM,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey[800]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(Constants.borderRadius),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '1',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Завершено',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -333,9 +181,9 @@ class TpListView extends GetView<TpListController> {
                   Text(
                     'Синхронизация данных',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Get.theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Get.theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -343,8 +191,8 @@ class TpListView extends GetView<TpListController> {
                         ? controller.syncProgress
                         : 'Обновление списка трансформаторных пунктов...',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Get.theme.colorScheme.primary.withOpacity(0.8),
-                    ),
+                          color: Get.theme.colorScheme.primary.withOpacity(0.8),
+                        ),
                   ),
                 ],
               ),
@@ -371,9 +219,9 @@ class TpListView extends GetView<TpListController> {
                   Text(
                     controller.syncElapsedFormatted,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Get.theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Get.theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ],
               ),
@@ -432,21 +280,21 @@ class TpListView extends GetView<TpListController> {
             Text(
               'Синхронизация данных',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: Constants.paddingS),
 
             // Прогресс текст
             Obx(() => Text(
-              controller.syncProgress.isNotEmpty
-                  ? controller.syncProgress
-                  : 'Загрузка списка трансформаторных пунктов...',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
-              textAlign: TextAlign.center,
-            )),
+                  controller.syncProgress.isNotEmpty
+                      ? controller.syncProgress
+                      : 'Загрузка списка трансформаторных пунктов...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                  textAlign: TextAlign.center,
+                )),
             const SizedBox(height: Constants.paddingL),
 
             // Таймер
@@ -473,12 +321,12 @@ class TpListView extends GetView<TpListController> {
                   ),
                   const SizedBox(width: Constants.paddingS),
                   Obx(() => Text(
-                    controller.syncElapsedFormatted,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Get.theme.colorScheme.primary,
-                    ),
-                  )),
+                        controller.syncElapsedFormatted,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Get.theme.colorScheme.primary,
+                            ),
+                      )),
                 ],
               ),
             ),
@@ -488,8 +336,8 @@ class TpListView extends GetView<TpListController> {
             Text(
               'Пожалуйста, подождите...',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
-              ),
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                  ),
             ),
           ],
         ),
@@ -523,9 +371,7 @@ class TpListView extends GetView<TpListController> {
             ),
             const SizedBox(height: Constants.paddingL),
             Text(
-              isSearching
-                  ? 'Ничего не найдено'
-                  : 'Список ТП пуст',
+              isSearching ? 'Ничего не найдено' : 'Список ТП пуст',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: Constants.paddingS),
@@ -534,8 +380,8 @@ class TpListView extends GetView<TpListController> {
                   ? 'Попробуйте изменить параметры поиска'
                   : 'Нажмите кнопку ниже для загрузки данных с сервера',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: Constants.paddingL),
@@ -543,33 +389,32 @@ class TpListView extends GetView<TpListController> {
             // Показываем кнопку синхронизации только если не идет поиск
             if (!isSearching)
               Obx(() => ElevatedButton.icon(
-                onPressed: controller.isSyncing ? null : controller.syncTpList,
-                icon: controller.isSyncing
-                    ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.onPrimary,
+                    onPressed: controller.isSyncing ? null : controller.syncTpList,
+                    icon: controller.isSyncing
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.sync),
+                    label: Text(
+                      controller.isSyncing ? 'Синхронизация...' : 'Синхронизировать',
                     ),
-                  ),
-                )
-                    : const Icon(Icons.sync),
-                label: Text(
-                  controller.isSyncing ? 'Синхронизация...' : 'Синхронизировать',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Constants.paddingL,
-                    vertical: Constants.paddingM,
-                  ),
-                ),
-              )),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Constants.paddingL,
+                        vertical: Constants.paddingM,
+                      ),
+                    ),
+                  )),
 
             // Если идет поиск, показываем кнопку сброса
-            if (isSearching)
-              const SizedBox(height: Constants.paddingM),
+            if (isSearching) const SizedBox(height: Constants.paddingM),
             if (isSearching)
               TextButton(
                 onPressed: () => controller.searchTps(''),

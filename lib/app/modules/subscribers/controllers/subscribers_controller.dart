@@ -46,11 +46,18 @@ class SubscribersController extends GetxController {
 
   // Statistics
   int get totalSubscribers => _subscribers.length;
-  int get readingsCollected => _subscribers.where((s) => !s.canTakeReading).length;
-  int get readingsAvailable => _subscribers.where((s) => s.canTakeReading).length;
+  int get readingsCollected => _subscribers.where((s) => _hasReadingInCurrentMonth(s)).length;
+  int get readingsAvailable => _subscribers.where((s) => s.canTakeReading && !_hasReadingInCurrentMonth(s)).length;
   int get debtorsCount => _subscribers.where((s) => s.isDebtor).length;
+  int get blockedCount => _subscribers.where((s) => !s.canTakeReading).length;
 
-  // Status filter options with counts for UI
+  bool _hasReadingInCurrentMonth(SubscriberModel subscriber) {
+    if (subscriber.lastReadingDate == null) return false;
+    final now = DateTime.now();
+    return subscriber.lastReadingDate!.year == now.year &&
+        subscriber.lastReadingDate!.month == now.month;
+  }
+
   List<Map<String, dynamic>> get statusFilterOptions {
     return [
       {
@@ -61,13 +68,13 @@ class SubscribersController extends GetxController {
       },
       {
         'value': 'available',
-        'label': 'Доступны',
+        'label': 'Обход',
         'count': readingsAvailable,
         'color': Colors.green,
       },
       {
         'value': 'completed',
-        'label': 'Завершены',
+        'label': 'Пройдены',
         'count': readingsCollected,
         'color': Colors.blue,
       },
@@ -230,10 +237,14 @@ class SubscribersController extends GetxController {
     // Применяем фильтр по статусу
     switch (_selectedStatus.value) {
       case 'available':
-        filtered = filtered.where((s) => s.canTakeReading).toList();
+      // Нужен обход: не заблокирован И нет показания в текущем месяце
+        filtered = filtered.where((s) =>
+        s.canTakeReading && !_hasReadingInCurrentMonth(s)
+        ).toList();
         break;
       case 'completed':
-        filtered = filtered.where((s) => !s.canTakeReading).toList();
+      // Пройден: есть показание в текущем месяце (независимо от блокировки)
+        filtered = filtered.where((s) => _hasReadingInCurrentMonth(s)).toList();
         break;
       case 'debtors':
         filtered = filtered.where((s) => s.isDebtor).toList();

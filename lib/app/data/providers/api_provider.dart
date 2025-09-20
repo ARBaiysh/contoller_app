@@ -406,6 +406,24 @@ class ApiProvider extends GetxService {
   }
 
   // ========================================
+  // DASHBOARD ENDPOINT
+  // ========================================
+
+  /// GET /api/mobile/dashboard
+  Future<Map<String, dynamic>> getDashboardStatistics() async {
+    try {
+      print('[API] Getting dashboard statistics...');
+      final response = await _dio.get('/mobile/dashboard');
+      print('[API] Dashboard response: ${response.data}');
+
+      return Map<String, dynamic>.from(response.data);
+    } catch (e) {
+      print('[API] Error getting dashboard statistics: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
   // ERROR HANDLING
   // ========================================
 

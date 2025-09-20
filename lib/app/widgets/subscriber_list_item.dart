@@ -225,18 +225,51 @@ class SubscriberListItem extends StatelessWidget {
   }
 
   Widget _buildReadingStatus(BuildContext context) {
-    // Проверяем, есть ли показание в текущем месяце
-    final hasCurrentMonthReading = _hasReadingInCurrentMonth();
-
-    if (hasCurrentMonthReading) {
-      // Показание уже есть в текущем месяце
+    // Сначала проверяем, заблокирован ли абонент
+    if (!subscriber.canTakeReading) {
       return Container(
         padding: const EdgeInsets.symmetric(
           horizontal: Constants.paddingS,
           vertical: 4,
         ),
         decoration: BoxDecoration(
-          color: AppColors.success.withValues(alpha: 0.1),
+          color: AppColors.error.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.block,
+              size: 12,
+              color: AppColors.error,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Заблокирован',
+              style: TextStyle(
+                color: AppColors.error,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Если не заблокирован, проверяем есть ли показание в текущем месяце
+    final hasCurrentMonthReading = _hasReadingInCurrentMonth();
+
+    if (hasCurrentMonthReading) {
+      // Показание есть в текущем месяце = Пройден
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -249,7 +282,7 @@ class SubscriberListItem extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              'Занесено',
+              'Пройден',
               style: TextStyle(
                 color: AppColors.success,
                 fontSize: 11,
@@ -261,32 +294,29 @@ class SubscriberListItem extends StatelessWidget {
       );
     }
 
-    final color = subscriber.canTakeReading ? AppColors.info : AppColors.warning;
-    final text = subscriber.canTakeReading ? 'Можно брать' : 'Обработан';
-    final icon = subscriber.canTakeReading ? Icons.edit : Icons.lock;
-
+    // Нет показания в текущем месяце = Нужен обход
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: Constants.paddingS,
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: AppColors.info.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            icon,
+            Icons.radio_button_unchecked,
             size: 12,
-            color: color,
+            color: AppColors.info,
           ),
           const SizedBox(width: 4),
           Text(
-            text,
+            'Нужен обход',
             style: TextStyle(
-              color: color,
+              color: AppColors.info,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),

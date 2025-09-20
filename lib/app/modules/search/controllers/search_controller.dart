@@ -272,12 +272,12 @@ class GlobalSearchController extends GetxController {
       },
       {
         'value': 'available',
-        'label': 'Можно брать',
+        'label': 'Нужен обход', // Изменено с "Можно брать"
         'count': _searchResults.where((s) => s.canTakeReading).length,
       },
       {
         'value': 'completed',
-        'label': 'Обработаны',
+        'label': 'Обойдены', // Изменено с "Обработаны"
         'count': _searchResults.where((s) => !s.canTakeReading).length,
       },
     ];

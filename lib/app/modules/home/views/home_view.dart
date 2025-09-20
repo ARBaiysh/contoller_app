@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../controllers/home_controller.dart';
-import '../../../widgets/custom_app_bar.dart';
+import '../widgets/corporate_summary_card.dart';
+import '../widgets/corporate_metric_card.dart';
 import '../../../widgets/app_drawer.dart';
-import '../../../widgets/statistic_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 
@@ -12,146 +13,380 @@ class HomeView extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final RefreshController refreshController = RefreshController();
+
     return Scaffold(
-      appBar: CustomAppBar(
-        title: controller.userName,
-        showBackButton: false,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF0D1117)
+          : const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        title: Column(
+          children: [
+            const Text(
+              'КОНТРОЛЬНАЯ ПАНЕЛЬ',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
+            ),
+            Obx(() {
+              if (controller.dashboard != null) {
+                return Text(
+                  'Обновлено ${controller.dashboard!.lastUpdateTime}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+          ],
         ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       drawer: const AppDrawer(),
-      body: SafeArea(
-        top: false,    // AppBar уже учитывает верхнюю область
-        bottom: false, // BottomNavigationBar уже учитывает нижнюю область
-        left: true,    // Защищаем от вырезов по бокам
-        right: true,   // Защищаем от вырезов по бокам
-        child: Obx(() => _buildBody(context)),
+      body: Obx(() {
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final dashboard = controller.dashboard;
+        if (dashboard == null) {
+          return _buildErrorState(context, refreshController);
+        }
+
+        return SmartRefresher(
+          controller: refreshController,
+          enablePullDown: true,
+          header: const ClassicHeader(),
+          onRefresh: () async {
+            await controller.refreshDashboard();
+            refreshController.refreshCompleted();
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(Constants.paddingM),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Секция: Общий прогресс
+                _buildSectionTitle(context, 'ОБЩИЙ ПРОГРЕСС'),
+                const SizedBox(height: Constants.paddingM),
+                CorporateSummaryCard(
+                  title: 'Выполнение плана показаний',
+                  value: '${dashboard.readingsCollected}/${dashboard.totalReadingsNeeded}',
+                  subtitle: 'Снято показаний из необходимых',
+                  percentage: dashboard.completionPercentage,
+                  isPositive: dashboard.completionPercentage > 30,
+                ),
+
+                const SizedBox(height: Constants.paddingL),
+
+                // Секция: Ключевые показатели
+                _buildSectionTitle(context, 'КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ'),
+                const SizedBox(height: Constants.paddingM),
+
+                // Сетка метрик 2x2
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: Constants.paddingM,
+                  crossAxisSpacing: Constants.paddingM,
+                  childAspectRatio: 1.1,
+                  children: [
+                    CorporateMetricCard(
+                      icon: Icons.speed,
+                      title: 'Показания',
+                      value: dashboard.readingsCollected.toString(),
+                      subtitle: 'снято сегодня: ${dashboard.readingsToday}',
+                      iconColor: AppColors.info,
+                      items: [
+                        MetricItem(
+                          label: 'Выполнено',
+                          value: dashboard.readingsCollected.toString(),
+                          icon: Icons.check_circle_outline,
+                          valueColor: AppColors.success,
+                        ),
+                        MetricItem(
+                          label: 'Осталось',
+                          value: dashboard.readingsRemaining.toString(),
+                          icon: Icons.pending_outlined,
+                          valueColor: AppColors.warning,
+                        ),
+                        MetricItem(
+                          label: 'Сегодня',
+                          value: '+${dashboard.readingsToday}',
+                          icon: Icons.today,
+                          valueColor: AppColors.info,
+                        ),
+                      ],
+                    ),
+
+                    CorporateMetricCard(
+                      icon: Icons.people_outline,
+                      title: 'Абоненты',
+                      value: dashboard.totalAbonents.toString(),
+                      subtitle: 'кол-ов ${dashboard.totalTransformerPoints} ТП',
+                      iconColor: AppColors.primary,
+                      items: [
+                        MetricItem(
+                          label: 'Всего',
+                          value: dashboard.totalAbonents.toString(),
+                          icon: Icons.person_outline,
+                        ),
+                        MetricItem(
+                          label: 'Должники',
+                          value: '${dashboard.debtorsCount}',
+                          icon: Icons.warning_amber_outlined,
+                          valueColor: AppColors.error,
+                        ),
+                        MetricItem(
+                          label: 'Процент',
+                          value: '${dashboard.debtorsPercentage.toStringAsFixed(0)}%',
+                          icon: Icons.pie_chart_outline,
+                          valueColor: AppColors.error,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Constants.paddingM),
+
+                // Финансовые показатели в ряд
+                Container(
+                  height: 100, // Фиксированная высота
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildFinanceCard(
+                          context: context,
+                          title: 'ЗАДОЛЖЕННОСТЬ',
+                          value: dashboard.formattedDebtAmount,
+                          icon: Icons.trending_down,
+                          color: AppColors.error,
+                          isNegative: true,
+                        ),
+                      ),
+                      const SizedBox(width: Constants.paddingS), // Уменьшили отступ между карточками
+                      Expanded(
+                        child: _buildFinanceCard(
+                          context: context,
+                          title: 'ПЕРЕПЛАТЫ',
+                          value: dashboard.formattedOverpaymentAmount,
+                          icon: Icons.trending_up,
+                          color: AppColors.success,
+                          isNegative: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: Constants.paddingL),
+
+                // Секция: Платежи
+                _buildSectionTitle(context, 'ПЛАТЕЖИ'),
+                const SizedBox(height: Constants.paddingM),
+
+                _buildPaymentsSummary(context, dashboard),
+
+                const SizedBox(height: Constants.paddingL),
+
+                // Секция: Быстрые действия
+                _buildSectionTitle(context, 'БЫСТРЫЕ ДЕЙСТВИЯ'),
+                const SizedBox(height: Constants.paddingM),
+
+                _buildQuickActions(context),
+
+                const SizedBox(height: Constants.paddingXL),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.5,
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    if (controller.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+  Widget _buildFinanceCard({
+    required BuildContext context,
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required bool isNegative,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (controller.statistics == null) {
-      return _buildErrorState(context);
-    }
-
-    return RefreshIndicator(
-      onRefresh: controller.refreshStatistics,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(Constants.paddingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatisticsGrid(context),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(Constants.paddingS), // Уменьшили padding с paddingM
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1),
+          width: 1,
         ),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18), // Уменьшили размер иконки
+              const SizedBox(width: 4), // Уменьшили отступ
+              Expanded( // Добавили Expanded для текста
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8, // Уменьшили letter spacing
+                    fontSize: 10, // Уменьшили размер
+                  ),
+                  overflow: TextOverflow.ellipsis, // Добавили обрезку текста
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Constants.paddingS), // Уменьшили отступ
+          FittedBox( // Добавили FittedBox для автоматического масштабирования
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith( // Изменили с titleLarge
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
+  Widget _buildPaymentsSummary(BuildContext context, dynamic dashboard) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  Widget _buildStatisticsGrid(BuildContext context) {
-    final stats = controller.statistics!;
+    return Container(
+      padding: const EdgeInsets.all(Constants.paddingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildPaymentRow(
+            context: context,
+            label: 'Сегодня',
+            count: dashboard.paidToday,
+            amount: dashboard.formattedPaymentsToday,
+            icon: Icons.today,
+          ),
+          const Divider(height: Constants.paddingL),
+          _buildPaymentRow(
+            context: context,
+            label: 'За месяц',
+            count: dashboard.paidThisMonth,
+            amount: dashboard.formattedPaymentsThisMonth,
+            icon: Icons.calendar_month,
+          ),
+        ],
+      ),
+    );
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPaymentRow({
+    required BuildContext context,
+    required String label,
+    required int count,
+    required String amount,
+    required IconData icon,
+  }) {
+    return Row(
       children: [
-        Text(
-          'Статистика',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+        Icon(
+          icon,
+          color: AppColors.success,
+          size: 20,
+        ),
+        const SizedBox(width: Constants.paddingM),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                ),
+              ),
+              Text(
+                '$count абонентов',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: Constants.paddingM),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: Constants.paddingM,
-          crossAxisSpacing: Constants.paddingM,
-          childAspectRatio: 1.0,
-          children: [
-            StatisticCard(
-              title: 'Собрано показаний',
-              value: '${stats.readingsCollected}',
-              subtitle: 'из ${stats.totalSubscribers}',
-              icon: Icons.check_circle_outline,
-              iconColor: AppColors.success,
-              showProgress: true,
-              progressValue: stats.collectionPercentage,
-              onTap: controller.navigateToTpList,
-            ),
-            StatisticCard(
-              title: 'Оплатили',
-              value: '${stats.paidSubscribers}',
-              subtitle: '${stats.paymentPercentage.toStringAsFixed(1)}%',
-              icon: Icons.payment,
-              iconColor: AppColors.info,
-            ),
-            StatisticCard(
-              title: 'Должников',
-              value: '${stats.debtorCount}',
-              subtitle: '${stats.debtorPercentage.toStringAsFixed(1)}%',
-              icon: Icons.warning_amber_outlined,
-              iconColor: AppColors.warning,
-            ),
-            StatisticCard(
-              title: 'Сумма долга',
-              value: '${(stats.totalDebtAmount / 1000).toStringAsFixed(1)}K',
-              subtitle: '${stats.totalDebtAmount.toStringAsFixed(0)} сом',
-              icon: Icons.account_balance_wallet_outlined,
-              iconColor: AppColors.error,
-            ),
-          ],
+        Text(
+          amount,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.success,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          'Быстрые действия',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: _buildActionButton(
+            context: context,
+            icon: Icons.electrical_services,
+            label: 'СПИСОК ТП',
+            onTap: controller.navigateToTpList,
           ),
         ),
-        const SizedBox(height: Constants.paddingM),
-        _buildActionButton(
-          context: context,
-          icon: Icons.electrical_services,
-          title: 'Список ТП',
-          subtitle: 'Просмотр и управление',
-          onTap: controller.navigateToTpList,
+        const SizedBox(width: Constants.paddingS),
+        Expanded(
+          child: _buildActionButton(
+            context: context,
+            icon: Icons.search,
+            label: 'ПОИСК',
+            onTap: controller.navigateToSearch,
+          ),
         ),
-        const SizedBox(height: Constants.paddingS),
-        _buildActionButton(
-          context: context,
-          icon: Icons.search,
-          title: 'Поиск абонентов',
-          subtitle: 'По ФИО, адресу или счету',
-          onTap: controller.navigateToSearch,
-        ),
-        const SizedBox(height: Constants.paddingS),
-        _buildActionButton(
-          context: context,
-          icon: Icons.description,
-          title: 'Отчеты',
-          subtitle: 'Формирование документов',
-          onTap: controller.navigateToReports,
+        const SizedBox(width: Constants.paddingS),
+        Expanded(
+          child: _buildActionButton(
+            context: context,
+            icon: Icons.description,
+            label: 'ОТЧЕТЫ',
+            onTap: controller.navigateToReports,
+          ),
         ),
       ],
     );
@@ -160,93 +395,90 @@ class HomeView extends GetView<HomeController> {
   Widget _buildActionButton({
     required BuildContext context,
     required IconData icon,
-    required String title,
-    required String subtitle,
+    required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(Constants.borderRadius),
-      child: Container(
-        padding: const EdgeInsets.all(Constants.paddingM),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(Constants.paddingS),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: Constants.paddingM),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              child: Icon(
-                icon,
-                color: AppColors.primary,
-                size: Constants.iconSizeMedium,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            const SizedBox(width: Constants.paddingM),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: Constants.iconSizeSmall,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(BuildContext context) {
+  Widget _buildErrorState(BuildContext context, RefreshController refreshController) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-          const SizedBox(height: Constants.paddingM),
-          Text(
-            'Не удалось загрузить данные',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: Constants.paddingM),
-          ElevatedButton(
-            onPressed: controller.loadStatistics,
-            child: const Text('Повторить'),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(Constants.paddingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).disabledColor,
+            ),
+            const SizedBox(height: Constants.paddingM),
+            Text(
+              'НЕ УДАЛОСЬ ЗАГРУЗИТЬ ДАННЫЕ',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                letterSpacing: 1.2,
+                color: Theme.of(context).disabledColor,
+              ),
+            ),
+            const SizedBox(height: Constants.paddingS),
+            Text(
+              controller.lastError,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: Constants.paddingL),
+            ElevatedButton.icon(
+              onPressed: () => controller.loadDashboard(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('ПОВТОРИТЬ'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Constants.paddingL,
+                  vertical: Constants.paddingM,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
