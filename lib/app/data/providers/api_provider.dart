@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
@@ -9,7 +10,7 @@ import '../models/sync_status_model.dart';
 import '../models/tp_sync_response_model.dart';
 
 class ApiProvider extends GetxService {
-  static const String baseUrl = 'http://ca.asdf.kg/api';
+  static const String baseUrl = 'https://ca.asdf.kg/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
@@ -45,10 +46,12 @@ class ApiProvider extends GetxService {
       onError: (error, handler) async {
         // Handle 403 - token expired
         if (error.response?.statusCode == 403 && !error.requestOptions.path.contains('/auth/')) {
+          print('[API] Got 403 - attempting to refresh token...');
+
           // Try to refresh token
           final refreshed = await _refreshToken();
           if (refreshed) {
-            // Retry original request
+            // Retry original request with new token
             final opts = Options(
               method: error.requestOptions.method,
               headers: error.requestOptions.headers,
@@ -66,6 +69,9 @@ class ApiProvider extends GetxService {
             } catch (e) {
               return handler.reject(error);
             }
+          } else {
+            // Refresh failed - user will be redirected to login by _handleAuthFailure()
+            return handler.reject(error);
           }
         }
         handler.next(error);
@@ -74,6 +80,7 @@ class ApiProvider extends GetxService {
   }
 
   // Refresh token by re-authenticating
+  // Refresh token by re-authenticating
   Future<bool> _refreshToken() async {
     try {
       final username = _storage.read(Constants.usernameKey);
@@ -81,9 +88,12 @@ class ApiProvider extends GetxService {
       final regionCode = _storage.read(Constants.regionCodeKey);
 
       if (username == null || password == null || regionCode == null) {
+        print('[API] No saved credentials for refresh token');
+        _handleAuthFailure();
         return false;
       }
 
+      print('[API] Attempting to refresh token...');
       final response = await _dio.post(
         '/auth/login',
         data: {
@@ -97,14 +107,47 @@ class ApiProvider extends GetxService {
 
       if (authResponse.status == 'SUCCESS' && authResponse.token != null) {
         await _storage.write(Constants.tokenKey, authResponse.token);
+        print('[API] Token refreshed successfully');
         return true;
       }
 
+      // Если логин не прошел - очищаем данные и выкидываем на авторизацию
+      print('[API] Refresh token failed - invalid credentials');
+      _handleAuthFailure();
       return false;
+
     } catch (e) {
-      print('Error refreshing token: $e');
+      print('[API] Error refreshing token: $e');
+      _handleAuthFailure();
       return false;
     }
+  }
+// Обработка неудачной авторизации
+  void _handleAuthFailure() {
+    // Очищаем все сохраненные данные
+    _storage.remove(Constants.tokenKey);
+    _storage.remove(Constants.usernameKey);
+    _storage.remove(Constants.passwordKey);
+    _storage.remove(Constants.regionCodeKey);
+    _storage.remove(Constants.userKey);
+    _storage.remove(Constants.biometricKey);
+    _storage.remove('saved_username');
+    _storage.remove('saved_password');
+    _storage.remove('saved_region_code');
+    _storage.remove('remember_me');
+
+    // Редирект на авторизацию
+    Get.offAllNamed('/auth');
+
+    // Показываем сообщение
+    Get.snackbar(
+      'Сессия истекла',
+      'Войдите в систему заново',
+      backgroundColor: Colors.orange,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
   }
 
   // ========================================
@@ -135,6 +178,7 @@ class ApiProvider extends GetxService {
           'regionCode': regionCode,
         },
       );
+
       return AuthResponseModel.fromJson(response.data);
     } catch (e) {
       throw _handleError(e);
@@ -290,12 +334,56 @@ class ApiProvider extends GetxService {
     }
   }
 
+  /// Синхронизация одного абонента
+  /// POST /api/mobile/abonents/{accountNumber}/sync
+  Future<Map<String, dynamic>> syncSingleAbonent(String accountNumber) async {
+    try {
+      print('[API] Starting sync for single abonent: $accountNumber');
+      final response = await _dio.post('/mobile/abonents/$accountNumber/sync');
+      print('[API] Single abonent sync response (${response.statusCode}): ${response.data}');
+
+      return response.data;
+    } on DioException catch (e) {
+      // Обработка 409 Conflict
+      if (e.response?.statusCode == 409) {
+        print('[API] Got 409 - single abonent sync already in progress');
+        return {
+          'syncMessageId': null,
+          'status': 'ALREADY_RUNNING',
+          'message': 'Синхронизация абонента уже выполняется',
+        };
+      }
+
+      print('[API] Error syncing single abonent: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error syncing single abonent: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Получение данных одного абонента
+  /// GET /api/mobile/abonents/{accountNumber}
+  Future<Map<String, dynamic>> getAbonentByAccount(String accountNumber) async {
+    try {
+      print('[API] Getting abonent data for: $accountNumber');
+      final response = await _dio.get('/mobile/abonents/$accountNumber');
+      print('[API] Abonent data response: ${response.data}');
+
+      return response.data;
+    } catch (e) {
+      print('[API] Error getting abonent data: $e');
+      throw _handleError(e);
+    }
+  }
+
   // ========================================
   // METER READINGS ENDPOINTS
   // ========================================
 
   Future<Map<String, dynamic>> submitMeterReading({
     required String accountNumber,
+    required String meterSerialNumber,
     required int currentReading,
   }) async {
     try {
@@ -304,6 +392,7 @@ class ApiProvider extends GetxService {
         '/mobile/meter-readings',
         data: {
           'accountNumber': accountNumber,
+          'meterSerialNumber': meterSerialNumber,
           'currentReading': currentReading,
         },
       );

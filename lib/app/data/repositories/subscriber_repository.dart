@@ -1,11 +1,12 @@
-// lib/app/data/repositories/subscriber_repository.dart
 
 import 'dart:async';
+
 import 'package:get/get.dart';
-import '../models/subscriber_model.dart';
-import '../providers/api_provider.dart';
+
 import '../../core/services/sync_service.dart';
 import '../../core/values/constants.dart';
+import '../models/subscriber_model.dart';
+import '../providers/api_provider.dart';
 
 class SubscriberRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
@@ -43,7 +44,7 @@ class SubscriberRepository {
       // Поиск по всем ТП
       final searchResults = await searchSubscribers(accountNumber);
       return searchResults.firstWhereOrNull(
-            (s) => s.accountNumber == accountNumber,
+        (s) => s.accountNumber == accountNumber,
       );
     } catch (e) {
       print('[SUBSCRIBER REPO] Error getting subscriber by account: $e');
@@ -57,7 +58,8 @@ class SubscriberRepository {
 
   /// Синхронизация абонентов по ТП с колбэками для UI
   /// Использует SyncService для мониторинга прогресса
-  Future<void> syncAbonentsList(String tpCode, {
+  Future<void> syncAbonentsList(
+    String tpCode, {
     required Function() onSyncStarted,
     required Function(String message, Duration elapsed) onProgress,
     required Function() onSuccess,
@@ -106,7 +108,6 @@ class SubscriberRepository {
         print('[SUBSCRIBER REPO] Unexpected abonents sync response: ${syncResponse.status}');
         onError('Неожиданный ответ сервера при запуске синхронизации абонентов');
       }
-
     } catch (e) {
       print('[SUBSCRIBER REPO] Error starting abonents sync: $e');
       onError('Не удалось запустить синхронизацию абонентов');
@@ -156,41 +157,57 @@ class SubscriberRepository {
     }
   }
 
-  // ========================================
-  // СНЯТИЕ ПОКАЗАНИЙ
-  // ========================================
-
-  /// Отправка показаний счетчика
-  Future<bool> submitMeterReading({
+  /// Отправка показаний счетчика с мониторингом через SyncService
+  Future<void> submitMeterReading({
     required String accountNumber,
+    required String meterSerialNumber,
     required int currentReading,
+    required Function() onSubmitStarted,
+    required Function(String message) onProgress,
+    required Function() onSuccess,
+    required Function(String error) onError,
   }) async {
     try {
-      print('[SUBSCRIBER REPO] Submitting reading for $accountNumber: $currentReading');
+      print('[SUBSCRIBER REPO] Submitting meter reading for: $accountNumber');
 
-      await _apiProvider.submitMeterReading(
+      // Отправляем показание
+      final response = await _apiProvider.submitMeterReading(
         accountNumber: accountNumber,
+        meterSerialNumber: meterSerialNumber,
         currentReading: currentReading,
       );
 
-      print('[SUBSCRIBER REPO] Reading submitted successfully');
-      return true;
+      final status = response['status'] ?? 'ERROR';
+      final syncMessageId = response['syncMessageId'];
+
+      if (status == 'INITIATED' && syncMessageId != null) {
+        print('[SUBSCRIBER REPO] Reading submission initiated with messageId: $syncMessageId');
+        onSubmitStarted();
+
+        // Мониторим обработку показания
+        await _syncService.monitorSync(
+          messageId: syncMessageId,
+          timeout: const Duration(minutes: 3),
+          checkInterval: const Duration(seconds: 3),
+          onSuccess: (syncStatus) {
+            print('[SUBSCRIBER REPO] Reading processed successfully');
+            onSuccess();
+          },
+          onError: (error) {
+            print('[SUBSCRIBER REPO] Reading processing failed: $error');
+            onError(error);
+          },
+          onProgress: (message, elapsed) {
+            onProgress('Обработка показания...');
+          },
+        );
+      } else {
+        onError(response['message'] ?? 'Ошибка отправки показания');
+      }
     } catch (e) {
       print('[SUBSCRIBER REPO] Error submitting reading: $e');
-      throw Exception('Не удалось отправить показание счетчика');
+      onError('Не удалось отправить показание');
     }
-  }
-
-  /// Отправка показания счетчика (алиас для совместимости)
-  Future<bool> submitReading({
-    required String accountNumber,
-    required int newReading,
-    String? comment,
-  }) async {
-    return submitMeterReading(
-      accountNumber: accountNumber,
-      currentReading: newReading,
-    );
   }
 
   /// Принудительное обновление списка абонентов (для совместимости)
@@ -207,4 +224,94 @@ class SubscriberRepository {
       'debtors': subscribers.where((s) => s.isDebtor).length,
     };
   }
+  /// Синхронизация одного абонента с колбэками для UI
+  Future<void> syncSingleSubscriber(
+      String accountNumber, {
+        required Function() onSyncStarted,
+        required Function(String message) onProgress,
+        required Function(SubscriberModel subscriber) onSuccess,
+        required Function(String error) onError,
+      }) async {
+    try {
+      print('[SUBSCRIBER REPO] Starting single subscriber sync: $accountNumber');
+
+      // Запускаем синхронизацию
+      final syncResponse = await _apiProvider.syncSingleAbonent(accountNumber);
+
+      // Проверяем статус
+      final status = syncResponse['status'] ?? 'ERROR';
+
+      if (status == 'ALREADY_RUNNING') {
+        print('[SUBSCRIBER REPO] Single sync already running');
+        onError('Синхронизация уже выполняется');
+        return;
+      }
+
+      if (status == 'ERROR') {
+        print('[SUBSCRIBER REPO] Single sync initiation failed');
+        onError(syncResponse['message'] ?? 'Ошибка запуска синхронизации');
+        return;
+      }
+
+      if (status == 'INITIATED' && syncResponse['syncMessageId'] != null) {
+        final messageId = syncResponse['syncMessageId'];
+        print('[SUBSCRIBER REPO] Single sync initiated with messageId: $messageId');
+        onSyncStarted();
+
+        // Мониторим синхронизацию
+        await _syncService.monitorSync(
+          messageId: messageId,
+          timeout: const Duration(minutes: 2),
+          checkInterval: const Duration(seconds: 3),
+          onSuccess: (syncStatus) async {
+            // После успешной синхронизации получаем обновленные данные
+            print('[SUBSCRIBER REPO] Single sync completed, fetching updated data...');
+            try {
+              final updatedSubscriber = await fetchSubscriberByAccount(accountNumber);
+              if (updatedSubscriber != null) {
+                onSuccess(updatedSubscriber);
+              } else {
+                onError('Не удалось получить обновленные данные');
+              }
+            } catch (e) {
+              onError('Ошибка получения обновленных данных');
+            }
+          },
+          onError: (error) {
+            print('[SUBSCRIBER REPO] Single sync failed: $error');
+            onError(error);
+          },
+          onProgress: (message, elapsed) {
+            onProgress('Синхронизация абонента...');
+          },
+        );
+      } else {
+        onError('Неожиданный ответ сервера');
+      }
+
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error in single subscriber sync: $e');
+      onError('Не удалось запустить синхронизацию');
+    }
+  }
+
+  /// Получение обновленных данных абонента
+  Future<SubscriberModel?> fetchSubscriberByAccount(String accountNumber) async {
+    try {
+      print('[SUBSCRIBER REPO] Fetching subscriber data: $accountNumber');
+
+      final responseData = await _apiProvider.getAbonentByAccount(accountNumber);
+
+      // Преобразуем в модель
+      final subscriber = SubscriberModel.fromJson(responseData);
+
+      print('[SUBSCRIBER REPO] Successfully fetched subscriber: ${subscriber.fullName}');
+      return subscriber;
+
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error fetching subscriber by account: $e');
+      throw Exception('Не удалось получить данные абонента');
+    }
+  }
+
 }

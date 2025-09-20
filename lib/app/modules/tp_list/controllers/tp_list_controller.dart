@@ -221,7 +221,7 @@ class TpListController extends GetxController {
       arguments: {
         'tpId': tp.id,
         'tpCode': tp.id,
-        'tpName': '${tp.number} ${tp.name}',
+        'tpName': tp.name,
       },
     );
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
+import '../controllers/subscriber_detail_controller.dart';
 
 class SubscriberInfoCard extends StatelessWidget {
   final SubscriberModel subscriber;
@@ -49,8 +51,54 @@ class SubscriberInfoCard extends StatelessWidget {
 
           const SizedBox(height: Constants.paddingM),
 
-          // ИСПРАВЛЕНО: Status badge (используем новую модель)
-          _StatusBadge(status: subscriber.status),
+          // Status badge с поддержкой синхронизации
+          GetBuilder<SubscriberDetailController>(
+            builder: (controller) {
+              return Obx(() {
+                if (controller.isSyncing) {
+                  // Показываем статус синхронизации
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Constants.paddingM,
+                      vertical: Constants.paddingS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(Constants.borderRadius),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          ),
+                        ),
+                        const SizedBox(width: Constants.paddingS),
+                        Text(
+                          'Статус: ${controller.syncMessage}',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  // Показываем обычный статус
+                  return _StatusBadge(status: subscriber.status);
+                }
+              });
+            },
+          ),
         ],
       ),
     );

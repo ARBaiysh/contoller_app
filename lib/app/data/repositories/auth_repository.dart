@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../core/services/biometric_service.dart';
 import '../models/sync_status_model.dart';
 import '../providers/api_provider.dart';
 import '../models/region_model.dart';
@@ -120,6 +121,7 @@ class AuthRepository {
     await _storage.write(Constants.userKey, inspectorData.toJson());
   }
 
+
   // Logout
   Future<void> logout() async {
     _authToken = null;
@@ -132,6 +134,12 @@ class AuthRepository {
     await _storage.remove(Constants.regionCodeKey);
     await _storage.remove(Constants.userKey);
     await _storage.remove(Constants.biometricKey);
+
+    // Clear saved login data
+    await _storage.remove('saved_username');
+    await _storage.remove('saved_password');
+    await _storage.remove('saved_region_code');
+    await _storage.remove('remember_me');
   }
 
   // Get user full name
@@ -156,6 +164,7 @@ class AuthRepository {
 
   // Check biometric availability (для совместимости)
   Future<bool> get isBiometricAvailable async {
-    return false; // Временно отключаем
+    final BiometricService _biometricService = Get.find<BiometricService>();
+    return await _biometricService.isBiometricAvailable;
   }
 }

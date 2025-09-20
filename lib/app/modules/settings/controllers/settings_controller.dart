@@ -105,13 +105,20 @@ class SettingsController extends GetxController {
       duration: const Duration(seconds: 1),
     );
   }
+
   // Toggle biometric authentication
   Future<void> toggleBiometric(bool value) async {
-    if (value) {
-      await _enableBiometric();
-    } else {
-      await _disableBiometric();
-    }
+    // Биометрия управляется автоматически через "Запомнить меня" при входе
+    Get.snackbar(
+      'Информация',
+      'Биометрия настраивается автоматически при входе с опцией "Запомнить меня"',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.blue.withOpacity(0.1),
+      colorText: Colors.blue,
+    );
+
+    // Не меняем значение переключателя
+    _biometricEnabled.value = _storage.read(Constants.biometricKey) ?? false;
   }
 
   // Enable biometric authentication

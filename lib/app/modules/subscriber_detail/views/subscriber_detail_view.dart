@@ -35,7 +35,13 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
           }
 
           return RefreshIndicator(
-            onRefresh: controller.refreshSubscriberDetails,
+            onRefresh: controller.isSyncing
+                ? () async {} // Пустая функция, если идет синхронизация
+                : controller.refreshSubscriberDetails,
+            notificationPredicate: (notification) {
+              // Блокируем pull-to-refresh если идет синхронизация
+              return !controller.isSyncing && notification.depth == 0;
+            },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(

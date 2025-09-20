@@ -46,30 +46,52 @@ class TpRepository {
     required Function(String error) onError,
   }) async {
     try {
-      onSyncStarted();
+      print('[TP REPO] Starting TP sync...');
 
-      final stopwatch = Stopwatch()..start();
-      Timer? progressTimer;
+      // Запускаем синхронизацию через API
+      final syncResponse = await _apiProvider.syncTransformerPoints();
 
-      // Обновляем прогресс каждые 3 секунды
-      progressTimer = Timer.periodic(Constants.tpSyncCheckInterval, (timer) {
-        final elapsed = stopwatch.elapsed;
-        onProgress('Синхронизация ТП...', elapsed);
-      });
+      if (syncResponse.isAlreadyRunning) {
+        print('[TP REPO] Sync already running');
+        onError(syncResponse.displayMessage);
+        return;
+      }
 
-      // Загружаем данные
-      final tpList = await getTpList(forceRefresh: true);
+      if (syncResponse.isError) {
+        print('[TP REPO] Sync initiation failed: ${syncResponse.displayMessage}');
+        onError(syncResponse.displayMessage);
+        return;
+      }
 
-      progressTimer?.cancel();
-      stopwatch.stop();
+      if (syncResponse.isInitiated && syncResponse.syncMessageId != null) {
+        print('[TP REPO] Sync initiated with messageId: ${syncResponse.syncMessageId}');
+        onSyncStarted();
 
-      onProgress('Загружено ${tpList.length} ТП', stopwatch.elapsed);
-      onSuccess();
+        // Используем SyncService для мониторинга
+        await _syncService.monitorSync(
+          messageId: syncResponse.syncMessageId!,
+          timeout: Constants.tpSyncTimeout,          // 5 минут
+          checkInterval: Constants.tpSyncCheckInterval, // 5 секунд
+          onSuccess: (syncStatus) {
+            print('[TP REPO] Sync completed successfully');
+            onSuccess();
+          },
+          onError: (error) {
+            print('[TP REPO] Sync failed: $error');
+            onError(error);
+          },
+          onProgress: (message, elapsed) {
+            onProgress(message, elapsed);
+          },
+        );
+      } else {
+        print('[TP REPO] Unexpected sync response: ${syncResponse.status}');
+        onError('Неожиданный ответ сервера при запуске синхронизации');
+      }
 
     } catch (e) {
-      print('[TP REPO] Sync error: $e');
-      onError(e.toString());
-      throw e;
+      print('[TP REPO] Error starting TP sync: $e');
+      onError('Не удалось запустить синхронизацию: ${e.toString()}');
     }
   }
 

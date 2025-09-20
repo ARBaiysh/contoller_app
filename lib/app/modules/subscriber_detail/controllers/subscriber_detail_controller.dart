@@ -12,7 +12,6 @@ class SubscriberDetailController extends GetxController {
 
   // Text controller for new reading
   final TextEditingController readingController = TextEditingController();
-  final TextEditingController commentController = TextEditingController();
 
   // ИСПРАВЛЕНО: Данные из аргументов
   late final String tpName;
@@ -22,15 +21,34 @@ class SubscriberDetailController extends GetxController {
   final _isLoading = false.obs;
   final _isSubmitting = false.obs;
   final _subscriber = Rxn<SubscriberModel>();
+  final _isSyncing = false.obs;
+  final _syncMessage = ''.obs;
+  final _submissionMessage = ''.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
-
   bool get isSubmitting => _isSubmitting.value;
-
   SubscriberModel? get subscriber => _subscriber.value;
+  bool get isSyncing => _isSyncing.value;
+  String get syncMessage => _syncMessage.value;
+  String get submissionMessage => _submissionMessage.value;
+  bool get canSubmitReading {
+    if (subscriber == null) return false;
+    if (!subscriber!.canTakeReading) return false;
 
-  bool get canSubmitReading => subscriber?.canTakeReading ?? false;
+    // Проверяем, есть ли показание в текущем месяце
+    if (subscriber!.lastReadingDate != null) {
+      final now = DateTime.now();
+      final lastReading = subscriber!.lastReadingDate!;
+
+      // Если показание в том же месяце и году - запрещаем
+      if (lastReading.year == now.year && lastReading.month == now.month) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   @override
   void onInit() {
@@ -60,7 +78,6 @@ class SubscriberDetailController extends GetxController {
   @override
   void onClose() {
     readingController.dispose();
-    commentController.dispose();
     super.onClose();
   }
 
@@ -90,28 +107,48 @@ class SubscriberDetailController extends GetxController {
 
   // ИСПРАВЛЕНО: Refresh subscriber details
   Future<void> refreshSubscriberDetails() async {
-    if (_subscriber.value == null) return;
+    if (_subscriber.value == null || _isSyncing.value) return;
 
-    _isLoading.value = true;
-    try {
-      // Перезагружаем данные абонента через repository
-      final accountNumber = _subscriber.value!.accountNumber;
-      final updatedSubscriber = await _subscriberRepository.getSubscriberByAccountNumber(accountNumber);
+    final accountNumber = _subscriber.value!.accountNumber;
 
-      if (updatedSubscriber != null) {
+    await _subscriberRepository.syncSingleSubscriber(
+      accountNumber,
+      onSyncStarted: () {
+        _isSyncing.value = true;
+        _syncMessage.value = 'синхронизация...';
+      },
+      onProgress: (message) {
+        _syncMessage.value = message.toLowerCase();
+      },
+      onSuccess: (updatedSubscriber) {
         _subscriber.value = updatedSubscriber;
-        print('[SUBSCRIBER DETAIL] Subscriber data refreshed');
-      }
-    } catch (e) {
-      print('[SUBSCRIBER DETAIL] Error refreshing subscriber: $e');
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось обновить данные абонента',
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
+        _isSyncing.value = false;
+        _syncMessage.value = '';
+
+        Get.snackbar(
+          'Успешно',
+          'Данные абонента обновлены',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          duration: const Duration(seconds: 2),
+        );
+      },
+      onError: (error) {
+        _isSyncing.value = false;
+        _syncMessage.value = '';
+
+        // Показываем старые данные, но с сообщением об ошибке
+        Get.snackbar(
+          'Ошибка синхронизации',
+          error,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          duration: const Duration(seconds: 3),
+        );
+      },
+    );
   }
 
   // Validate reading
@@ -140,72 +177,72 @@ class SubscriberDetailController extends GetxController {
     return null;
   }
 
-  // Submit reading
-  Future<void> submitReading({
-    required int reading,
-    String comment = '',
-  }) async {
-    if (_subscriber.value == null) return;
+  // Submit meter reading
+  Future<void> submitReading() async {
+    if (!formKey.currentState!.validate() || _subscriber.value == null) return;
+
+    final reading = int.parse(readingController.text);
+    final accountNumber = _subscriber.value!.accountNumber;
+    final meterSerialNumber = _subscriber.value!.meterSerialNumber;
 
     _isSubmitting.value = true;
 
-    try {
-      print('[SUBSCRIBER DETAIL] Submitting reading: $reading for ${_subscriber.value!.accountNumber}');
+    await _subscriberRepository.submitMeterReading(
+      accountNumber: accountNumber,
+      meterSerialNumber: meterSerialNumber,
+      currentReading: reading,
+      onSubmitStarted: () {
+        _submissionMessage.value = 'Отправка показания...';
+        // Блокируем форму сразу после успешной отправки
+        _subscriber.update((val) {
+          if (val != null) {
+            val = val.copyWith(canTakeReading: false);
+          }
+        });
+      },
+      onProgress: (message) {
+        _submissionMessage.value = message;
+      },
+      onSuccess: () async {
+        _isSubmitting.value = false;
+        _submissionMessage.value = '';
 
-      // Отправляем показание через repository
-      final success = await _subscriberRepository.submitMeterReading(
-        accountNumber: _subscriber.value!.accountNumber,
-        currentReading: reading,
-      );
-
-      if (success) {
         Get.snackbar(
           'Успешно',
-          'Показание отправлено',
-          backgroundColor: Get.theme.colorScheme.primary,
-          colorText: Get.theme.colorScheme.onPrimary,
-          snackPosition: SnackPosition.TOP,
+          'Показание принято и обработано',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          duration: const Duration(seconds: 3),
         );
 
         // Очищаем форму
         readingController.clear();
-        commentController.clear();
 
-        // Обновляем данные абонента
+        // Автоматически синхронизируем данные абонента
         await refreshSubscriberDetails();
+      },
+      onError: (error) {
+        _isSubmitting.value = false;
+        _submissionMessage.value = '';
 
-        // Возвращаемся назад
-        Get.back();
-      }
-    } catch (e) {
-      print('[SUBSCRIBER DETAIL] Error submitting reading: $e');
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось отправить показание: ${e.toString().replaceAll('Exception: ', '')}',
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Get.theme.colorScheme.onError,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 5),
-      );
-    } finally {
-      _isSubmitting.value = false;
-    }
-  }
+        // Возвращаем возможность отправки при ошибке
+        _subscriber.update((val) {
+          if (val != null) {
+            val = val.copyWith(canTakeReading: true);
+          }
+        });
 
-  // Calculate consumption
-  String calculateConsumption(int newReading) {
-    if (subscriber?.lastReading == null) return '0';
-    final consumption = newReading - subscriber!.lastReading!;
-    return consumption.toString();
-  }
-
-  // Calculate approximate amount (примерный расчет)
-  String calculateAmount(int newReading) {
-    if (subscriber?.lastReading == null) return '0.00';
-    final consumption = newReading - subscriber!.lastReading!;
-    // Примерный расчет: 1.5 руб за кВт·ч
-    final amount = consumption * 1.5;
-    return amount.toStringAsFixed(2);
+        Get.snackbar(
+          'Ошибка отправки',
+          error,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          duration: const Duration(seconds: 4),
+        );
+      },
+    );
   }
 
   // НОВОЕ: Получение информации для UI

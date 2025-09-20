@@ -31,9 +31,6 @@ class SubscriberListItem extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Status indicator
-                  _buildStatusIndicator(context),
-                  const SizedBox(width: Constants.paddingM),
 
                   // Subscriber info
                   Expanded(
@@ -63,7 +60,7 @@ class SubscriberListItem extends StatelessWidget {
                                   color: AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'Долг',
                                   style: TextStyle(
                                     color: AppColors.error,
@@ -79,8 +76,8 @@ class SubscriberListItem extends StatelessWidget {
                         // Account number
                         Text(
                           'Л/С: ${subscriber.accountNumber}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w500,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -183,25 +180,6 @@ class SubscriberListItem extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIndicator(BuildContext context) {
-    final color = subscriber.canTakeReading ? AppColors.warning : AppColors.success;
-    final icon = subscriber.canTakeReading ? Icons.edit : Icons.check_circle;
-
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 20,
       ),
     );
   }

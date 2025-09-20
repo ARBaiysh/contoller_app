@@ -59,7 +59,7 @@ class TpItemCard extends StatelessWidget {
                         children: [
                           // TP Number and Name
                           Text(
-                            '${tp.number} ${tp.name}',
+                            tp.name,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -69,7 +69,7 @@ class TpItemCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           // Fider
                           Text(
-                            tp.fider,
+                            "Фидер: ${tp.fider}",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                             ),

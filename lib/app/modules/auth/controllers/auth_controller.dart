@@ -1,15 +1,17 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../data/repositories/auth_repository.dart';
-import '../../../data/models/region_model.dart';
-import '../../../data/models/auth_response_model.dart';
-import '../../../data/models/sync_status_model.dart';
-import '../../../routes/app_pages.dart';
-import '../../../core/values/constants.dart';
+import 'package:get_storage/get_storage.dart';
+
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/sync_service.dart';
-import 'package:get_storage/get_storage.dart';
+import '../../../core/values/constants.dart';
+import '../../../data/models/auth_response_model.dart';
+import '../../../data/models/region_model.dart';
+import '../../../data/models/sync_status_model.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../routes/app_pages.dart';
 
 class AuthController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
@@ -38,14 +40,23 @@ class AuthController extends GetxController {
 
   // Getters
   bool get isLoading => _isLoading.value;
+
   List<RegionModel> get regions => _regions;
+
   RegionModel? get selectedRegion => _selectedRegion.value;
+
   bool get isSyncing => _isSyncing.value;
+
   String get syncMessage => _syncMessage.value;
+
   bool get isPasswordVisible => _isPasswordVisible.value;
+
   bool get rememberMe => _rememberMe.value;
+
   bool get showBiometricOption => _showBiometricOption.value;
+
   bool get isBiometricLoading => _isBiometricLoading.value;
+
   bool get isFormValid => _isFormValid.value;
 
   @override
@@ -81,7 +92,8 @@ class AuthController extends GetxController {
     final isPasswordValid = passwordController.text.trim().isNotEmpty;
     final isRegionSelected = _selectedRegion.value != null;
 
-    _isFormValid.value = isUsernameValid && isPasswordValid && isRegionSelected && !_isLoading.value && !_isSyncing.value;
+    _isFormValid.value =
+        isUsernameValid && isPasswordValid && isRegionSelected && !_isLoading.value && !_isSyncing.value;
   }
 
   // ========================================
@@ -126,7 +138,25 @@ class AuthController extends GetxController {
   }
 
   Future<void> _checkBiometricAvailability() async {
-    _showBiometricOption.value = false;
+    try {
+      // Проверяем есть ли сохраненные credentials
+      final hasSavedCredentials = _storage.read('saved_username') != null && _storage.read('saved_password') != null;
+
+      // Показываем кнопку биометрии только если:
+      // 1. Есть сохраненные данные
+      // 2. Биометрия доступна на устройстве
+      if (hasSavedCredentials) {
+        final isAvailable = await _biometricService.isBiometricAvailable;
+        _showBiometricOption.value = isAvailable;
+        print('[AUTH] Biometric option: $isAvailable (has saved credentials: $hasSavedCredentials)');
+      } else {
+        _showBiometricOption.value = false;
+        print('[AUTH] No saved credentials - hiding biometric option');
+      }
+    } catch (e) {
+      print('[AUTH] Error checking biometric availability: $e');
+      _showBiometricOption.value = false;
+    }
   }
 
   void _loadSavedCredentials() {
@@ -196,13 +226,50 @@ class AuthController extends GetxController {
 
       // Save credentials if remember me is checked
       if (_rememberMe.value) {
-        await _storage.write('remember_me', true);
-        await _storage.write('saved_username', usernameController.text.trim());
-        await _storage.write('saved_region_code', _selectedRegion.value!.code);
+        // Проверяем доступность биометрии
+        final isBiometricAvailable = await _biometricService.isBiometricAvailable;
+
+        if (isBiometricAvailable && response.status == 'SUCCESS') {
+          // Запрашиваем биометрию для защиты сохраненных данных
+          final biometricConfirmed = await _biometricService.authenticateWithBiometrics();
+
+          if (biometricConfirmed) {
+            // Сохраняем все данные включая пароль
+            await _storage.write('remember_me', true);
+            await _storage.write('saved_username', usernameController.text.trim());
+            await _storage.write('saved_password', passwordController.text.trim());
+            await _storage.write('saved_region_code', _selectedRegion.value!.code);
+            await _storage.write(Constants.biometricKey, true);
+
+            print('[AUTH] Credentials saved with biometric protection');
+            Get.snackbar(
+              'Успешно',
+              'Данные для входа сохранены и защищены биометрией',
+              backgroundColor: Colors.green.withOpacity(0.1),
+              colorText: Colors.green,
+              duration: const Duration(seconds: 2),
+            );
+          } else {
+            // Если биометрия отклонена - не сохраняем
+            _rememberMe.value = false;
+            print('[AUTH] Biometric declined - credentials not saved');
+          }
+        } else {
+          // Биометрия недоступна - сохраняем без защиты
+          await _storage.write('remember_me', true);
+          await _storage.write('saved_username', usernameController.text.trim());
+          await _storage.write('saved_password', passwordController.text.trim());
+          await _storage.write('saved_region_code', _selectedRegion.value!.code);
+
+          print('[AUTH] Credentials saved without biometric (not available)');
+        }
       } else {
+        // Удаляем сохраненные данные если галочка снята
         await _storage.remove('remember_me');
         await _storage.remove('saved_username');
+        await _storage.remove('saved_password');
         await _storage.remove('saved_region_code');
+        await _storage.remove(Constants.biometricKey);
       }
 
       await _handleLoginResponse(response);
@@ -220,15 +287,63 @@ class AuthController extends GetxController {
   }
 
   Future<void> loginWithBiometrics() async {
-    _isBiometricLoading.value = true;
-    await Future.delayed(const Duration(seconds: 1));
-    _isBiometricLoading.value = false;
+    if (_isLoading.value || _isSyncing.value) return;
 
-    Get.snackbar(
-      'Информация',
-      'Биометрическая аутентификация временно недоступна',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    try {
+      _isBiometricLoading.value = true;
+      print('[AUTH] Starting biometric login...');
+
+      // Проверяем биометрию
+      final authenticated = await _biometricService.authenticateWithBiometrics();
+
+      if (!authenticated) {
+        print('[AUTH] Biometric authentication failed or cancelled');
+        return;
+      }
+
+      // Получаем сохраненные credentials из обычного storage
+      final savedUsername = _storage.read('saved_username');
+      final savedPassword = _storage.read('saved_password');
+      final savedRegionCode = _storage.read('saved_region_code');
+
+      if (savedUsername == null || savedPassword == null || savedRegionCode == null) {
+        print('[AUTH] No saved credentials found');
+        Get.snackbar(
+          'Ошибка',
+          'Не найдены сохраненные данные для входа',
+          backgroundColor: Get.theme.colorScheme.error,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      print('[AUTH] Biometric authenticated, logging in with saved credentials...');
+
+      // Выполняем вход с сохраненными данными
+      _isLoading.value = true;
+      _validateForm();
+
+      final response = await _authRepository.login(
+        username: savedUsername,
+        password: savedPassword,
+        regionCode: savedRegionCode,
+      );
+
+      await _handleLoginResponse(response);
+
+    } catch (e) {
+      print('[AUTH] Biometric login error: $e');
+      Get.snackbar(
+        'Ошибка',
+        'Не удалось выполнить вход',
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Colors.white,
+      );
+    } finally {
+      _isBiometricLoading.value = false;
+      _isLoading.value = false;
+      _validateForm();
+    }
   }
 
   Future<String> getBiometricButtonText() async {
@@ -274,8 +389,10 @@ class AuthController extends GetxController {
 
     await _syncService.monitorSync(
       messageId: syncMessageId,
-      timeout: Constants.authSyncTimeout,        // 2 минуты
-      checkInterval: Constants.authSyncCheckInterval, // 3 секунды
+      timeout: Constants.authSyncTimeout,
+      // 2 минуты
+      checkInterval: Constants.authSyncCheckInterval,
+      // 3 секунды
       onSuccess: _onSyncSuccess,
       onError: _onSyncError,
       onProgress: _onSyncProgress,

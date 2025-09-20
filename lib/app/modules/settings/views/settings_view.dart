@@ -35,23 +35,9 @@ class SettingsView extends GetView<SettingsController> {
               const SizedBox(height: Constants.paddingL),
         
               // Security settings section
-              SettingsSection(
+              const SettingsSection(
                 title: 'Безопасность',
                 children: [
-                  Obx(() => controller.biometricAvailable
-                      ? SettingsItem(
-                    icon: Icons.fingerprint,
-                    title: 'Биометрическая аутентификация',
-                    subtitle: controller.biometricEnabled
-                        ? 'Быстрый вход с помощью биометрии'
-                        : 'Включить для быстрого входа',
-                    trailing: Switch(
-                      value: controller.biometricEnabled,
-                      onChanged: controller.toggleBiometric,
-                      activeColor: AppColors.primary,
-                    ),
-                  )
-                      : const SizedBox.shrink()),
                 ],
               ),
               const SizedBox(height: Constants.paddingL),

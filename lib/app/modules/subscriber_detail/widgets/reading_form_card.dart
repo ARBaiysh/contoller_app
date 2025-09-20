@@ -66,35 +66,45 @@ class ReadingFormCard extends StatelessWidget {
             ),
             const SizedBox(height: Constants.paddingM),
 
-            // Comment input
-            TextFormField(
-              controller: controller.commentController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: 'Примечание (необязательно)',
-                hintText: 'Дополнительная информация',
-                prefixIcon: Icon(Icons.comment),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: Constants.paddingL),
-
-            // Submit button
-            Obx(() => ElevatedButton(
-              onPressed: controller.isSubmitting ? null : null,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-              child: controller.isSubmitting
-                  ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            Obx(() => SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: controller.isSubmitting
+                    ? null
+                    : () {
+                  if (controller.formKey.currentState!.validate()) {
+                    controller.submitReading();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: Constants.paddingM),
                 ),
-              )
-                  : const Text('Отправить показание'),
+                child: controller.isSubmitting
+                    ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: Constants.paddingS),
+                    Text(controller.submissionMessage.isNotEmpty
+                        ? controller.submissionMessage
+                        : 'Отправка...'),
+                  ],
+                )
+                    : const Text(
+                  'Отправить показание',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             )),
           ],
         ),
