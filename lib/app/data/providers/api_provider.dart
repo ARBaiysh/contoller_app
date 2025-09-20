@@ -9,7 +9,7 @@ import '../models/sync_status_model.dart';
 import '../models/tp_sync_response_model.dart';
 
 class ApiProvider extends GetxService {
-  static const String baseUrl = 'http://192.168.120.10:8269/api';
+  static const String baseUrl = 'http://ca.asdf.kg/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
