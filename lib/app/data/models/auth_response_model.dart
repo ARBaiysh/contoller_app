@@ -74,11 +74,11 @@ class InspectorData {
 
   factory InspectorData.fromJson(Map<String, dynamic> json) {
     return InspectorData(
-      inspectorId: json['inspectorId'],
-      fullName: json['fullName'],
-      regionName: json['regionName'],
-      regionCode: json['regionCode'],
-      username: json['username'],
+      inspectorId: json['inspectorId'] ?? 0,
+      fullName: json['fullName'] ?? '',
+      regionName: json['regionName'] ?? '',
+      regionCode: json['regionCode'] ?? '',
+      username: json['username'] ?? '',
     );
   }
 
