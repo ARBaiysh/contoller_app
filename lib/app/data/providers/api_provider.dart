@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
 import '../models/abonent_sync_response_model.dart';
 import '../models/auth_response_model.dart';
+import '../models/full_sync_response_model.dart';
 import '../models/region_model.dart';
 import '../models/sync_status_model.dart';
 import '../models/tp_sync_response_model.dart';
@@ -445,5 +446,39 @@ class ApiProvider extends GetxService {
       }
     }
     return Exception('Неизвестная ошибка');
+  }
+
+  /// Запуск полной синхронизации всех данных
+  Future<FullSyncResponse> startFullSync() async {
+    try {
+      print('[API] Starting full sync...');
+      final response = await _dio.post('/mobile/full-sync');
+      print('[API] Full sync response (${response.statusCode}): ${response.data}');
+
+      return FullSyncResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      // Обработка специальных статусов
+      if (e.response?.statusCode == 409) {
+        print('[API] Got 409 - full sync already running');
+        return FullSyncResponse(
+          status: 'ALREADY_RUNNING',
+          message: 'Полная синхронизация уже выполняется',
+        );
+      }
+
+      if (e.response?.statusCode == 500) {
+        print('[API] Got 500 - server error during full sync');
+        return FullSyncResponse(
+          status: 'ERROR',
+          message: 'Ошибка сервера при запуске синхронизации',
+        );
+      }
+
+      print('[API] Error starting full sync: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error starting full sync: $e');
+      throw _handleError(e);
+    }
   }
 }

@@ -95,6 +95,7 @@ class Constants {
   static const int maxReadingValue = 999999;
 
   // Status Colors (добавляем для удобства из AppColors)
+  static const Color primary = Color(0xFF2563EB);
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFFC107);
   static const Color error = Color(0xFFF44336);
