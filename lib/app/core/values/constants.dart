@@ -19,7 +19,7 @@ class Constants {
   // КОНСТАНТЫ СИНХРОНИЗАЦИИ
   // ========================================
 
-  static const Duration fullSyncCooldown = Duration(minutes: 2);
+  static const Duration fullSyncCooldown = Duration(minutes: 10);
 
   // Авторизация
   static const Duration authSyncTimeout = Duration(minutes: 2);

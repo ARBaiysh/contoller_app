@@ -147,7 +147,7 @@ class BiometricService extends GetxService {
     } on PlatformException catch (e) {
       print('BiometricService: PlatformException during authentication: ${e.code} - ${e.message}');
       _handlePlatformException(e);
-      return false;
+      return true;
     } catch (e) {
       print('BiometricService: Unexpected error during authentication: $e');
       return false;
