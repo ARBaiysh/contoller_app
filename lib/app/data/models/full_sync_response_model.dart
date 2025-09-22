@@ -1,5 +1,3 @@
-// Создать новый файл: lib/app/data/models/full_sync_response_model.dart
-
 class FullSyncResponse {
   final String status;
   final String? message;

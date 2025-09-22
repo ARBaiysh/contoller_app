@@ -1,44 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+
+import '../../../core/values/constants.dart';
+import '../../../widgets/app_drawer.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/dashboard_header.dart';
+import '../widgets/financial_summary_card.dart';
 import '../widgets/sync_status_card.dart';
-import '../widgets/progress_overview_card.dart';
-import '../widgets/key_metrics_grid.dart';
-import '../widgets/quick_actions_card.dart';
-import '../widgets/recent_activity_card.dart';
-import '../../../widgets/app_drawer.dart';
-import '../../../core/values/constants.dart';
 
-class HomeView extends GetView<HomeController> {
+class HomeView extends StatelessWidget {
   const HomeView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final RefreshController refreshController = RefreshController();
+    final HomeController controller = Get.find<HomeController>();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(context),
       drawer: const AppDrawer(),
       body: Obx(() {
-        if (controller.isLoading) {
+        if (controller.isLoading.value) {
           return const Center(
             child: CircularProgressIndicator(),
           );
         }
 
-        final dashboard = controller.dashboard;
+        final dashboard = controller.dashboard.value;
         if (dashboard == null) {
-          return _buildErrorState(context, refreshController);
+          return _buildErrorState(context, refreshController, controller);
         }
 
         return SmartRefresher(
           controller: refreshController,
           enablePullDown: true,
-          header: const WaterDropMaterialHeader(
-            backgroundColor: Constants.primary,
+          header: WaterDropMaterialHeader(
+            backgroundColor: Theme.of(context).primaryColor,
           ),
           onRefresh: () async {
             await controller.refreshDashboard();
@@ -49,30 +48,16 @@ class HomeView extends GetView<HomeController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Заголовок с приветствием
-                DashboardHeader(controller: controller),
-                const SizedBox(height: Constants.paddingL),
+                // Новый минималистичный заголовок
+                DashboardHeader(),
 
-                // Общий прогресс
-                ProgressOverviewCard(dashboard: dashboard),
-                const SizedBox(height: Constants.paddingL),
+                // Финансовые показатели (свернутая карточка)
+                FinancialSummaryCard(dashboard: dashboard),
 
-                // Ключевые метрики
-                KeyMetricsGrid(dashboard: dashboard),
-                const SizedBox(height: Constants.paddingL),
+                // Статус синхронизации
+                const SyncStatusCard(),
 
-                // Быстрые действия
-                QuickActionsCard(controller: controller),
-                const SizedBox(height: Constants.paddingL),
-
-                // Недавняя активность
-                RecentActivityCard(dashboard: dashboard),
-
-                // Статус синхронизации (новый блок)
-                SyncStatusCard(controller: controller),
-                const SizedBox(height: Constants.paddingL),
-
-                // Отступ снизу для удобства
+                // Отступ снизу
                 const SizedBox(height: Constants.paddingXL),
               ],
             ),
@@ -84,44 +69,22 @@ class HomeView extends GetView<HomeController> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Панель управления',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Obx(() {
-            if (controller.dashboard != null) {
-              return Text(
-                'Обновлено ${controller.dashboard!.lastUpdateTime}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-        ],
-      ),
+      title: const Text('Панель управления'),
       centerTitle: true,
       elevation: 0,
       scrolledUnderElevation: 1,
     );
   }
 
-  Widget _buildErrorState(BuildContext context, RefreshController refreshController) {
+  Widget _buildErrorState(BuildContext context, RefreshController refreshController, HomeController controllerHome) {
     return SmartRefresher(
       controller: refreshController,
       enablePullDown: true,
-      header: const WaterDropMaterialHeader(
-        backgroundColor: Constants.primary,
+      header: WaterDropMaterialHeader(
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       onRefresh: () async {
-        await controller.loadDashboard();
+        await controllerHome.loadDashboard();
         refreshController.refreshCompleted();
       },
       child: Center(
@@ -133,7 +96,7 @@ class HomeView extends GetView<HomeController> {
               Icon(
                 Icons.error_outline,
                 size: 64,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
               ),
               const SizedBox(height: Constants.paddingM),
               Text(
@@ -141,19 +104,19 @@ class HomeView extends GetView<HomeController> {
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: Constants.paddingS),
+              const SizedBox(height: Constants.paddingL),
+
               Text(
-                controller.lastError.isNotEmpty
-                    ? controller.lastError
+                controllerHome.lastError.value != ''
+                    ? controllerHome.lastError.value
                     : 'Потяните вниз для обновления',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: Constants.paddingL),
-              OutlinedButton.icon(
-                onPressed: () => controller.loadDashboard(),
+              ElevatedButton.icon(
+                onPressed: () => controllerHome.loadDashboard(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Повторить'),
               ),

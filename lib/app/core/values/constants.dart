@@ -19,6 +19,8 @@ class Constants {
   // КОНСТАНТЫ СИНХРОНИЗАЦИИ
   // ========================================
 
+  static const Duration fullSyncCooldown = Duration(minutes: 2);
+
   // Авторизация
   static const Duration authSyncTimeout = Duration(minutes: 2);
   static const Duration authSyncCheckInterval = Duration(seconds: 3);
@@ -117,17 +119,6 @@ class Constants {
   static const String readingSubmitted = 'Показание успешно отправлено';
   static const String loginSuccess = 'Вход выполнен успешно';
   static const String dataUpdated = 'Данные обновлены';
-
-  // Meter Types
-  static const List<String> meterTypes = [
-    'СОЭ',
-    'СОЭ ЖК',
-    'DD5',
-    'DD5 ЖК',
-    'Меркурий',
-    'Меркурий ЖК',
-    'НЕХ-12СУ',
-  ];
 
   // Report Types
   static const Map<String, String> reportTypes = {

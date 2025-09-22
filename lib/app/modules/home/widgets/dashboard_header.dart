@@ -1,219 +1,237 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../data/models/dashboard_model.dart';
 import '../controllers/home_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 
 class DashboardHeader extends StatelessWidget {
-  final HomeController controller;
 
   const DashboardHeader({
     Key? key,
-    required this.controller,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final dashboard = controller.dashboard;
-    if (dashboard == null) return const SizedBox.shrink();
+    final HomeController controller = Get.find();
+    DashboardModel dashboard = controller.dashboard.value;
 
-    return Container(
-      padding: const EdgeInsets.all(Constants.paddingL),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withValues(alpha: 0.8),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Время обновления
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end  ,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Constants.paddingS,
+                vertical: Constants.paddingXS,
+              ),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+              ),
+              child: Text(
+                'Обновлено: ${_formatDateTime(dashboard.generatedAt)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(Constants.borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+
+        const SizedBox(height: Constants.paddingL),
+
+        // Основная карточка сбора показаний
+        Container(
+          padding: const EdgeInsets.all(Constants.paddingL),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(Constants.borderRadius),
+            border: Border.all(
+              color: theme.dividerColor.withOpacity(0.1),
+              width: 1,
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Заголовок с временем
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getGreeting(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Сводка по участку',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Constants.paddingS,
-                  vertical: Constants.paddingXS,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
-                ),
-                child: Text(
-                  dashboard.lastUpdateTime,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: Constants.paddingL),
-
-          // Основные показатели в строке
-          Row(
-            children: [
-              Expanded(
-                child: _buildHeaderStat(
-                  'Абонентов',
-                  dashboard.totalAbonents.toString(),
-                  'на ${dashboard.totalTransformerPoints} ТП',
-                  Icons.people,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withValues(alpha: 0.3),
-                margin: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
-              ),
-              Expanded(
-                child: _buildHeaderStat(
-                  'Показания',
-                  '${dashboard.completionPercentage.toStringAsFixed(0)}%',
-                  '${dashboard.readingsCollected}/${dashboard.totalReadingsNeeded}',
-                  Icons.electrical_services,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: Constants.paddingM),
-
-          // Финансовые показатели
-          Row(
-            children: [
-              Expanded(
-                child: _buildFinancialCard(
-                  'Должники',
-                  dashboard.debtorsCount.toString(),
-                  dashboard.formattedDebtAmount,
-                  Icons.warning_amber,
-                  AppColors.warning,
-                ),
-              ),
-              const SizedBox(width: Constants.paddingS),
-              Expanded(
-                child: _buildFinancialCard(
-                  'Оплаты',
-                  dashboard.paidToday.toString(),
-                  dashboard.formattedPaymentsToday,
-                  Icons.payments,
-                  AppColors.success,
-                ),
-              ),
-              const SizedBox(width: Constants.paddingS),
-              Expanded(
-                child: _buildFinancialCard(
-                  'За месяц',
-                  dashboard.paidThisMonth.toString(),
-                  dashboard.formattedPaymentsThisMonth,
-                  Icons.calendar_month,
-                  AppColors.info,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderStat(String label, String value, String subtitle, IconData icon) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: Colors.white.withValues(alpha: 0.9),
-          size: 20,
-        ),
-        const SizedBox(width: Constants.paddingS),
-        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'СБОР ПОКАЗАНИЙ',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      letterSpacing: 0.5,
+                      fontWeight: FontWeight.w600,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Constants.paddingS,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+                    ),
+                    child: Text(
+                      '${dashboard.completionPercentage.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: Constants.paddingM),
+
+              // Показания сегодня
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Сегодня',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dashboard.readingsToday.toString(),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: theme.dividerColor.withOpacity(0.2),
+                  ),
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Собрано',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${dashboard.readingsCollected} / ${dashboard.totalReadingsNeeded}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: Constants.paddingM),
+
+              // Прогресс бар
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: dashboard.completionPercentage / 100,
+                  minHeight: 8,
+                  backgroundColor: theme.dividerColor.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
+
+              const SizedBox(height: Constants.paddingS),
+
               Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 10,
+                'Осталось: ${dashboard.readingsRemaining}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
                 ),
               ),
             ],
           ),
+        ),
+
+        const SizedBox(height: Constants.paddingM),
+
+        // Компактная статистика
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactStat(
+                context: context,
+                icon: Icons.business,
+                value: dashboard.totalTransformerPoints.toString(),
+                label: 'ТП',
+              ),
+            ),
+            const SizedBox(width: Constants.paddingS),
+            Expanded(
+              child: _buildCompactStat(
+                context: context,
+                icon: Icons.people,
+                value: dashboard.totalAbonents.toString(),
+                label: 'Абонентов',
+              ),
+            ),
+            const SizedBox(width: Constants.paddingS),
+            Expanded(
+              child: _buildCompactStat(
+                context: context,
+                icon: Icons.warning_amber,
+                value: dashboard.debtorsCount.toString(),
+                label: 'Должников',
+                isWarning: true,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildFinancialCard(
-      String title,
-      String count,
-      String amount,
-      IconData icon,
-      Color accentColor
-      ) {
+  Widget _buildCompactStat({
+    required BuildContext context,
+    required IconData icon,
+    required String value,
+    required String label,
+    bool isWarning = false,
+  }) {
+    final theme = Theme.of(context);
+    final color = isWarning ? AppColors.error : theme.textTheme.bodyMedium?.color;
+
     return Container(
-      padding: const EdgeInsets.all(Constants.paddingS),
+      padding: const EdgeInsets.all(Constants.paddingM),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: accentColor.withValues(alpha: 0.3),
+          color: theme.dividerColor.withOpacity(0.1),
           width: 1,
         ),
       ),
@@ -221,51 +239,31 @@ class DashboardHeader extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: accentColor,
-            size: 16,
+            size: 20,
+            color: color?.withOpacity(0.6),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: Constants.paddingXS),
           Text(
-            count,
-            style: TextStyle(
-              color: accentColor,
-              fontSize: 14,
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
           Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 9,
-              fontWeight: FontWeight.w500,
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            amount,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 8,
-              fontWeight: FontWeight.w400,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Доброе утро!';
-    } else if (hour < 17) {
-      return 'Добрый день!';
-    } else {
-      return 'Добрый вечер!';
-    }
+  String _formatDateTime(DateTime dateTime) {
+    final formatter = DateFormat('dd.MM.yyyy HH:mm');
+    return formatter.format(dateTime);
   }
 }

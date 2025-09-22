@@ -43,8 +43,33 @@ class DashboardModel {
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
+    // Функция для безопасного парсинга дат
+    DateTime? parseDateTime(String? dateString) {
+      if (dateString == null) return null;
+      try {
+        print('[DashboardModel] Parsing date string: $dateString');
+
+        // Парсим дату
+        final parsed = DateTime.parse(dateString);
+        print('[DashboardModel] Parsed as: $parsed (isUtc: ${parsed.isUtc})');
+
+        // Если строка содержит 'Z' или явный часовой пояс, доверяем парсеру
+        if (dateString.endsWith('Z') || dateString.contains('+') || dateString.contains('-')) {
+          print('[DashboardModel] Date has timezone info, using as-is');
+          return parsed;
+        } else {
+          // Если нет информации о часовом поясе, считаем что это локальное время
+          print('[DashboardModel] No timezone info, treating as local time');
+          return parsed;
+        }
+      } catch (e) {
+        print('[DashboardModel] Error parsing date: $dateString - $e');
+        return null;
+      }
+    }
+
     return DashboardModel(
-      generatedAt: DateTime.parse(json['generatedAt']),
+      generatedAt: parseDateTime(json['generatedAt']) ?? DateTime.now(),
       totalTransformerPoints: json['totalTransformerPoints'] ?? 0,
       totalAbonents: json['totalAbonents'] ?? 0,
       totalReadingsNeeded: json['totalReadingsNeeded'] ?? 0,
@@ -59,21 +84,17 @@ class DashboardModel {
       totalPaymentsThisMonth: (json['totalPaymentsThisMonth'] ?? 0).toDouble(),
       paidToday: json['paidToday'] ?? 0,
       totalPaymentsToday: (json['totalPaymentsToday'] ?? 0).toDouble(),
-      // Новые поля
+      // Новые поля с правильным парсингом
       fullSyncInProgress: json['fullSyncInProgress'] ?? false,
-      fullSyncStartedAt: json['fullSyncStartedAt'] != null
-          ? DateTime.parse(json['fullSyncStartedAt'])
-          : null,
-      lastFullSyncCompleted: json['lastFullSyncCompleted'] != null
-          ? DateTime.parse(json['lastFullSyncCompleted'])
-          : null,
+      fullSyncStartedAt: parseDateTime(json['fullSyncStartedAt']),
+      lastFullSyncCompleted: parseDateTime(json['lastFullSyncCompleted']),
     );
   }
 
   // Вспомогательные методы для UI
   String get lastUpdateTime {
     final now = DateTime.now();
-    final diff = now.difference(generatedAt);
+    final diff = now.difference(generatedAt.toLocal());
 
     if (diff.inMinutes < 1) {
       return 'только что';
@@ -125,7 +146,8 @@ class DashboardModel {
 
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
-    final diff = now.difference(dateTime);
+    final localDateTime = dateTime.toLocal();
+    final diff = now.difference(localDateTime);
 
     if (diff.inMinutes < 1) {
       return 'только что';
@@ -134,11 +156,11 @@ class DashboardModel {
     } else if (diff.inHours < 24) {
       return '${diff.inHours} ч назад';
     } else if (diff.inDays == 1) {
-      return 'вчера в ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+      return 'вчера в ${localDateTime.hour.toString().padLeft(2, '0')}:${localDateTime.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays < 7) {
       return '${diff.inDays} дн назад';
     } else {
-      return '${dateTime.day}.${dateTime.month}.${dateTime.year}';
+      return '${localDateTime.day}.${localDateTime.month}.${localDateTime.year}';
     }
   }
 
@@ -151,5 +173,28 @@ class DashboardModel {
     } else {
       return '❌';
     }
+  }
+
+  static DashboardModel empty() {
+    return DashboardModel(
+      generatedAt: DateTime.now(),
+      totalTransformerPoints: 0,
+      totalAbonents: 0,
+      totalReadingsNeeded: 0,
+      readingsCollected: 0,
+      readingsRemaining: 0,
+      completionPercentage: 0.0,
+      readingsToday: 0,
+      debtorsCount: 0,
+      totalDebtAmount: 0.0,
+      totalOverpaymentAmount: 0.0,
+      paidThisMonth: 0,
+      totalPaymentsThisMonth: 0.0,
+      paidToday: 0,
+      totalPaymentsToday: 0.0,
+      fullSyncInProgress: false,
+      fullSyncStartedAt: null,
+      lastFullSyncCompleted: null,
+    );
   }
 }
