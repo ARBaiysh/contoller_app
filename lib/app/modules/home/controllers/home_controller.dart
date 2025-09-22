@@ -133,9 +133,11 @@ class HomeController extends GetxController {
       print('[HOME] Loading dashboard...');
       final dashboardData = await _statisticsRepository.getDashboardStatistics();
       print('[HOME] Dashboard loaded: fullSyncInProgress=${dashboardData.fullSyncInProgress}');
-      print('[HOME] Dashboard loaded: $dashboardData');
 
       dashboard.value = dashboardData;
+
+      print('[HOME] dashboardData.fullSyncStartedAt: ${dashboardData.fullSyncStartedAt}');
+      print('[HOME] Dashboard.value.fullSyncStartedAt: ${dashboard.value.fullSyncStartedAt}');
 
       // Обновляем все связанные состояния
       _updateSyncAvailability();
@@ -188,7 +190,6 @@ class HomeController extends GetxController {
 
         // Ждем немного и обновляем dashboard
         await Future.delayed(const Duration(milliseconds: 500));
-        _statisticsRepository.clearCache();
         await loadDashboard(showLoading: false);
 
       } else if (response.status == 'ALREADY_RUNNING') {
@@ -200,6 +201,9 @@ class HomeController extends GetxController {
           colorText: Constants.warning,
           duration: const Duration(seconds: 3),
         );
+
+        // Обновляем данные чтобы получить актуальный статус
+        await loadDashboard(showLoading: false);
 
       } else {
         throw Exception(response.message ?? 'Неизвестная ошибка');

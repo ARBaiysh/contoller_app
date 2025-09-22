@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      // ИСПРАВЛЕНИЕ: Убираем themeMode: ThemeMode.system
+      themeMode: ThemeMode.system,
       // Теме будет управлять ThemeController
       initialBinding: InitialBinding(),
       initialRoute: AppPages.INITIAL,
