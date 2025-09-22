@@ -62,7 +62,7 @@ class SyncStatusCard extends StatelessWidget {
                           color: AppColors.info.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SizedBox(
@@ -73,7 +73,7 @@ class SyncStatusCard extends StatelessWidget {
                                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.info),
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6),
                             Text(
                               'В процессе',
                               style: TextStyle(
@@ -109,70 +109,47 @@ class SyncStatusCard extends StatelessWidget {
                   ),
                 ],
 
-                const SizedBox(height: Constants.paddingL),
+                const SizedBox(height: Constants.paddingS),
 
                 // Кнопка синхронизации
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: Obx(() => ElevatedButton(
-                    onPressed: controller.canStartSync.value
-                        ? controller.startFullSync
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: controller.isFullSyncInProgress.value
-                          ? theme.disabledColor
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(Constants.borderRadius),
-                      ),
-                      disabledBackgroundColor: theme.cardColor,
-                      disabledForegroundColor: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-                    ),
-                    child: controller.isFullSyncInProgress.value
-                        ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                Obx(() {
+                  if (controller.canStartSync.value) {
+                    return Column(
                       children: [
+                        const SizedBox(height: Constants.paddingL),
                         SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.textTheme.bodyMedium?.color?.withOpacity(0.5) ?? Colors.grey,
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: controller.startFullSync,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(Constants.borderRadius),
+                              ),
+                            ),
+                            child: const Text(
+                              'Полная синхронизация',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: Constants.paddingS),
-                        Text(
-                          'Идет синхронизация...',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ],
-                    )
-                        : Text(
-                      controller.syncButtonText.value,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  )),
-                ),
+                    );
+                  }
 
-                // Информация о задержке
-                Obx(() {
+                  // Если кнопка недоступна, показываем только текст объяснения
                   if (!controller.canStartSync.value &&
                       controller.minutesUntilSyncAvailable.value > 0 &&
                       !controller.isFullSyncInProgress.value) {
                     return Column(
                       children: [
-                        const SizedBox(height: Constants.paddingS),
+                        const SizedBox(height: Constants.paddingL),
                         Text(
                           'Повторная синхронизация возможна не ранее, чем через ${Constants.fullSyncCooldown.inMinutes} минут после завершения предыдущей',
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -184,6 +161,8 @@ class SyncStatusCard extends StatelessWidget {
                       ],
                     );
                   }
+
+                  // Если идет синхронизация, не показываем ничего
                   return const SizedBox.shrink();
                 }),
               ],

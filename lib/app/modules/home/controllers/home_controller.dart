@@ -30,7 +30,8 @@ class HomeController extends GetxController {
   // Данные пользователя
   final userName = ''.obs;
 
-  Timer? _syncAvailabilityTimer;
+  // Таймер для проверки статуса синхронизации
+  Timer? _syncStatusTimer;
 
   @override
   void onInit() {
@@ -38,32 +39,44 @@ class HomeController extends GetxController {
     print('[HOME] Controller initialized: ${hashCode}');
     userName.value = _authRepository.userFullName;
     loadDashboard();
-    _startSyncAvailabilityTimer();
   }
 
   @override
   void onClose() {
-    _syncAvailabilityTimer?.cancel();
+    _stopSyncStatusTimer();
     super.onClose();
   }
 
   // ========================================
-  // ТАЙМЕР ДЛЯ ОТСЛЕЖИВАНИЯ ДОСТУПНОСТИ СИНХРОНИЗАЦИИ
+  // МОНИТОРИНГ СИНХРОНИЗАЦИИ
   // ========================================
 
-  void _startSyncAvailabilityTimer() {
-    _syncAvailabilityTimer?.cancel();
+  void _startSyncStatusMonitoring() {
+    _stopSyncStatusTimer();
 
-    _syncAvailabilityTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _updateSyncAvailability();
+    print('[HOME] Starting sync status monitoring (every 5 seconds)');
+
+    _syncStatusTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      print('[HOME] Checking sync status...');
+      await loadDashboard(showLoading: false);
+
+      // Если синхронизация завершена, останавливаем таймер
+      if (!isFullSyncInProgress.value) {
+        print('[HOME] Sync completed, stopping monitoring');
+        _stopSyncStatusTimer();
+      }
     });
+  }
 
-    // Сразу обновляем
-    _updateSyncAvailability();
+  void _stopSyncStatusTimer() {
+    _syncStatusTimer?.cancel();
+    _syncStatusTimer = null;
+    print('[HOME] Sync status monitoring stopped');
   }
 
   void _updateSyncAvailability() {
     final dashboardData = dashboard.value;
+
     if (dashboardData == null) {
       canStartSync.value = false;
       syncButtonText.value = 'Полная синхронизация';
@@ -72,10 +85,11 @@ class HomeController extends GetxController {
 
     // Обновляем флаг синхронизации
     isFullSyncInProgress.value = dashboardData.fullSyncInProgress;
+    print('[SYNC AVAILABILITY] fullSyncInProgress: ${dashboardData.fullSyncInProgress}');
 
     if (isFullSyncInProgress.value) {
       canStartSync.value = false;
-      syncButtonText.value = 'Идет синхронизация...';
+      syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
       minutesUntilSyncAvailable.value = 0;
       return;
     }
@@ -89,7 +103,7 @@ class HomeController extends GetxController {
         print('[SYNC AVAILABILITY] WARNING: Last sync time is in the future!');
         canStartSync.value = false;
         minutesUntilSyncAvailable.value = Constants.fullSyncCooldown.inMinutes;
-        syncButtonText.value = 'Доступно через ${Constants.fullSyncCooldown.inMinutes} мин';
+        syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
         return;
       }
 
@@ -97,13 +111,11 @@ class HomeController extends GetxController {
       final cooldownMinutes = Constants.fullSyncCooldown.inMinutes;
       final timeSinceInMinutes = timeSinceLastSync.inMinutes;
 
-      print('[SYNC AVAILABILITY] Time since last sync: ${timeSinceInMinutes} minutes');
-
       if (timeSinceInMinutes < cooldownMinutes) {
         final remaining = cooldownMinutes - timeSinceInMinutes;
         minutesUntilSyncAvailable.value = remaining;
         canStartSync.value = false;
-        syncButtonText.value = 'Доступно через $remaining мин';
+        syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
       } else {
         minutesUntilSyncAvailable.value = 0;
         canStartSync.value = !isFullSyncStarting.value;
@@ -132,12 +144,11 @@ class HomeController extends GetxController {
 
       print('[HOME] Loading dashboard...');
       final dashboardData = await _statisticsRepository.getDashboardStatistics();
-      print('[HOME] Dashboard loaded: fullSyncInProgress=${dashboardData.fullSyncInProgress}');
+
+      print('[HOME] Dashboard loaded:');
+      print('[HOME] - fullSyncInProgress: ${dashboardData.fullSyncInProgress}');
 
       dashboard.value = dashboardData;
-
-      print('[HOME] dashboardData.fullSyncStartedAt: ${dashboardData.fullSyncStartedAt}');
-      print('[HOME] Dashboard.value.fullSyncStartedAt: ${dashboard.value.fullSyncStartedAt}');
 
       // Обновляем все связанные состояния
       _updateSyncAvailability();
@@ -192,6 +203,9 @@ class HomeController extends GetxController {
         await Future.delayed(const Duration(milliseconds: 500));
         await loadDashboard(showLoading: false);
 
+        // Запускаем мониторинг статуса синхронизации
+        _startSyncStatusMonitoring();
+
       } else if (response.status == 'ALREADY_RUNNING') {
         Get.snackbar(
           'Внимание',
@@ -202,8 +216,11 @@ class HomeController extends GetxController {
           duration: const Duration(seconds: 3),
         );
 
-        // Обновляем данные чтобы получить актуальный статус
+        // Обновляем данные и запускаем мониторинг
         await loadDashboard(showLoading: false);
+        if (isFullSyncInProgress.value) {
+          _startSyncStatusMonitoring();
+        }
 
       } else {
         throw Exception(response.message ?? 'Неизвестная ошибка');
