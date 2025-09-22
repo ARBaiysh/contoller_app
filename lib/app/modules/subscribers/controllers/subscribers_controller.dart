@@ -23,6 +23,10 @@ class SubscribersController extends GetxController {
   final _selectedStatus = 'all'.obs;
   final _searchQuery = ''.obs;
   final _sortBy = 'default'.obs;
+  final _filterByTariff = 'all'.obs;
+
+  final _householdCount = 0.obs;
+  final _nonHouseholdCount = 0.obs;
 
   // ДОБАВЛЕНО: Новые реактивные переменные для замены геттеров с логикой
   final _isEmpty = true.obs;
@@ -53,6 +57,9 @@ class SubscribersController extends GetxController {
   int get debtorsCount => _debtorsCount.value;
   int get blockedCount => _blockedCount.value;
   List<Map<String, dynamic>> get statusFilterOptions => _statusFilterOptions;
+  String get filterByTariff => _filterByTariff.value;
+  int get householdCount => _householdCount.value;
+  int get nonHouseholdCount => _nonHouseholdCount.value;
 
   @override
   void onInit() {
@@ -62,6 +69,7 @@ class SubscribersController extends GetxController {
     _subscribers.listen((_) => _updateStatistics());
     _syncElapsed.listen((_) => _updateSyncElapsedFormatted());
     _selectedStatus.listen((_) => _updateStatusFilterOptions());
+    _filterByTariff.listen((_) => applyFiltersAndSort());
 
     // Получаем параметры
     final args = Get.arguments as Map<String, dynamic>? ?? {};
@@ -92,6 +100,13 @@ class SubscribersController extends GetxController {
     _readingsAvailable.value = _subscribers.where((s) => s.canTakeReading && !_hasReadingInCurrentMonth(s)).length;
     _debtorsCount.value = _subscribers.where((s) => s.isDebtor).length;
     _blockedCount.value = _subscribers.where((s) => !s.canTakeReading).length;
+
+    // НОВАЯ СТАТИСТИКА ПО ТАРИФАМ
+    _householdCount.value = _subscribers.where((s) =>
+        s.tariffName.toLowerCase().contains('населен')).length;
+    _nonHouseholdCount.value = _subscribers.where((s) =>
+    !s.tariffName.toLowerCase().contains('населен')).length;
+
     _updateStatusFilterOptions();
   }
 
@@ -272,13 +287,11 @@ class SubscribersController extends GetxController {
     // Применяем фильтр по статусу
     switch (_selectedStatus.value) {
       case 'available':
-      // Нужен обход: не заблокирован И нет показания в текущем месяце
         filtered = filtered.where((s) =>
         s.canTakeReading && !_hasReadingInCurrentMonth(s)
         ).toList();
         break;
       case 'completed':
-      // Пройден: есть показание в текущем месяце (независимо от блокировки)
         filtered = filtered.where((s) => _hasReadingInCurrentMonth(s)).toList();
         break;
       case 'debtors':
@@ -286,18 +299,32 @@ class SubscribersController extends GetxController {
         break;
       case 'all':
       default:
-      // Показываем всех
         break;
     }
 
-    // Применяем поиск
+    // ОБНОВЛЯЕМ ПОИСК - добавляем поиск по номеру счётчика
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((s) =>
       s.fullName.toLowerCase().contains(query) ||
           s.accountNumber.toLowerCase().contains(query) ||
-          s.address.toLowerCase().contains(query)
+          s.address.toLowerCase().contains(query) ||
+          s.meterSerialNumber.toLowerCase().contains(query) // НОВОЕ: поиск по номеру счётчика
       ).toList();
+    }
+
+    // НОВЫЙ ФИЛЬТР ПО ТАРИФУ
+    if (_filterByTariff.value != 'all') {
+      switch (_filterByTariff.value) {
+        case 'household':
+          filtered = filtered.where((s) =>
+              s.tariffName.toLowerCase().contains('населен')).toList();
+          break;
+        case 'non_household':
+          filtered = filtered.where((s) =>
+          !s.tariffName.toLowerCase().contains('населен')).toList();
+          break;
+      }
     }
 
     // Применяем сортировку
@@ -316,7 +343,6 @@ class SubscribersController extends GetxController {
         break;
       case 'default':
       default:
-      // Сортировка по умолчанию: сначала доступные для обхода, потом по имени
         filtered.sort((a, b) {
           final aAvailable = a.canTakeReading && !_hasReadingInCurrentMonth(a);
           final bAvailable = b.canTakeReading && !_hasReadingInCurrentMonth(b);
@@ -337,6 +363,10 @@ class SubscribersController extends GetxController {
     _selectedStatus.value = status;
     applyFiltersAndSort();
     print('[SUBSCRIBERS CONTROLLER] Status filter changed to: $status');
+  }
+
+  void setTariffFilter(String tariff) {
+    _filterByTariff.value = tariff;
   }
 
   /// Поиск абонентов

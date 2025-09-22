@@ -78,7 +78,7 @@ class SearchView extends GetView<GlobalSearchController> {
             controller: controller.searchTextController,
             onChanged: controller.search,
             decoration: InputDecoration(
-              hintText: 'ФИО, адрес или лицевой счет',
+              hintText: 'Поиск по ФИО, Адресу, ЛС, № счётчика (минимум 3 символа)',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: controller.searchQuery.isNotEmpty
                   ? IconButton(
@@ -105,7 +105,12 @@ class SearchView extends GetView<GlobalSearchController> {
 
   Widget _buildFilters(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(Constants.paddingM),
+      padding: const EdgeInsets.fromLTRB(
+        Constants.paddingM,
+        Constants.paddingS,
+        Constants.paddingM,
+        Constants.paddingS,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -126,11 +131,12 @@ class SearchView extends GetView<GlobalSearchController> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             activeColor: AppColors.error,
+            visualDensity: VisualDensity.compact,
           )),
 
-          const SizedBox(height: Constants.paddingS),
+          const SizedBox(height: Constants.paddingXS),
 
-          // ИСПРАВЛЕНО: Status filter chips (убран 'processing')
+          // Status filter chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Obx(() => Row(
@@ -151,7 +157,6 @@ class SearchView extends GetView<GlobalSearchController> {
                   icon: Icons.check_circle_outline,
                 ),
                 const SizedBox(width: Constants.paddingS),
-                // УБРАЛИ processing фильтр
                 _buildFilterChip(
                   context: context,
                   label: 'Показания сняты',
@@ -163,8 +168,86 @@ class SearchView extends GetView<GlobalSearchController> {
               ],
             )),
           ),
+
+          const SizedBox(height: Constants.paddingXS),
+
+          // НОВЫЙ ФИЛЬТР ПО ТАРИФУ
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Obx(() => Row(
+              children: [
+                _buildTariffFilterChip(
+                  context: context,
+                  label: 'Все',
+                  value: 'all',
+                  isSelected: controller.filterByTariff == 'all',
+                ),
+                const SizedBox(width: Constants.paddingS),
+                _buildTariffFilterChip(
+                  context: context,
+                  label: 'Быт',
+                  value: 'household',
+                  isSelected: controller.filterByTariff == 'household',
+                  color: Colors.green,
+                  icon: Icons.home_outlined,
+                ),
+                const SizedBox(width: Constants.paddingS),
+                _buildTariffFilterChip(
+                  context: context,
+                  label: 'НеБыт',
+                  value: 'non_household',
+                  isSelected: controller.filterByTariff == 'non_household',
+                  color: Colors.orange,
+                  icon: Icons.business_outlined,
+                ),
+              ],
+            )),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTariffFilterChip({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required bool isSelected,
+    Color? color,
+    IconData? icon,
+  }) {
+    final chipColor = color ?? AppColors.primary;
+
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : chipColor,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (_) => controller.setTariffFilter(value),
+      selectedColor: chipColor,
+      backgroundColor: chipColor.withValues(alpha: 0.1),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : chipColor,
+        fontSize: 13,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: chipColor.withValues(alpha: 0.3),
+        width: 1,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact, // Компактность
     );
   }
 
@@ -322,6 +405,30 @@ class SearchView extends GetView<GlobalSearchController> {
   }
 
   Widget _buildSearchResults(BuildContext context) {
+    if (controller.searchQuery.isNotEmpty && controller.searchQuery.length < 3) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Constants.paddingXL),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 64,
+                color: Theme.of(context).primaryColor,
+              ),
+              const SizedBox(height: Constants.paddingL),
+              Text(
+                'Введите минимум 3 символа',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Column(
       children: [
         // Results count

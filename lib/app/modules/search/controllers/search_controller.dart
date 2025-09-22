@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../data/models/subscriber_model.dart';
-import '../../../data/models/tp_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
-import '../../../data/repositories/tp_repository.dart';
 import '../../../routes/app_pages.dart';
 import '../../../core/values/constants.dart';
 
 class GlobalSearchController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
-  final TpRepository _tpRepository = Get.find<TpRepository>();
   final GetStorage _storage = GetStorage();
 
   // Storage key for recent searches
@@ -27,16 +24,18 @@ class GlobalSearchController extends GetxController {
   final _isLoading = false.obs;
   final _searchQuery = ''.obs;
   final _searchResults = <SubscriberModel>[].obs;
-  final _tpList = <TpModel>[].obs;
   final _showRecent = true.obs;
   final _recentSearches = <String>[].obs;
 
   // Filter states
   final _filterByDebtor = false.obs;
   final _filterByStatus = 'all'.obs;
+  final _filterByTariff = 'all'.obs;
 
   final _totalResults = 0.obs;
   final _debtorResults = 0.obs;
+  final _householdResults = 0.obs;
+  final _nonHouseholdResults = 0.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -46,25 +45,34 @@ class GlobalSearchController extends GetxController {
   List<String> get recentSearches => _recentSearches;
   bool get filterByDebtor => _filterByDebtor.value;
   String get filterByStatus => _filterByStatus.value;
+  String get filterByTariff => _filterByTariff.value;
+
 
   // Statistics
   int get totalResults => _totalResults.value;
   int get debtorResults => _debtorResults.value;
+  int get householdResults => _householdResults.value;
+  int get nonHouseholdResults => _nonHouseholdResults.value;
 
   @override
   void onInit() {
     super.onInit();
 
-    // ДОБАВЛЕНО: Слушатель для обновления статистики
-    _searchResults.listen((_) => _updateSearchStatistics());
+    // Слушатель для обновления статистики
+    _searchResults.listen((_) => _updateStatistics());
 
-    loadTpList();
+    // Загружаем историю поиска
     loadRecentSearches();
   }
 
-  void _updateSearchStatistics() {
+  void _updateStatistics() {
     _totalResults.value = _searchResults.length;
     _debtorResults.value = _searchResults.where((s) => s.isDebtor).length;
+
+    _householdResults.value = _searchResults.where((s) =>
+        s.tariffName.toLowerCase().contains('населен')).length;
+    _nonHouseholdResults.value = _searchResults.where((s) =>
+    !s.tariffName.toLowerCase().contains('населен')).length;
   }
 
   @override
@@ -74,24 +82,12 @@ class GlobalSearchController extends GetxController {
     super.onClose();
   }
 
-  // Load TP list for mapping
-  Future<void> loadTpList() async {
-    try {
-      final tps = await _tpRepository.getTpList();
-      _tpList.value = tps;
-    } catch (e) {
-      print('Error loading TP list: $e');
-    }
-  }
-
   // Load recent searches from storage
   void loadRecentSearches() {
     try {
       final List<dynamic>? storedSearches = _storage.read(_recentSearchesKey);
       if (storedSearches != null) {
         _recentSearches.value = storedSearches.cast<String>();
-      } else {
-        _saveRecentSearches();
       }
     } catch (e) {
       print('Error loading recent searches: $e');
@@ -123,6 +119,12 @@ class GlobalSearchController extends GetxController {
 
     _showRecent.value = false;
 
+    // Если меньше 3 символов - очищаем результаты, но не показываем snackbar при вводе
+    if (query.length < 3) {
+      _searchResults.clear();
+      return;
+    }
+
     _debounce = Timer(
       const Duration(milliseconds: Constants.searchDebounceMs),
           () => performSearch(query),
@@ -131,28 +133,21 @@ class GlobalSearchController extends GetxController {
 
   // Perform actual search
   Future<void> performSearch(String query) async {
-    if (query.length < 3) {
-      Get.snackbar(
-        'Поиск',
-        'Введите минимум 3 символа для поиска',
-        snackPosition: SnackPosition.TOP,
-      );
-      return;
-    }
+    if (query.length < 3) return;
 
     _isLoading.value = true;
 
     try {
+      // Используем новый API endpoint
       final results = await _subscriberRepository.searchSubscribers(query);
 
-      // Apply filters
+      // Применяем локальные фильтры
       List<SubscriberModel> filtered = results;
 
       if (_filterByDebtor.value) {
         filtered = filtered.where((s) => s.isDebtor).toList();
       }
 
-      // ИСПРАВЛЕНО: используем canTakeReading вместо ReadingStatus
       if (_filterByStatus.value != 'all') {
         switch (_filterByStatus.value) {
           case 'available':
@@ -163,15 +158,31 @@ class GlobalSearchController extends GetxController {
           // Показания уже сняты (нельзя снимать)
             filtered = filtered.where((s) => !s.canTakeReading).toList();
             break;
-        // Убрали case 'processing' так как в новой модели нет промежуточного состояния
+        }
+      }
+
+      if (_filterByTariff.value != 'all') {
+        switch (_filterByTariff.value) {
+          case 'household':
+          // Быт - содержит "населен"
+            filtered = filtered.where((s) =>
+                s.tariffName.toLowerCase().contains('населен')).toList();
+            break;
+          case 'non_household':
+          // НеБыт - НЕ содержит "населен"
+            filtered = filtered.where((s) =>
+            !s.tariffName.toLowerCase().contains('населен')).toList();
+            break;
         }
       }
 
       _searchResults.value = filtered;
-      _updateSearchStatistics();
+      _updateStatistics();
 
-      // Add to recent searches
-      addToRecentSearches(query);
+      // Добавляем в историю поиска только если есть результаты
+      if (results.isNotEmpty) {
+        addToRecentSearches(query);
+      }
     } catch (e) {
       print('Search error: $e');
       Get.snackbar(
@@ -183,6 +194,13 @@ class GlobalSearchController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  void setTariffFilter(String tariff) {
+    _filterByTariff.value = tariff;
+    if (_searchQuery.value.isNotEmpty && _searchQuery.value.length >= 3) {
+      performSearch(_searchQuery.value);
     }
   }
 
@@ -210,21 +228,19 @@ class GlobalSearchController extends GetxController {
   // Remove from recent searches
   void removeFromRecent(String query) {
     _recentSearches.remove(query);
-    // Save updated list to storage
     _saveRecentSearches();
   }
 
   // Clear all recent searches
   void clearRecentSearches() {
     _recentSearches.clear();
-    // Clear from storage
     _saveRecentSearches();
   }
 
   // Toggle debtor filter
   void toggleDebtorFilter() {
     _filterByDebtor.value = !_filterByDebtor.value;
-    if (_searchQuery.value.isNotEmpty) {
+    if (_searchQuery.value.isNotEmpty && _searchQuery.value.length >= 3) {
       performSearch(_searchQuery.value);
     }
   }
@@ -232,7 +248,7 @@ class GlobalSearchController extends GetxController {
   // Set status filter
   void setStatusFilter(String status) {
     _filterByStatus.value = status;
-    if (_searchQuery.value.isNotEmpty) {
+    if (_searchQuery.value.isNotEmpty && _searchQuery.value.length >= 3) {
       performSearch(_searchQuery.value);
     }
   }
@@ -268,7 +284,7 @@ class GlobalSearchController extends GetxController {
     return suggestions.take(5).toList();
   }
 
-  // ИСПРАВЛЕНО: обновленные опции фильтра под новую модель
+  // Опции фильтра по статусу
   List<Map<String, dynamic>> get statusFilterOptions {
     return [
       {
@@ -278,14 +294,35 @@ class GlobalSearchController extends GetxController {
       },
       {
         'value': 'available',
-        'label': 'Нужен обход', // Изменено с "Можно брать"
+        'label': 'Нужен обход',
         'count': _searchResults.where((s) => s.canTakeReading).length,
       },
       {
         'value': 'completed',
-        'label': 'Обойдены', // Изменено с "Обработаны"
+        'label': 'Обойдены',
         'count': _searchResults.where((s) => !s.canTakeReading).length,
       },
     ];
   }
+
+  List<Map<String, dynamic>> get tariffFilterOptions {
+    return [
+      {
+        'value': 'all',
+        'label': 'Все тарифы',
+        'count': _searchResults.length,
+      },
+      {
+        'value': 'household',
+        'label': 'Быт',
+        'count': _householdResults.value,
+      },
+      {
+        'value': 'non_household',
+        'label': 'НеБыт',
+        'count': _nonHouseholdResults.value,
+      },
+    ];
+  }
+
 }

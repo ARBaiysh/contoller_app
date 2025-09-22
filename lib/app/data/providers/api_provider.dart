@@ -481,4 +481,27 @@ class ApiProvider extends GetxService {
       throw _handleError(e);
     }
   }
+
+  /// Поиск абонентов (живой поиск)
+  Future<List<dynamic>> searchAbonents(String query) async {
+    try {
+      print('[API] Searching abonents with query: $query');
+
+      final response = await _dio.get(
+        '/mobile/abonents/search',
+        queryParameters: {'query': query},
+      );
+
+      print('[API] Search returned ${response.data.length} results');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      print('[API] Search error: ${e.message}');
+      if (e.response?.statusCode == 400) {
+        // При запросе меньше 3 символов возвращаем пустой массив
+        return [];
+      }
+      throw _handleError(e);
+    }
+  }
+
 }

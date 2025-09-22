@@ -118,41 +118,27 @@ class SubscriberRepository {
   // ПОИСК И ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
   // ========================================
 
-  /// Поиск абонентов по всем ТП
+  /// Поиск абонентов через новый API endpoint
   Future<List<SubscriberModel>> searchSubscribers(String query) async {
-    if (query.isEmpty) return [];
-
-    final lowerQuery = query.toLowerCase();
-    final List<SubscriberModel> results = [];
+    if (query.isEmpty || query.length < 3) {
+      return [];
+    }
 
     try {
-      // Получаем список всех ТП через ApiProvider
-      final tpList = await _apiProvider.getTransformerPoints();
-      print('[SUBSCRIBER REPO] Searching across ${tpList.length} transformer points');
+      print('[SUBSCRIBER REPO] Searching subscribers with query: $query');
 
-      // Загружаем абонентов по каждому ТП и ищем
-      for (final tpData in tpList) {
-        try {
-          final tpId = tpData['id'] ?? '';
-          if (tpId.isEmpty) continue;
+      // Используем новый endpoint
+      final results = await _apiProvider.searchAbonents(query);
 
-          final subscribers = await getSubscribersByTp(tpId);
-          final filtered = subscribers.where((s) {
-            return s.accountNumber.toLowerCase().contains(lowerQuery) ||
-                s.fullName.toLowerCase().contains(lowerQuery) ||
-                s.address.toLowerCase().contains(lowerQuery);
-          });
-          results.addAll(filtered);
-        } catch (e) {
-          print('[SUBSCRIBER REPO] Error searching in TP: $e');
-          // Продолжаем поиск в других ТП даже при ошибке
-        }
-      }
+      // Преобразуем в модели
+      final subscribers = results
+          .map((json) => SubscriberModel.fromJson(json))
+          .toList();
 
-      print('[SUBSCRIBER REPO] Search completed: found ${results.length} results for "$query"');
-      return results;
+      print('[SUBSCRIBER REPO] Search completed: found ${subscribers.length} results');
+      return subscribers;
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error in global search: $e');
+      print('[SUBSCRIBER REPO] Search error: $e');
       throw Exception('Ошибка при поиске абонентов');
     }
   }

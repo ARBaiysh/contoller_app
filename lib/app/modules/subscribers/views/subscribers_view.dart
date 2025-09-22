@@ -93,7 +93,7 @@ class SubscribersView extends GetView<SubscribersController> {
       child: TextField(
         onChanged: controller.searchSubscribers,
         decoration: InputDecoration(
-          hintText: 'Поиск по ФИО, адресу или лицевому счету',
+          hintText: 'Поиск по ФИО, Адресу, ЛС, № счётчика',
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: Theme.of(context).cardColor,
@@ -228,100 +228,123 @@ class SubscribersView extends GetView<SubscribersController> {
 
   Widget _buildStatusChips(BuildContext context) {
     return Container(
-      height: 40,
-      margin: const EdgeInsets.only(bottom: Constants.paddingS),
-      child: Obx(() => ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
-        itemCount: controller.statusFilterOptions.length,
-        itemBuilder: (context, index) {
-          final option = controller.statusFilterOptions[index];
-          final isSelected = controller.selectedStatus == option['value'];
-
-          // Определяем цвета для каждой кнопки
-          Color backgroundColor;
-          Color iconColor;
-          Color textColor;
-          IconData icon;
-
-          switch (option['value']) {
-            case 'all':
-              backgroundColor = Colors.blue;
-              iconColor = Colors.white;
-              textColor = Colors.white;
-              icon = Icons.people;
-              break;
-            case 'available':
-              backgroundColor = Colors.green;
-              iconColor = Colors.white;
-              textColor = Colors.white;
-              icon = Icons.check_circle_outline;
-              break;
-            case 'completed':
-              backgroundColor = Colors.orange;
-              iconColor = Colors.white;
-              textColor = Colors.white;
-              icon = Icons.home_work_outlined;
-              break;
-            case 'debtors':
-              backgroundColor = Colors.red;
-              iconColor = Colors.white;
-              textColor = Colors.white;
-              icon = Icons.warning_amber_outlined;
-              break;
-            default:
-              backgroundColor = Colors.grey;
-              iconColor = Colors.white;
-              textColor = Colors.white;
-              icon = Icons.people;
-          }
-
-          return Padding(
-            padding: const EdgeInsets.only(right: Constants.paddingS),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => controller.setStatusFilter(option['value']),
-                borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Constants.paddingM,
-                    vertical: Constants.paddingS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? backgroundColor
-                        : backgroundColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
-                    border: Border.all(
-                      color: backgroundColor.withOpacity(0.3),
-                      width: 1,
+      padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
+      child: Column(
+        children: [
+          // Существующие фильтры по статусу
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Obx(() => Row(
+              children: controller.statusFilterOptions.map((option) {
+                final isSelected = controller.selectedStatus == option['value'];
+                return Padding(
+                  padding: const EdgeInsets.only(right: Constants.paddingS),
+                  child: FilterChip(
+                    label: Text('${option['label']} (${option['count']})'),
+                    selected: isSelected,
+                    onSelected: (_) => controller.setStatusFilter(option['value']),
+                    selectedColor: (option['color'] as Color).withOpacity(0.2),
+                    checkmarkColor: option['color'] as Color,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? option['color'] as Color
+                          : Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected
+                          ? option['color'] as Color
+                          : Theme.of(context).dividerColor,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: isSelected ? iconColor : backgroundColor,
-                      ),
-                      const SizedBox(width: Constants.paddingS),
-                      Text(
-                        '${option['label']} (${option['count']})',
-                        style: TextStyle(
-                          color: isSelected ? textColor : backgroundColor,
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                );
+              }).toList(),
+            )),
+          ),
+
+          const SizedBox(height: Constants.paddingXS),
+
+          // НОВЫЙ РЯД ФИЛЬТРОВ ПО ТАРИФУ
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Obx(() => Row(
+              children: [
+                const SizedBox(width: Constants.paddingS),
+                _buildTariffChip(
+                  context: context,
+                  label: 'Все',
+                  value: 'all',
+                  count: controller.totalSubscribers,
+                  isSelected: controller.filterByTariff == 'all',
                 ),
-              ),
+                const SizedBox(width: Constants.paddingS),
+                _buildTariffChip(
+                  context: context,
+                  label: 'Быт',
+                  value: 'household',
+                  count: controller.householdCount,
+                  isSelected: controller.filterByTariff == 'household',
+                  color: Colors.green,
+                  icon: Icons.home_outlined,
+                ),
+                const SizedBox(width: Constants.paddingS),
+                _buildTariffChip(
+                  context: context,
+                  label: 'НеБыт',
+                  value: 'non_household',
+                  count: controller.nonHouseholdCount,
+                  isSelected: controller.filterByTariff == 'non_household',
+                  color: Colors.orange,
+                  icon: Icons.business_outlined,
+                ),
+              ],
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTariffChip({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required int count,
+    required bool isSelected,
+    Color? color,
+    IconData? icon,
+  }) {
+    final chipColor = color ?? Theme.of(context).primaryColor;
+
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? chipColor : chipColor.withOpacity(0.7),
             ),
-          );
-        },
-      )),
+            const SizedBox(width: 4),
+          ],
+          Text('$label ($count)'),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (_) => controller.setTariffFilter(value),
+      selectedColor: chipColor.withOpacity(0.2),
+      checkmarkColor: chipColor,
+      labelStyle: TextStyle(
+        color: isSelected ? chipColor : Theme.of(context).textTheme.bodyMedium?.color,
+        fontSize: 13,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: isSelected ? chipColor : Theme.of(context).dividerColor,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
     );
   }
 
