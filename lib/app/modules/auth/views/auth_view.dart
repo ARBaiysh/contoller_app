@@ -277,7 +277,7 @@ class AuthView extends GetView<AuthController> {
         ),
         child: SizedBox(
           height: 24,
-          child: controller.isLoading
+          child: controller.isLoading || controller.isSyncing
               ? const SizedBox(
             height: 20,
             width: 20,

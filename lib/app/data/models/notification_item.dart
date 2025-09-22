@@ -97,4 +97,20 @@ class NotificationItem {
     },
     'isRead': isRead,
   };
+
+  static NotificationItem empty() {
+    return NotificationItem(
+      id: '',
+      type: NotificationType.taskVisitTp,
+      title: '',
+      message: null,
+      tpCode: null,
+      tpNumber: null,
+      subscriberNumber: null,
+      deadline: null,
+      createdAt: DateTime.now(),
+      severity: NotificationSeverity.info,
+      isRead: false,
+    );
+  }
 }

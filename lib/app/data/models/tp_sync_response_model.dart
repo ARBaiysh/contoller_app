@@ -42,4 +42,13 @@ class TpSyncResponseModel {
         return message ?? 'Неизвестный статус: $status';
     }
   }
+
+  // Добавить в класс TpSyncResponseModel:
+  static TpSyncResponseModel empty() {
+    return TpSyncResponseModel(
+      syncMessageId: null,
+      status: '',
+      message: null,
+    );
+  }
 }

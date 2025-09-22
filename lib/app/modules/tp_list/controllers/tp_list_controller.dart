@@ -18,28 +18,45 @@ class TpListController extends GetxController {
   final _searchQuery = ''.obs;
   final _sortBy = 'default'.obs;
 
-  // Getters
+  // ДОБАВЛЕНО: Новые реактивные переменные для замены геттеров с логикой
+  final _isEmpty = true.obs;
+  final _hasData = false.obs;
+  final _syncElapsedFormatted = '00:00'.obs;
+
+  // Getters - просто возвращают значения
   bool get isLoading => _isLoading.value;
   bool get isSyncing => _isSyncing.value;
   String get syncProgress => _syncProgress.value;
   Duration get syncElapsed => _syncElapsed.value;
   List<TpModel> get tpList => _filteredTpList;
-  bool get isEmpty => _tpList.isEmpty;
-  bool get hasData => _tpList.isNotEmpty;
+  bool get isEmpty => _isEmpty.value;  // ИЗМЕНЕНО
+  bool get hasData => _hasData.value;  // ИЗМЕНЕНО
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
-
-  // Форматированное время синхронизации
-  String get syncElapsedFormatted {
-    final minutes = _syncElapsed.value.inMinutes;
-    final seconds = _syncElapsed.value.inSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
+  String get syncElapsedFormatted => _syncElapsedFormatted.value;  // ИЗМЕНЕНО
 
   @override
   void onInit() {
     super.onInit();
+
+    // ДОБАВЛЕНО: Слушатели для обновления зависимых состояний
+    _tpList.listen((_) => _updateListState());
+    _syncElapsed.listen((_) => _updateSyncElapsedFormatted());
+
     loadTpList();
+  }
+
+  // ДОБАВЛЕНО: Метод для обновления состояния списка
+  void _updateListState() {
+    _isEmpty.value = _tpList.isEmpty;
+    _hasData.value = _tpList.isNotEmpty;
+  }
+
+  // ДОБАВЛЕНО: Метод для форматирования времени синхронизации
+  void _updateSyncElapsedFormatted() {
+    final minutes = _syncElapsed.value.inMinutes;
+    final seconds = _syncElapsed.value.inSeconds % 60;
+    _syncElapsedFormatted.value = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   // ========================================
@@ -56,6 +73,7 @@ class TpListController extends GetxController {
 
       final tpList = await _tpRepository.getTpList(forceRefresh: forceRefresh);
       _tpList.value = tpList;
+      _updateListState(); // ДОБАВЛЕНО: обновляем состояние
 
       print('[TP CONTROLLER] Loaded ${tpList.length} TPs');
       applyFiltersAndSort();
@@ -91,16 +109,16 @@ class TpListController extends GetxController {
     await _tpRepository.syncTpList(
       onSyncStarted: _onSyncStarted,
       onProgress: _onSyncProgress,
-      onSuccess: _onSyncSuccess,      // Изменено с onSyncCompleted
-      onError: _onSyncError,          // Изменено с onSyncError
+      onSuccess: _onSyncSuccess,
+      onError: _onSyncError,
     );
   }
-
   /// Колбэк: синхронизация запущена
   void _onSyncStarted() {
     _isSyncing.value = true;
     _syncProgress.value = 'Запуск синхронизации...';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[TP CONTROLLER] Sync started');
 
@@ -126,6 +144,7 @@ class TpListController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[TP CONTROLLER] Sync completed successfully');
 
@@ -147,6 +166,7 @@ class TpListController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[TP CONTROLLER] Sync failed: $error');
 
@@ -209,7 +229,6 @@ class TpListController extends GetxController {
 
     _filteredTpList.value = filtered;
   }
-
   // ========================================
   // НАВИГАЦИЯ
   // ========================================

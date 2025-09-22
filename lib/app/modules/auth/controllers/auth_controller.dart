@@ -36,27 +36,18 @@ class AuthController extends GetxController {
   final _rememberMe = false.obs;
   final _showBiometricOption = false.obs;
   final _isBiometricLoading = false.obs;
-  final _isFormValid = false.obs;
+  final _isFormValid = false.obs;  // ДОБАВЛЕНО: явная реактивная переменная
 
-  // Getters
+  // Getters - просто возвращают значения без логики
   bool get isLoading => _isLoading.value;
-
   List<RegionModel> get regions => _regions;
-
   RegionModel? get selectedRegion => _selectedRegion.value;
-
   bool get isSyncing => _isSyncing.value;
-
   String get syncMessage => _syncMessage.value;
-
   bool get isPasswordVisible => _isPasswordVisible.value;
-
   bool get rememberMe => _rememberMe.value;
-
   bool get showBiometricOption => _showBiometricOption.value;
-
   bool get isBiometricLoading => _isBiometricLoading.value;
-
   bool get isFormValid => _isFormValid.value;
 
   @override
@@ -70,8 +61,8 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    usernameController.removeListener(_validateForm);
-    passwordController.removeListener(_validateForm);
+    usernameController.removeListener(_updateFormState);
+    passwordController.removeListener(_updateFormState);
     usernameController.dispose();
     passwordController.dispose();
     super.onClose();
@@ -82,18 +73,24 @@ class AuthController extends GetxController {
   // ========================================
 
   void _setupFormValidation() {
-    usernameController.addListener(_validateForm);
-    passwordController.addListener(_validateForm);
-    _selectedRegion.listen((_) => _validateForm());
+    usernameController.addListener(_updateFormState);
+    passwordController.addListener(_updateFormState);
+    _selectedRegion.listen((_) => _updateFormState());
+    _isLoading.listen((_) => _updateFormState());
+    _isSyncing.listen((_) => _updateFormState());
   }
 
-  void _validateForm() {
+  // НОВЫЙ МЕТОД: Обновление состояния валидности формы
+  void _updateFormState() {
     final isUsernameValid = usernameController.text.trim().isNotEmpty;
     final isPasswordValid = passwordController.text.trim().isNotEmpty;
     final isRegionSelected = _selectedRegion.value != null;
 
-    _isFormValid.value =
-        isUsernameValid && isPasswordValid && isRegionSelected && !_isLoading.value && !_isSyncing.value;
+    _isFormValid.value = isUsernameValid &&
+        isPasswordValid &&
+        isRegionSelected &&
+        !_isLoading.value &&
+        !_isSyncing.value;
   }
 
   // ========================================
@@ -133,7 +130,7 @@ class AuthController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
-      _validateForm();
+      _updateFormState(); // Обновляем состояние формы
     }
   }
 
@@ -172,7 +169,7 @@ class AuthController extends GetxController {
 
   void selectRegion(RegionModel? region) {
     _selectedRegion.value = region;
-    _validateForm();
+    _updateFormState(); // Обновляем состояние формы
   }
 
   void togglePasswordVisibility() {
@@ -197,6 +194,7 @@ class AuthController extends GetxController {
     return null;
   }
 
+
   // ========================================
   // LOGIN LOGIC
   // ========================================
@@ -216,7 +214,7 @@ class AuthController extends GetxController {
 
     try {
       _isLoading.value = true;
-      _validateForm();
+      _updateFormState(); // Обновляем состояние формы
 
       final response = await _authRepository.login(
         username: usernameController.text.trim(),
@@ -245,44 +243,30 @@ class AuthController extends GetxController {
             Get.snackbar(
               'Успешно',
               'Данные для входа сохранены и защищены биометрией',
-              backgroundColor: Colors.green.withOpacity(0.1),
-              colorText: Colors.green,
-              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green,
+              colorText: Colors.white,
             );
-          } else {
-            // Если биометрия отклонена - не сохраняем
-            _rememberMe.value = false;
-            print('[AUTH] Biometric declined - credentials not saved');
           }
-        } else {
-          // Биометрия недоступна - сохраняем без защиты
+        } else if (response.status == 'SUCCESS') {
+          // Сохраняем только username если биометрия недоступна
           await _storage.write('remember_me', true);
           await _storage.write('saved_username', usernameController.text.trim());
-          await _storage.write('saved_password', passwordController.text.trim());
-          await _storage.write('saved_region_code', _selectedRegion.value!.code);
-
-          print('[AUTH] Credentials saved without biometric (not available)');
+          print('[AUTH] Username saved (biometric not available)');
         }
-      } else {
-        // Удаляем сохраненные данные если галочка снята
-        await _storage.remove('remember_me');
-        await _storage.remove('saved_username');
-        await _storage.remove('saved_password');
-        await _storage.remove('saved_region_code');
-        await _storage.remove(Constants.biometricKey);
       }
 
       await _handleLoginResponse(response);
     } catch (e) {
+      print('[AUTH] Login error: $e');
       Get.snackbar(
-        'Ошибка авторизации',
+        'Ошибка',
         e.toString().replaceAll('Exception: ', ''),
         backgroundColor: Get.theme.colorScheme.error,
         colorText: Colors.white,
       );
     } finally {
       _isLoading.value = false;
-      _validateForm();
+      _updateFormState(); // Обновляем состояние формы
     }
   }
 
@@ -321,7 +305,7 @@ class AuthController extends GetxController {
 
       // Выполняем вход с сохраненными данными
       _isLoading.value = true;
-      _validateForm();
+      _updateFormState();
 
       final response = await _authRepository.login(
         username: savedUsername,
@@ -342,7 +326,7 @@ class AuthController extends GetxController {
     } finally {
       _isBiometricLoading.value = false;
       _isLoading.value = false;
-      _validateForm();
+      _updateFormState();
     }
   }
 
@@ -383,7 +367,7 @@ class AuthController extends GetxController {
   Future<void> _startSyncProcess(int syncMessageId) async {
     _isSyncing.value = true;
     _syncMessage.value = 'Идет синхронизация с 1С...';
-    _validateForm();
+    _updateFormState();
 
     print('[AUTH] Starting sync monitoring for messageId: $syncMessageId');
 
@@ -407,13 +391,13 @@ class AuthController extends GetxController {
   Future<void> _onSyncSuccess(SyncStatusModel syncStatus) async {
     _isSyncing.value = false;
     _syncMessage.value = '';
-    _validateForm();
+    _updateFormState();
 
     print('[AUTH] Sync completed successfully, retrying login...');
 
     try {
       _isLoading.value = true;
-      _validateForm();
+      _updateFormState();
 
       // Повторный запрос авторизации после успешной синхронизации
       final response = await _authRepository.login(
@@ -444,14 +428,14 @@ class AuthController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
-      _validateForm();
+      _updateFormState();
     }
   }
 
   void _onSyncError(String error) {
     _isSyncing.value = false;
     _syncMessage.value = '';
-    _validateForm();
+    _updateFormState();
 
     print('[AUTH] Sync failed: $error');
 

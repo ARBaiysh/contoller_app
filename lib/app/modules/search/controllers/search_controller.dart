@@ -35,6 +35,9 @@ class GlobalSearchController extends GetxController {
   final _filterByDebtor = false.obs;
   final _filterByStatus = 'all'.obs;
 
+  final _totalResults = 0.obs;
+  final _debtorResults = 0.obs;
+
   // Getters
   bool get isLoading => _isLoading.value;
   String get searchQuery => _searchQuery.value;
@@ -45,14 +48,23 @@ class GlobalSearchController extends GetxController {
   String get filterByStatus => _filterByStatus.value;
 
   // Statistics
-  int get totalResults => _searchResults.length;
-  int get debtorResults => _searchResults.where((s) => s.isDebtor).length;
+  int get totalResults => _totalResults.value;
+  int get debtorResults => _debtorResults.value;
 
   @override
   void onInit() {
     super.onInit();
+
+    // ДОБАВЛЕНО: Слушатель для обновления статистики
+    _searchResults.listen((_) => _updateSearchStatistics());
+
     loadTpList();
     loadRecentSearches();
+  }
+
+  void _updateSearchStatistics() {
+    _totalResults.value = _searchResults.length;
+    _debtorResults.value = _searchResults.where((s) => s.isDebtor).length;
   }
 
   @override
@@ -79,13 +91,6 @@ class GlobalSearchController extends GetxController {
       if (storedSearches != null) {
         _recentSearches.value = storedSearches.cast<String>();
       } else {
-        // Set default searches for first time users
-        _recentSearches.value = [
-          'Абдуллаев',
-          '090099',
-          'Гайрат',
-          'должники',
-        ];
         _saveRecentSearches();
       }
     } catch (e) {
@@ -163,6 +168,7 @@ class GlobalSearchController extends GetxController {
       }
 
       _searchResults.value = filtered;
+      _updateSearchStatistics();
 
       // Add to recent searches
       addToRecentSearches(query);

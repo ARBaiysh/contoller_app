@@ -20,13 +20,14 @@ class SettingsController extends GetxController {
   final _cacheSize = 0.obs;
   final _biometricAvailable = false.obs;
   final _biometricEnabled = false.obs;
+  final _cacheFormattedSize = '0.0 МБ'.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
   bool get notificationsEnabled => _notificationsEnabled.value;
   bool get autoSyncEnabled => _autoSyncEnabled.value;
   int get cacheSize => _cacheSize.value;
-  String get cacheFormattedSize => '${(_cacheSize.value / 1024).toStringAsFixed(1)} МБ';
+  String get cacheFormattedSize => _cacheFormattedSize.value;
   bool get biometricAvailable => _biometricAvailable.value;
   bool get biometricEnabled => _biometricEnabled.value;
 
@@ -39,9 +40,14 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _cacheSize.listen((_) => _updateCacheFormattedSize());
     _loadSettings();
     _calculateCacheSize();
     _checkBiometricAvailability();
+  }
+
+  void _updateCacheFormattedSize() {
+    _cacheFormattedSize.value = '${(_cacheSize.value / 1024).toStringAsFixed(1)} МБ';
   }
 
   // Load settings from storage
@@ -66,6 +72,7 @@ class SettingsController extends GetxController {
   void _calculateCacheSize() {
     // Mock cache size calculation
     _cacheSize.value = 15 * 1024; // 15 KB in bytes
+    _updateCacheFormattedSize();
   }
 
   // Toggle notifications
@@ -229,6 +236,7 @@ class SettingsController extends GetxController {
       // Clear repositories cache
       // In real app, would clear actual cache
       _cacheSize.value = 0;
+      _updateCacheFormattedSize();
 
       Get.snackbar(
         'Успех',

@@ -20,37 +20,21 @@ class SubscriberDetailController extends GetxController {
   // Observable states
   final _isLoading = false.obs;
   final _isSubmitting = false.obs;
-  Rxn<SubscriberModel> _subscriber = Rxn<SubscriberModel>();
+  final Rxn<SubscriberModel> _subscriber = Rxn<SubscriberModel>(SubscriberModel.empty());
   final _isSyncing = false.obs;
   final _syncMessage = ''.obs;
   final _submissionMessage = ''.obs;
 
+  final _canSubmitReading = false.obs;
+
   // Getters
   bool get isLoading => _isLoading.value;
-
   bool get isSubmitting => _isSubmitting.value;
-
   SubscriberModel? get subscriber => _subscriber.value;
-
   bool get isSyncing => _isSyncing.value;
-
   String get syncMessage => _syncMessage.value;
-
   String get submissionMessage => _submissionMessage.value;
-
-  bool get canSubmitReading {
-    if (_isSyncing.value) return false;
-    if (subscriber == null) return false;
-    if (!subscriber!.canTakeReading) return false;
-    if (subscriber!.lastReadingDate != null) {
-      final now = DateTime.now();
-      final lastReading = subscriber!.lastReadingDate!;
-      if (lastReading.year == now.year && lastReading.month == now.month) {
-        return false;
-      }
-    }
-    return true;
-  }
+  bool get canSubmitReading => _canSubmitReading.value;
 
   @override
   void onInit() {
@@ -75,6 +59,39 @@ class SubscriberDetailController extends GetxController {
       _isLoading.value = false;
       print('[SUBSCRIBER DETAIL] Subscriber loaded successfully: ${_subscriber.value!.fullName}');
     }
+
+    _isSyncing.listen((_) => _updateCanSubmitReading());
+    _subscriber.listen((_) => _updateCanSubmitReading());
+
+    _updateCanSubmitReading();
+  }
+
+  void _updateCanSubmitReading() {
+    if (_isSyncing.value) {
+      _canSubmitReading.value = false;
+      return;
+    }
+
+    if (_subscriber.value == null) {
+      _canSubmitReading.value = false;
+      return;
+    }
+
+    if (!_subscriber.value!.canTakeReading) {
+      _canSubmitReading.value = false;
+      return;
+    }
+
+    if (_subscriber.value!.lastReadingDate != null) {
+      final now = DateTime.now();
+      final lastReading = _subscriber.value!.lastReadingDate!;
+      if (lastReading.year == now.year && lastReading.month == now.month) {
+        _canSubmitReading.value = false;
+        return;
+      }
+    }
+
+    _canSubmitReading.value = true;
   }
 
   @override
@@ -126,6 +143,7 @@ class SubscriberDetailController extends GetxController {
         _subscriber.value = null;
         await Future.delayed(const Duration(milliseconds: 10));
         _subscriber.value = updatedSubscriber;
+        _updateCanSubmitReading();
         update();
 
         _isSyncing.value = false;
@@ -200,9 +218,9 @@ class SubscriberDetailController extends GetxController {
       currentReading: reading,
       onSubmitStarted: () {
         _submissionMessage.value = 'Отправка показания...';
-        // ИСПРАВЛЕНО: Правильное обновление Rxn
         if (_subscriber.value != null) {
           _subscriber.value = _subscriber.value!.copyWith(canTakeReading: false);
+          _updateCanSubmitReading();
         }
       },
       onProgress: (message) {
@@ -234,6 +252,7 @@ class SubscriberDetailController extends GetxController {
         // ИСПРАВЛЕНО: Правильное обновление Rxn при ошибке
         if (_subscriber.value != null) {
           _subscriber.value = _subscriber.value!.copyWith(canTakeReading: true);
+          _updateCanSubmitReading();
         }
 
         Get.snackbar(

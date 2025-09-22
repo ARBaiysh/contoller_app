@@ -5,8 +5,6 @@ class TpModel {
   final String number;
   final String name;
   final String fider;
-
-  // Статистика от API
   final int totalSubscribers;
   final int readingsCollected;
   final int readingsAvailable;
@@ -62,5 +60,17 @@ class TpModel {
       'readings_collected': readingsCollected,
       'readings_available': readingsAvailable,
     };
+  }
+
+  static TpModel empty() {
+    return TpModel(
+      id: '',
+      number: '',
+      name: '',
+      fider: '',
+      totalSubscribers: 0,
+      readingsCollected: 0,
+      readingsAvailable: 0,
+    );
   }
 }

@@ -91,4 +91,14 @@ class InspectorData {
       'username': username,
     };
   }
+
+  static InspectorData empty() {
+    return InspectorData(
+      inspectorId: 0,
+      fullName: '',
+      regionName: '',
+      regionCode: '',
+      username: '',
+    );
+  }
 }

@@ -60,4 +60,19 @@ class NewsItem {
         externalUrl: externalUrl,
         isBookmarked: isBookmarked ?? this.isBookmarked,
       );
+
+  // Добавить в класс NewsItem:
+  static NewsItem empty() {
+    return NewsItem(
+      id: '',
+      title: '',
+      subtitle: null,
+      imageUrl: null,
+      source: '',
+      publishedAt: DateTime.now(),
+      content: null,
+      externalUrl: null,
+      isBookmarked: false,
+    );
+  }
 }

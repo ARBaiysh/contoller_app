@@ -82,4 +82,13 @@ class AbonentSyncResponseModel {
 
   @override
   int get hashCode => Object.hash(syncMessageId, status, message);
+
+  // Добавить в класс AbonentSyncResponseModel:
+  static AbonentSyncResponseModel empty() {
+    return AbonentSyncResponseModel(
+      syncMessageId: null,
+      status: '',
+      message: null,
+    );
+  }
 }

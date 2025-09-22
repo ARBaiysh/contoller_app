@@ -50,6 +50,15 @@ class SyncStatusModel {
     }
   }
 
+  static SyncStatusModel empty() {
+    return SyncStatusModel(
+      messageType: '',
+      messageId: 0,
+      status: '',
+      result: null,
+    );
+  }
+
   // Для ошибок - извлекаем детали из result
   String? get errorDetails => isError ? result : null;
 }

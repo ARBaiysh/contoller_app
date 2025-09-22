@@ -169,6 +169,28 @@ class SubscriberModel {
     );
   }
 
+  static SubscriberModel empty() {
+    return SubscriberModel(
+      id: 0,
+      accountNumber: '',
+      fullName: '',
+      address: '',
+      phone: null,
+      balance: 0.0,
+      lastReading: null,
+      lastReadingDate: null,
+      canTakeReading: false,
+      meterType: '',
+      meterSerialNumber: '',
+      sealNumber: '',
+      tariffName: '',
+      lastPaymentAmount: 0.0,
+      lastPaymentDate: null,
+      transformerPointCode: '',
+      transformerPointName: '',
+    );
+  }
+
   @override
   String toString() {
     return 'SubscriberModel(id: $id, accountNumber: $accountNumber, fullName: $fullName, balance: $balance)';

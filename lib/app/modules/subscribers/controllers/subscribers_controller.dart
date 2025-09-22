@@ -24,7 +24,18 @@ class SubscribersController extends GetxController {
   final _searchQuery = ''.obs;
   final _sortBy = 'default'.obs;
 
-  // Getters
+  // ДОБАВЛЕНО: Новые реактивные переменные для замены геттеров с логикой
+  final _isEmpty = true.obs;
+  final _hasData = false.obs;
+  final _syncElapsedFormatted = '00:00 / 05:00'.obs;
+  final _totalSubscribers = 0.obs;
+  final _readingsCollected = 0.obs;
+  final _readingsAvailable = 0.obs;
+  final _debtorsCount = 0.obs;
+  final _blockedCount = 0.obs;
+  final _statusFilterOptions = <Map<String, dynamic>>[].obs;
+
+  // Getters - просто возвращают значения
   bool get isLoading => _isLoading.value;
   bool get isSyncing => _isSyncing.value;
   String get syncProgress => _syncProgress.value;
@@ -33,63 +44,24 @@ class SubscribersController extends GetxController {
   String get selectedStatus => _selectedStatus.value;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
-  bool get isEmpty => _subscribers.isEmpty;
-  bool get hasData => _subscribers.isNotEmpty;
-
-  // Форматированное время синхронизации MM:SS / MAX_TIME
-  String get syncElapsedFormatted {
-    final minutes = _syncElapsed.value.inMinutes;
-    final seconds = _syncElapsed.value.inSeconds % 60;
-    final maxMinutes = Constants.abonentsSyncTimeout.inMinutes;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')} / ${maxMinutes.toString().padLeft(2, '0')}:00';
-  }
-
-  // Statistics
-  int get totalSubscribers => _subscribers.length;
-  int get readingsCollected => _subscribers.where((s) => _hasReadingInCurrentMonth(s)).length;
-  int get readingsAvailable => _subscribers.where((s) => s.canTakeReading && !_hasReadingInCurrentMonth(s)).length;
-  int get debtorsCount => _subscribers.where((s) => s.isDebtor).length;
-  int get blockedCount => _subscribers.where((s) => !s.canTakeReading).length;
-
-  bool _hasReadingInCurrentMonth(SubscriberModel subscriber) {
-    if (subscriber.lastReadingDate == null) return false;
-    final now = DateTime.now();
-    return subscriber.lastReadingDate!.year == now.year &&
-        subscriber.lastReadingDate!.month == now.month;
-  }
-
-  List<Map<String, dynamic>> get statusFilterOptions {
-    return [
-      {
-        'value': 'all',
-        'label': 'Все',
-        'count': totalSubscribers,
-        'color': Colors.blueAccent,
-      },
-      {
-        'value': 'available',
-        'label': 'Обход',
-        'count': readingsAvailable,
-        'color': Colors.green,
-      },
-      {
-        'value': 'completed',
-        'label': 'Пройдены',
-        'count': readingsCollected,
-        'color': Colors.blue,
-      },
-      {
-        'value': 'debtors',
-        'label': 'Должники',
-        'count': debtorsCount,
-        'color': Colors.red,
-      },
-    ];
-  }
+  bool get isEmpty => _isEmpty.value;
+  bool get hasData => _hasData.value;
+  String get syncElapsedFormatted => _syncElapsedFormatted.value;
+  int get totalSubscribers => _totalSubscribers.value;
+  int get readingsCollected => _readingsCollected.value;
+  int get readingsAvailable => _readingsAvailable.value;
+  int get debtorsCount => _debtorsCount.value;
+  int get blockedCount => _blockedCount.value;
+  List<Map<String, dynamic>> get statusFilterOptions => _statusFilterOptions;
 
   @override
   void onInit() {
     super.onInit();
+
+    // ДОБАВЛЕНО: Слушатели для обновления зависимых состояний
+    _subscribers.listen((_) => _updateStatistics());
+    _syncElapsed.listen((_) => _updateSyncElapsedFormatted());
+    _selectedStatus.listen((_) => _updateStatusFilterOptions());
 
     // Получаем параметры
     final args = Get.arguments as Map<String, dynamic>? ?? {};
@@ -101,6 +73,64 @@ class SubscribersController extends GetxController {
 
     // Загружаем абонентов
     loadSubscribers();
+  }
+
+  // ДОБАВЛЕНО: Вспомогательный метод для проверки показания в текущем месяце
+  bool _hasReadingInCurrentMonth(SubscriberModel subscriber) {
+    if (subscriber.lastReadingDate == null) return false;
+    final now = DateTime.now();
+    return subscriber.lastReadingDate!.year == now.year &&
+        subscriber.lastReadingDate!.month == now.month;
+  }
+
+  // ДОБАВЛЕНО: Обновление всех статистик
+  void _updateStatistics() {
+    _isEmpty.value = _subscribers.isEmpty;
+    _hasData.value = _subscribers.isNotEmpty;
+    _totalSubscribers.value = _subscribers.length;
+    _readingsCollected.value = _subscribers.where((s) => _hasReadingInCurrentMonth(s)).length;
+    _readingsAvailable.value = _subscribers.where((s) => s.canTakeReading && !_hasReadingInCurrentMonth(s)).length;
+    _debtorsCount.value = _subscribers.where((s) => s.isDebtor).length;
+    _blockedCount.value = _subscribers.where((s) => !s.canTakeReading).length;
+    _updateStatusFilterOptions();
+  }
+
+  // ДОБАВЛЕНО: Обновление форматированного времени синхронизации
+  void _updateSyncElapsedFormatted() {
+    final minutes = _syncElapsed.value.inMinutes;
+    final seconds = _syncElapsed.value.inSeconds % 60;
+    final maxMinutes = Constants.abonentsSyncTimeout.inMinutes;
+    _syncElapsedFormatted.value = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')} / ${maxMinutes.toString().padLeft(2, '0')}:00';
+  }
+
+  // ДОБАВЛЕНО: Обновление опций фильтра статуса
+  void _updateStatusFilterOptions() {
+    _statusFilterOptions.value = [
+      {
+        'value': 'all',
+        'label': 'Все',
+        'count': _totalSubscribers.value,
+        'color': Colors.blueAccent,
+      },
+      {
+        'value': 'available',
+        'label': 'Обход',
+        'count': _readingsAvailable.value,
+        'color': Colors.green,
+      },
+      {
+        'value': 'completed',
+        'label': 'Пройдены',
+        'count': _readingsCollected.value,
+        'color': Colors.blue,
+      },
+      {
+        'value': 'debtors',
+        'label': 'Должники',
+        'count': _debtorsCount.value,
+        'color': Colors.red,
+      },
+    ];
   }
 
   // ========================================
@@ -121,6 +151,7 @@ class SubscribersController extends GetxController {
       );
 
       _subscribers.value = subscribersList;
+      _updateStatistics(); // ДОБАВЛЕНО: обновляем статистику
       print('[SUBSCRIBERS CONTROLLER] Loaded ${subscribersList.length} subscribers');
 
       applyFiltersAndSort();
@@ -147,6 +178,7 @@ class SubscribersController extends GetxController {
   // СИНХРОНИЗАЦИЯ С ПРОГРЕССОМ
   // ========================================
 
+
   /// Запуск синхронизации абонентов с SyncService
   Future<void> syncSubscribers() async {
     if (_isSyncing.value || _isLoading.value) return;
@@ -167,6 +199,7 @@ class SubscribersController extends GetxController {
     _isSyncing.value = true;
     _syncProgress.value = 'Запуск синхронизации абонентов...';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[SUBSCRIBERS CONTROLLER] Abonents sync started for TP: $tpCode');
 
@@ -192,6 +225,7 @@ class SubscribersController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[SUBSCRIBERS CONTROLLER] Abonents sync completed successfully for TP: $tpCode');
 
@@ -213,6 +247,7 @@ class SubscribersController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
 
     print('[SUBSCRIBERS CONTROLLER] Abonents sync failed for TP $tpCode: $error');
 
@@ -258,11 +293,11 @@ class SubscribersController extends GetxController {
     // Применяем поиск
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
-      filtered = filtered.where((s) {
-        return s.accountNumber.toLowerCase().contains(query) ||
-            s.fullName.toLowerCase().contains(query) ||
-            s.address.toLowerCase().contains(query);
-      }).toList();
+      filtered = filtered.where((s) =>
+      s.fullName.toLowerCase().contains(query) ||
+          s.accountNumber.toLowerCase().contains(query) ||
+          s.address.toLowerCase().contains(query)
+      ).toList();
     }
 
     // Применяем сортировку
@@ -270,33 +305,31 @@ class SubscribersController extends GetxController {
       case 'name':
         filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
         break;
+      case 'account':
+        filtered.sort((a, b) => a.accountNumber.compareTo(b.accountNumber));
+        break;
       case 'address':
         filtered.sort((a, b) => a.address.compareTo(b.address));
         break;
       case 'debt':
-        filtered.sort((a, b) => a.balance.compareTo(b.balance));
-        break;
-      case 'account':
-        filtered.sort((a, b) => a.accountNumber.compareTo(b.accountNumber));
+        filtered.sort((a, b) => b.debtAmount.compareTo(a.debtAmount));
         break;
       case 'default':
       default:
-      // Сортировка по статусу (сначала доступные для снятия показаний, потом по адресу)
+      // Сортировка по умолчанию: сначала доступные для обхода, потом по имени
         filtered.sort((a, b) {
-          // Сначала сортируем по возможности снятия показаний
-          if (a.canTakeReading && !b.canTakeReading) return -1;
-          if (!a.canTakeReading && b.canTakeReading) return 1;
-
-          // Затем по адресу
-          return a.address.compareTo(b.address);
+          final aAvailable = a.canTakeReading && !_hasReadingInCurrentMonth(a);
+          final bAvailable = b.canTakeReading && !_hasReadingInCurrentMonth(b);
+          if (aAvailable != bAvailable) {
+            return aAvailable ? -1 : 1;
+          }
+          return a.fullName.compareTo(b.fullName);
         });
         break;
     }
 
     _filteredSubscribers.value = filtered;
-    print('[SUBSCRIBERS CONTROLLER] Applied filters: ${_selectedStatus.value}, '
-        'search: "${_searchQuery.value}", sort: ${_sortBy.value}. '
-        'Result: ${filtered.length}/${_subscribers.length}');
+    print('[SUBSCRIBERS CONTROLLER] Filters applied. Result: ${filtered.length}/${_subscribers.length}');
   }
 
   /// Установка фильтра по статусу

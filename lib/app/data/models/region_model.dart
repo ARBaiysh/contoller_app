@@ -24,4 +24,12 @@ class RegionModel {
       'name': name,
     };
   }
+
+  static RegionModel empty() {
+    return RegionModel(
+      id: 0,
+      code: '',
+      name: '',
+    );
+  }
 }
