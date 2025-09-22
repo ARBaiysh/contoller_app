@@ -23,33 +23,6 @@ class DashboardHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Время обновления
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end  ,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Constants.paddingS,
-                vertical: Constants.paddingXS,
-              ),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
-              ),
-              child: Text(
-                'Обновлено: ${_formatDateTime(dashboard.generatedAt)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: Constants.paddingL),
-
         // Основная карточка сбора показаний
         Container(
           padding: const EdgeInsets.all(Constants.paddingL),
