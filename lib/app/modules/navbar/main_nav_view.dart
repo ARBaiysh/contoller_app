@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../home/views/home_view.dart';
 import '../reports/views/reports_view.dart';
@@ -21,16 +22,51 @@ class MainNavView extends StatelessWidget {
     ];
 
     Future<bool> onWillPop() async {
+      // Проверяем вложенную навигацию
       final current = navKeys[controller.currentIndex.value].currentState!;
       if (current.canPop()) {
         current.pop();
         return false;
       }
-      if (controller.currentIndex.value != 0) {
-        controller.switchTo(0);
+
+      // Используем метод контроллера
+      final shouldExit = controller.handleBack();
+
+      if (shouldExit) {
+        // Показываем диалог выхода
+        final exitConfirmed = await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Выход из приложения'),
+            content: const Text('Вы действительно хотите выйти?'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Выйти'),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+
+        if (exitConfirmed == true) {
+          SystemNavigator.pop();
+          return true;
+        }
         return false;
       }
-      return true;
+
+      return false;
     }
 
     Widget buildTabNavigator(GlobalKey<NavigatorState> key, Widget root) {
@@ -44,17 +80,18 @@ class MainNavView extends StatelessWidget {
     }
 
     final tabs = [
-      buildTabNavigator(navKeys[0], const HomeView()), // Главная
-      buildTabNavigator(navKeys[1], const TpListView()),    // ТП
-      buildTabNavigator(navKeys[2], const SearchView()),    // Поиск
-      buildTabNavigator(navKeys[3], const ReportsView()),   // Отчёты
+      buildTabNavigator(navKeys[0], const HomeView()),
+      buildTabNavigator(navKeys[1], const TpListView()),
+      buildTabNavigator(navKeys[2], const SearchView()),
+      buildTabNavigator(navKeys[3], const ReportsView()),
     ];
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        onWillPop();
+        final shouldExit = await onWillPop();
+        // PopScope обработает выход автоматически, если shouldExit = true
       },
       child: Obx(() {
         return Scaffold(
