@@ -56,26 +56,19 @@ class SplashView extends GetView<SplashController> {
   // Компактный профессиональный логотип
   Widget _buildCompactLogo(bool isDarkMode) {
     return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primary,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.electrical_services,
-        size: 60,
-        color: Colors.white,
+      width: 220,
+      height: 220,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0), // чтобы логотип не прилипал к краям
+        child: Image.asset(
+          'assets/icons/logo.png',
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
+
+
 
   // Название приложения
   Widget _buildAppTitle(BuildContext context, bool isDarkMode) {
