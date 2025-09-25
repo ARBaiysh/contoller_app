@@ -57,10 +57,9 @@ class ReadingFormCard extends StatelessWidget {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(6),
               ],
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Показание счетчика',
                 hintText: 'Введите текущее показание',
-                suffixText: 'кВт·ч',
                 prefixIcon: Icon(Icons.speed),
               ),
             ),

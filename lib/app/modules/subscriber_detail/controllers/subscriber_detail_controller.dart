@@ -193,11 +193,6 @@ class SubscriberDetailController extends GetxController {
     if (reading < minValue || reading > maxValue) {
       return 'Показание должно быть от $minValue до $maxValue';
     }
-
-    if (subscriber?.lastReading != null && reading <= subscriber!.lastReading!) {
-      return 'Новое показание должно быть больше предыдущего (${subscriber!.lastReading})';
-    }
-
     return null;
   }
 
