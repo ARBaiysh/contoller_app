@@ -1,27 +1,34 @@
+// lib/app/data/models/subscriber_model.dart
+
+import 'package:intl/intl.dart';
+
 class SubscriberModel {
   final int id;
   final String accountNumber;
   final String fullName;
   final String address;
-  final String? phone; // НОВОЕ ПОЛЕ
+  final String? phone;
   final double balance;
   final int? lastReading;
   final DateTime? lastReadingDate;
-  final bool canTakeReading; // ОБНОВЛЕНО: заменили ReadingStatus
+  final bool canTakeReading;
 
-  // Информация о счетчике (ОБНОВЛЕНО)
+  // Информация о счетчике
   final String meterType;
   final String meterSerialNumber;
   final String sealNumber;
-  final String tariffName; // НОВОЕ ПОЛЕ
+  final String tariffName;
 
   // Информация о платежах
   final double lastPaymentAmount;
   final DateTime? lastPaymentDate;
 
-  // Информация о ТП (НОВЫЕ ПОЛЯ)
+  // Информация о ТП
   final String transformerPointCode;
   final String transformerPointName;
+
+  // НОВОЕ ПОЛЕ: Информация о синхронизации
+  final DateTime? lastSync;
 
   SubscriberModel({
     required this.id,
@@ -41,6 +48,7 @@ class SubscriberModel {
     this.lastPaymentDate,
     required this.transformerPointCode,
     required this.transformerPointName,
+    this.lastSync, // НОВОЕ ПОЛЕ
   });
 
   // ========================================
@@ -73,6 +81,80 @@ class SubscriberModel {
     return SubscriberStatus.normal;
   }
 
+  /// НОВОЕ: Форматированная дата последней синхронизации
+  String get formattedLastSync {
+    if (lastSync == null) return 'Не синхронизировано';
+
+    final now = DateTime.now();
+    final difference = now.difference(lastSync!);
+
+    if (difference.inMinutes < 1) {
+      return 'Только что';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} мин. назад';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ч. назад';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} дн. назад';
+    } else {
+      final formatter = DateFormat('dd.MM.yyyy HH:mm');
+      return formatter.format(lastSync!);
+    }
+  }
+
+  /// НОВОЕ: Полная форматированная дата синхронизации
+  String get fullFormattedLastSync {
+    if (lastSync == null) return 'Не синхронизировано';
+    final formatter = DateFormat('dd.MM.yyyy в HH:mm');
+    return formatter.format(lastSync!);
+  }
+
+  /// НОВОЕ: Форматированный телефон для звонка (формат Кыргызстана)
+  /// Преобразует номер в международный формат +996XXXXXXXXX
+  String? get phoneForCall {
+    if (phone == null || phone!.isEmpty) return null;
+
+    // Убираем все пробелы, скобки, дефисы
+    String cleaned = phone!.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // Если номер начинается с 0, заменяем на +996
+    if (cleaned.startsWith('0')) {
+      return '+996${cleaned.substring(1)}';
+    }
+
+    // Если начинается с 996 без +, добавляем +
+    if (cleaned.startsWith('996')) {
+      return '+$cleaned';
+    }
+
+    // Если уже с +996, возвращаем как есть
+    if (cleaned.startsWith('+996')) {
+      return cleaned;
+    }
+
+    // Если формат непонятен, добавляем +996 в начало
+    return '+996$cleaned';
+  }
+
+  /// НОВОЕ: Красиво отформатированный телефон для отображения
+  /// Формат: +996 (XXX) XX-XX-XX
+  String? get formattedPhone {
+    if (phone == null || phone!.isEmpty) return null;
+
+    String? callPhone = phoneForCall;
+    if (callPhone == null) return phone;
+
+    // Убираем +996
+    String digits = callPhone.replaceAll('+996', '');
+
+    // Форматируем: (XXX) XX-XX-XX
+    if (digits.length == 9) {
+      return '+996 (${digits.substring(0, 3)}) ${digits.substring(3, 5)}-${digits.substring(5, 7)}-${digits.substring(7, 9)}';
+    }
+
+    return phone; // Если формат неожиданный, возвращаем оригинал
+  }
+
   // ========================================
   // JSON SERIALIZATION
   // ========================================
@@ -100,6 +182,10 @@ class SubscriberModel {
           : null,
       transformerPointCode: json['transformerPointCode'] ?? '',
       transformerPointName: json['transformerPointName'] ?? '',
+      // НОВОЕ: парсинг lastSync
+      lastSync: json['lastSync'] != null
+          ? DateTime.tryParse(json['lastSync'])
+          : null,
     );
   }
 
@@ -122,6 +208,7 @@ class SubscriberModel {
       'lastPaymentDate': lastPaymentDate?.toIso8601String(),
       'transformerPointCode': transformerPointCode,
       'transformerPointName': transformerPointName,
+      'lastSync': lastSync?.toIso8601String(), // НОВОЕ
     };
   }
 
@@ -147,6 +234,7 @@ class SubscriberModel {
     DateTime? lastPaymentDate,
     String? transformerPointCode,
     String? transformerPointName,
+    DateTime? lastSync, // НОВОЕ
   }) {
     return SubscriberModel(
       id: id ?? this.id,
@@ -166,6 +254,7 @@ class SubscriberModel {
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
       transformerPointCode: transformerPointCode ?? this.transformerPointCode,
       transformerPointName: transformerPointName ?? this.transformerPointName,
+      lastSync: lastSync ?? this.lastSync, // НОВОЕ
     );
   }
 
@@ -188,6 +277,7 @@ class SubscriberModel {
       lastPaymentDate: null,
       transformerPointCode: '',
       transformerPointName: '',
+      lastSync: null, // НОВОЕ
     );
   }
 

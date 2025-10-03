@@ -1,3 +1,5 @@
+// lib/app/widgets/subscriber_list_item.dart
+
 import 'package:flutter/material.dart';
 import '../data/models/subscriber_model.dart';
 import '../core/theme/app_colors.dart';
@@ -31,7 +33,6 @@ class SubscriberListItem extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Subscriber info
                   Expanded(
                     child: Column(
@@ -75,7 +76,7 @@ class SubscriberListItem extends StatelessWidget {
 
                         // Account number
                         Text(
-                          'Л/С: ${subscriber.accountNumber}',
+                          subscriber.accountNumber,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -125,6 +126,28 @@ class SubscriberListItem extends StatelessWidget {
                             ],
                           ),
                         ],
+
+                        // ОБНОВЛЕНО: Синхронизация с СИНИМ цветом
+                        if (subscriber.lastSync != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.timelapse,
+                                size: 14,
+                                color: AppColors.info, // ИЗМЕНЕНО: синий цвет
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Синхронизация: ${subscriber.formattedLastSync}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  color: AppColors.info, // ИЗМЕНЕНО: синий цвет
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -163,7 +186,6 @@ class SubscriberListItem extends StatelessWidget {
                     value: _formatBalance(subscriber.balance),
                     valueColor: subscriber.balance <= 0 ? AppColors.success : AppColors.error,
                   ),
-
                   // Last reading
                   if (subscriber.lastReading != null)
                     _buildInfoItem(
@@ -172,7 +194,6 @@ class SubscriberListItem extends StatelessWidget {
                       label: 'Последнее',
                       value: '${subscriber.lastReading}',
                     ),
-
                   // Status
                   _buildReadingStatus(context),
                 ],
@@ -206,8 +227,7 @@ class SubscriberListItem extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 10,
-                color:
-                Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
               ),
             ),
             Text(
@@ -260,7 +280,6 @@ class SubscriberListItem extends StatelessWidget {
 
     // Если не заблокирован, проверяем есть ли показание в текущем месяце
     final hasCurrentMonthReading = _hasReadingInCurrentMonth();
-
     if (hasCurrentMonthReading) {
       // Показание есть в текущем месяце = Пройден
       return Container(
@@ -326,7 +345,7 @@ class SubscriberListItem extends StatelessWidget {
     );
   }
 
-// Добавьте вспомогательный метод
+  // Добавьте вспомогательный метод
   bool _hasReadingInCurrentMonth() {
     if (subscriber.lastReadingDate == null) return false;
 

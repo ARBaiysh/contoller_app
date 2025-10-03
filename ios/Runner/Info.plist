@@ -2,10 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Название приложения -->
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Contoller App</string>
+	<string>ОшПЭС Контролер</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,15 +25,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
+
+	<!-- Поддержка ориентации экрана -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -41,9 +39,44 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- Настройки UI -->
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- НОВОЕ: Разрешения для звонков и WhatsApp -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>telprompt</string>
+		<string>whatsapp</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
+
+	<!-- НОВОЕ: Описание для пользователя (опционально) -->
+	<key>NSContactsUsageDescription</key>
+	<string>Приложение использует контакты для звонков абонентам</string>
+
+	<!-- Описание для доступа к камере (если понадобится в будущем) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Приложение использует камеру для снятия показаний счетчиков</string>
+
+	<!-- Описание для доступа к фото (если понадобится в будущем) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Приложение использует галерею для добавления фотографий счетчиков</string>
+
+	<!-- Описание для Face ID / Touch ID -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Используется для быстрого входа в приложение</string>
+
 </dict>
 </plist>

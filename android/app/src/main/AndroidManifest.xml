@@ -4,8 +4,12 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- Основные разрешения -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- НОВОЕ: Разрешения для звонков -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
 
     <application
         android:label="ОшПЭС Контролер"
@@ -43,15 +47,27 @@
             android:value="2" />
     </application>
 
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- ОБНОВЛЕНО: Queries для звонков и внешних приложений -->
     <queries>
+        <!-- Для обработки текста -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+
+        <!-- НОВОЕ: Для телефонных звонков -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+
+        <!-- НОВОЕ: Для WhatsApp -->
+        <package android:name="com.whatsapp" />
+
+        <!-- НОВОЕ: Для открытия веб-ссылок (включая wa.me) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 </manifest>
