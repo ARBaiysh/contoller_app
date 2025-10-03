@@ -1,5 +1,3 @@
-// lib/app/modules/subscriber_detail/widgets/subscriber_info_card.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
