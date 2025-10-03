@@ -20,6 +20,17 @@ class SubscriberInfoCard extends StatelessWidget {
       final subscriber = controller.subscriber;
       if (subscriber == null) return const SizedBox.shrink();
 
+      // ОТЛАДКА: Выводим информацию о телефоне
+      print('═══════════════════════════════════════');
+      print('DEBUG SubscriberInfoCard:');
+      print('Phone value: "${subscriber.phone}"');
+      print('Phone is null: ${subscriber.phone == null}');
+      print('Phone isEmpty: ${subscriber.phone?.isEmpty ?? "null"}');
+      print('Phone trimmed: "${subscriber.phone?.trim()}"');
+      print('Phone length: ${subscriber.phone?.length ?? 0}');
+      print('hasValidPhone: ${_hasValidPhone(subscriber)}');
+      print('═══════════════════════════════════════');
+
       return Container(
         margin: const EdgeInsets.all(Constants.paddingM),
         padding: const EdgeInsets.all(Constants.paddingM),
@@ -48,9 +59,12 @@ class SubscriberInfoCard extends StatelessWidget {
             _InfoRow(label: 'Лицевой счет', value: subscriber.accountNumber),
             _InfoRow(label: 'Адрес', value: subscriber.address),
 
-            // Телефон без кнопок
-            if (subscriber.phone != null && subscriber.phone!.isNotEmpty)
-              _InfoRow(label: 'Телефон', value: subscriber.formattedPhone ?? subscriber.phone!),
+            // Телефон (показываем только если есть валидный номер)
+            if (_hasValidPhone(subscriber))
+              _InfoRow(
+                label: 'Телефон',
+                value: subscriber.formattedPhone ?? subscriber.phone!,
+              ),
 
             _InfoRow(label: 'Тариф', value: subscriber.tariffName),
 
@@ -61,8 +75,8 @@ class SubscriberInfoCard extends StatelessWidget {
                 value: subscriber.fullFormattedLastSync,
               ),
 
-            // Кнопки действий внизу (если есть телефон)
-            if (subscriber.phone != null && subscriber.phone!.isNotEmpty) ...[
+            // КНОПКИ ДЕЙСТВИЙ (ТОЛЬКО если есть валидный телефон)
+            if (_hasValidPhone(subscriber)) ...[
               const SizedBox(height: Constants.paddingM),
               Divider(color: Theme.of(context).dividerColor),
               const SizedBox(height: Constants.paddingM),
@@ -72,6 +86,43 @@ class SubscriberInfoCard extends StatelessWidget {
         ),
       );
     });
+  }
+
+  // Проверка наличия валидного телефона
+  bool _hasValidPhone(SubscriberModel subscriber) {
+    // Проверка 1: null
+    if (subscriber.phone == null) {
+      print('  ❌ Phone is NULL');
+      return false;
+    }
+
+    // Проверка 2: пустая строка
+    if (subscriber.phone!.isEmpty) {
+      print('  ❌ Phone is EMPTY string');
+      return false;
+    }
+
+    // Проверка 3: только пробелы
+    if (subscriber.phone!.trim().isEmpty) {
+      print('  ❌ Phone is only WHITESPACE');
+      return false;
+    }
+
+    // Проверка 4: строка "null"
+    if (subscriber.phone!.toLowerCase() == 'null') {
+      print('  ❌ Phone is string "null"');
+      return false;
+    }
+
+    // Проверка 5: минимальная длина (хотя бы 9 цифр)
+    String digitsOnly = subscriber.phone!.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (digitsOnly.length < 9) {
+      print('  ❌ Phone too short (only $digitsOnly.length digits)');
+      return false;
+    }
+
+    print('  ✅ Phone is VALID');
+    return true;
   }
 }
 
@@ -148,7 +199,8 @@ class _PhoneActions extends StatelessWidget {
       return;
     }
 
-    final cleanNumber = phoneNumber.replaceAll('+', '');
+    // WhatsApp использует формат без + и пробелов
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
     final Uri whatsappUri = Uri.parse('https://wa.me/$cleanNumber');
 
     try {
@@ -169,37 +221,37 @@ class _PhoneActions extends StatelessWidget {
       return;
     }
 
-    final message = _generateDebtMessage();
-    final cleanNumber = phoneNumber.replaceAll('+', '');
-    final encodedMessage = Uri.encodeComponent(message);
-    final Uri whatsappUri = Uri.parse('https://wa.me/$cleanNumber?text=$encodedMessage');
+    final message = _getDebtMessage();
+    final Uri smsUri = Uri.parse('sms:$phoneNumber?body=${Uri.encodeComponent(message)}');
 
     try {
-      if (await canLaunchUrl(whatsappUri)) {
-        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri, mode: LaunchMode.externalApplication);
       } else {
-        _showError('WhatsApp не установлен');
+        _showError('Не удалось отправить SMS');
       }
     } catch (e) {
       _showError('Ошибка: $e');
     }
   }
 
-  String _generateDebtMessage() {
-    final balance = subscriber.balance;
+  String _getDebtMessage() {
+    final balance = subscriber.balance > 0
+        ? '+${subscriber.balance.toStringAsFixed(2)}'
+        : subscriber.balance.toStringAsFixed(2);
 
     return '''
-Уважаемый(ая) ${subscriber.fullName}!
+Уважаемый абонент!
 
 Лицевой счет: ${subscriber.accountNumber}
 Адрес: ${subscriber.address}
 Тариф: ${subscriber.tariffName}
 
-Счет на текущий момент: ${balance}
+Счет на текущий момент: $balance сом.
 
 ${subscriber.lastReading != null ? 'Последнее показание: ${subscriber.lastReading}' : ''}
 
-${balance > 0 ? 'Просим своевременно погасить задолженность.' : ''}
+${subscriber.balance > 0 ? 'Просим своевременно погасить задолженность.' : ''}
 
 С уважением,
 ОАО "ОшПЭС"
@@ -223,7 +275,6 @@ ${balance > 0 ? 'Просим своевременно погасить задо
       children: [
         // Кнопка обычного звонка
         _ActionButton(
-          icon: Icons.phone,
           label: 'Позвонить',
           color: AppColors.success,
           onTap: _makePhoneCall,
@@ -231,9 +282,8 @@ ${balance > 0 ? 'Просим своевременно погасить задо
 
         const SizedBox(width: Constants.paddingS),
 
-        // Кнопка WhatsApp (используем chat_bubble вместо whatsapp)
+        // Кнопка WhatsApp
         _ActionButton(
-          icon: Icons.chat_bubble,
           label: 'WhatsApp',
           color: const Color(0xFF25D366),
           onTap: _openWhatsApp,
@@ -241,9 +291,8 @@ ${balance > 0 ? 'Просим своевременно погасить задо
 
         const SizedBox(width: Constants.paddingS),
 
-        // Кнопка отправки уведомления (ВСЕГДА показывается)
+        // Кнопка отправки уведомления
         _ActionButton(
-          icon: Icons.message,
           label: 'Уведомить',
           color: AppColors.info,
           onTap: _sendDebtMessage,
@@ -255,13 +304,11 @@ ${balance > 0 ? 'Просим своевременно погасить задо
 
 // Кнопка действия
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
 
   const _ActionButton({
-    required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
@@ -269,7 +316,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 100,
       child: Material(
         color: color.withValues(alpha: 0.1),
@@ -287,7 +334,7 @@ class _ActionButton extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             ),

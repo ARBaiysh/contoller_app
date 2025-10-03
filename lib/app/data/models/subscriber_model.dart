@@ -109,6 +109,16 @@ class SubscriberModel {
     return formatter.format(lastSync!);
   }
 
+  bool get hasValidPhone {
+    if (phone == null) return false;
+    if (phone!.isEmpty) return false;
+    if (phone!.trim().isEmpty) return false;
+    if (phone!.toLowerCase() == 'null') return false;
+    // Дополнительно: проверка на минимальную длину номера
+    if (phone!.replaceAll(RegExp(r'[\s\-\(\)]'), '').length < 9) return false;
+    return true;
+  }
+
   /// НОВОЕ: Форматированный телефон для звонка (формат Кыргызстана)
   /// Преобразует номер в международный формат +996XXXXXXXXX
   String? get phoneForCall {
@@ -160,12 +170,53 @@ class SubscriberModel {
   // ========================================
 
   factory SubscriberModel.fromJson(Map<String, dynamic> json) {
+    // Обработка телефона: преобразуем невалидные значения в null
+    String? processPhone(dynamic phoneValue) {
+      if (phoneValue == null) return null;
+
+      final phoneStr = phoneValue.toString().trim();
+
+      // Пустая строка
+      if (phoneStr.isEmpty) return null;
+
+      // Строки-заполнители
+      final invalidPlaceholders = [
+        'неопределено',
+        'не указано',
+        'не указан',
+        'отсутствует',
+        'нет данных',
+        'нет',
+        'n/a',
+        'na',
+        'none',
+        'null',
+        'undefined',
+        'unknown',
+        '-',
+        '--',
+        '---',
+      ];
+
+      if (invalidPlaceholders.contains(phoneStr.toLowerCase())) {
+        return null;
+      }
+
+      // Проверка на наличие хотя бы 9 цифр
+      final digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
+      if (digitsOnly.length < 9) {
+        return null;
+      }
+
+      return phoneStr;
+    }
+
     return SubscriberModel(
       id: json['id'] ?? 0,
       accountNumber: json['accountNumber'] ?? '',
       fullName: json['fullName'] ?? '',
       address: json['address'] ?? '',
-      phone: json['phone'],
+      phone: processPhone(json['phone']), // ← ИСПРАВЛЕНО
       balance: (json['balance'] ?? 0).toDouble(),
       lastReading: json['lastReading'],
       lastReadingDate: json['lastReadingDate'] != null
@@ -182,7 +233,6 @@ class SubscriberModel {
           : null,
       transformerPointCode: json['transformerPointCode'] ?? '',
       transformerPointName: json['transformerPointName'] ?? '',
-      // НОВОЕ: парсинг lastSync
       lastSync: json['lastSync'] != null
           ? DateTime.tryParse(json['lastSync'])
           : null,
