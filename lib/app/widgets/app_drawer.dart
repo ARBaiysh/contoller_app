@@ -230,6 +230,8 @@ class AppDrawer extends StatelessWidget {
           const SizedBox(height: Constants.paddingS),
 
           // Logout button
+          // Просто замените эту кнопку в app_drawer.dart
+
           ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
@@ -238,27 +240,27 @@ class AppDrawer extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
-                Icons.logout,
+                Icons.delete_forever,  // Изменено с logout на delete_forever
                 color: AppColors.error,
                 size: 20,
               ),
             ),
             title: Text(
-              'Выйти из системы',
+              'Удалить аккаунт',  // Изменено с "Выйти из системы"
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.error,
                 fontWeight: FontWeight.w500,
               ),
             ),
             subtitle: Text(
-              'Завершить текущую сессию',
+              'Безвозвратное удаление данных',  // Изменено с "Завершить текущую сессию"
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.error.withValues(alpha: 0.7),
               ),
             ),
             onTap: () {
               Get.back(); // Закрываем drawer сначала
-              homeController.logout();
+              homeController.logout();  // Оставляем как есть
             },
             contentPadding: EdgeInsets.zero,
           ),

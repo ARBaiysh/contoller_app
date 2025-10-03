@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../routes/app_pages.dart';
@@ -8,6 +9,7 @@ class SplashController extends GetxController {
   late final AuthRepository _authRepository;
   late final BiometricService _biometricService;
   final GetStorage _storage = GetStorage();
+  late final AppUpdateService _appUpdateService;
 
   // Observable states для UI
   final _isLoading = true.obs;
@@ -23,11 +25,14 @@ class SplashController extends GetxController {
     try {
       _authRepository = Get.find<AuthRepository>();
       _biometricService = Get.find<BiometricService>();
+      _appUpdateService = Get.find<AppUpdateService>();
     } catch (e) {
       Get.put(AuthRepository());
       Get.put(BiometricService());
+      Get.put(AppUpdateService());
       _authRepository = Get.find<AuthRepository>();
       _biometricService = Get.find<BiometricService>();
+      _appUpdateService = Get.find<AppUpdateService>();
     }
   }
 
@@ -42,6 +47,37 @@ class SplashController extends GetxController {
 
     await Future.delayed(const Duration(seconds: 1));
 
+    // ========================================
+    // ПРОВЕРКА ВЕРСИИ ПРИЛОЖЕНИЯ - НОВОЕ
+    // ========================================
+    _loadingText.value = 'Проверка версии...';
+
+    try {
+      // Проверяем, требуется ли обновление
+      final needsUpdate = await _appUpdateService.checkForUpdate();
+
+      if (needsUpdate) {
+        print('[SPLASH] ⚠️ Update required! Redirecting to update screen...');
+
+        // Небольшая задержка для плавности
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Переходим на экран обновления
+        Get.offAllNamed(Routes.UPDATE_REQUIRED);
+        return; // Останавливаем дальнейшую инициализацию
+      }
+
+      print('[SPLASH] ✅ App version is up to date');
+    } catch (e) {
+      // Если произошла ошибка при проверке версии, продолжаем работу
+      // (чтобы не блокировать пользователя из-за проблем с сетью)
+      print('[SPLASH] ⚠️ Error checking app version: $e');
+      print('[SPLASH] Continuing without version check...');
+    }
+
+    // ========================================
+    // ДАЛЬНЕЙШАЯ ИНИЦИАЛИЗАЦИЯ
+    // ========================================
     _loadingText.value = 'Проверка авторизации...';
 
     await _authRepository.init();

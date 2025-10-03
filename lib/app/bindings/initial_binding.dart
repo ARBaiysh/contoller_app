@@ -2,6 +2,7 @@ import 'package:contoller_app/app/modules/navbar/main_nav_controller.dart';
 import 'package:get/get.dart';
 
 import '../core/controllers/theme_controller.dart';
+import '../core/services/app_update_service.dart';
 import '../core/services/biometric_service.dart';
 import '../core/services/sync_service.dart';
 import '../data/providers/api_provider.dart';
@@ -37,6 +38,9 @@ class InitialBinding extends Bindings {
 
     // SyncService ПОСЛЕ репозиториев
     Get.put(SyncService(), permanent: true);
+
+    // AppUpdateService
+    Get.put(AppUpdateService(), permanent: true);
 
     // Controllers - Lazy loaded with fenix for auto-recreation
     Get.lazyPut<SplashController>(() => SplashController(), fenix: true);

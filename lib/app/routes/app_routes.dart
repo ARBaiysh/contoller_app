@@ -20,6 +20,7 @@ abstract class Routes {
   static const NAVBAR = _Paths.NAVBAR;
   static const HELP_SUPPORT = _Paths.HELP_SUPPORT;
   static const ABOUT = _Paths.ABOUT;
+  static const UPDATE_REQUIRED = _Paths.UPDATE_REQUIRED;
 }
 
 abstract class _Paths {
@@ -42,4 +43,5 @@ abstract class _Paths {
   static const NAVBAR = '/';
   static const HELP_SUPPORT = '/help-support';
   static const ABOUT = '/about';
+  static const UPDATE_REQUIRED = '/update-required';
 }

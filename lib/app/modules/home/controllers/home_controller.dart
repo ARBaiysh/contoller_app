@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../data/models/dashboard_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -54,15 +56,11 @@ class HomeController extends GetxController {
   void _startSyncStatusMonitoring() {
     _stopSyncStatusTimer();
 
-    print('[HOME] Starting sync status monitoring (every 5 seconds)');
-
     _syncStatusTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      print('[HOME] Checking sync status...');
       await loadDashboard(showLoading: false);
 
       // Если синхронизация завершена, останавливаем таймер
       if (!isFullSyncInProgress.value) {
-        print('[HOME] Sync completed, stopping monitoring');
         _stopSyncStatusTimer();
       }
     });
@@ -71,7 +69,6 @@ class HomeController extends GetxController {
   void _stopSyncStatusTimer() {
     _syncStatusTimer?.cancel();
     _syncStatusTimer = null;
-    print('[HOME] Sync status monitoring stopped');
   }
 
   void _updateSyncAvailability() {
@@ -85,7 +82,6 @@ class HomeController extends GetxController {
 
     // Обновляем флаг синхронизации
     isFullSyncInProgress.value = dashboardData.fullSyncInProgress;
-    print('[SYNC AVAILABILITY] fullSyncInProgress: ${dashboardData.fullSyncInProgress}');
 
     if (isFullSyncInProgress.value) {
       canStartSync.value = false;
@@ -100,7 +96,6 @@ class HomeController extends GetxController {
 
       // Защита от будущих дат
       if (localLastSync.isAfter(now)) {
-        print('[SYNC AVAILABILITY] WARNING: Last sync time is in the future!');
         canStartSync.value = false;
         minutesUntilSyncAvailable.value = Constants.fullSyncCooldown.inMinutes;
         syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
@@ -142,11 +137,8 @@ class HomeController extends GetxController {
       lastError.value = '';
       hasError.value = false;
 
-      print('[HOME] Loading dashboard...');
       final dashboardData = await _statisticsRepository.getDashboardStatistics();
 
-      print('[HOME] Dashboard loaded:');
-      print('[HOME] - fullSyncInProgress: ${dashboardData.fullSyncInProgress}');
 
       dashboard.value = dashboardData;
 
@@ -154,7 +146,6 @@ class HomeController extends GetxController {
       _updateSyncAvailability();
 
     } catch (e) {
-      print('[HOME] Error loading dashboard: $e');
       lastError.value = e.toString();
       hasError.value = true;
 
@@ -178,7 +169,6 @@ class HomeController extends GetxController {
 
   Future<void> startFullSync() async {
     if (!canStartSync.value) {
-      print('[HOME] Cannot start sync - button disabled');
       return;
     }
 
@@ -226,7 +216,6 @@ class HomeController extends GetxController {
         throw Exception(response.message ?? 'Неизвестная ошибка');
       }
     } catch (e) {
-      print('[HOME] Error starting full sync: $e');
       Get.snackbar(
         'Ошибка',
         'Не удалось запустить синхронизацию: ${e.toString()}',
@@ -268,17 +257,121 @@ class HomeController extends GetxController {
     }
   }
 
+// Замените метод logout() в lib/app/modules/home/controllers/home_controller.dart
+
   Future<void> logout() async {
-    Get.defaultDialog(
-      title: 'Выход',
-      middleText: 'Вы уверены, что хотите выйти?',
-      textConfirm: 'Да',
-      textCancel: 'Отмена',
-      confirmTextColor: Get.theme.cardColor,
-      onConfirm: () async {
-        await _authRepository.logout();
-        Get.offAllNamed(Routes.AUTH);
-      },
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.logout,
+                color: AppColors.error,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Выход из системы',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Вы действительно хотите выйти?',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppColors.warning,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'При выходе вам потребуется заново ввести данные для входа',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: Text(
+              'Отмена',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: Get.theme.textTheme.bodyMedium?.color,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Выйти',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
     );
+
+    if (confirmed == true) {
+      await _authRepository.logout();
+      Get.offAllNamed(Routes.AUTH);
+    }
   }
 }

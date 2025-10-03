@@ -23,6 +23,7 @@ import '../modules/splash/views/splash_view.dart';
 import '../modules/subscriber_detail/views/subscriber_detail_view.dart';
 import '../modules/subscribers/views/subscribers_view.dart';
 import '../modules/tp_list/views/tp_list_view.dart';
+import '../modules/update_required/update_required_view.dart';
 
 part 'app_routes.dart';
 
@@ -122,5 +123,11 @@ class AppPages {
 
     GetPage(name: Routes.HELP_SUPPORT, page: () => const HelpSupportView()),
     GetPage(name: Routes.ABOUT, page: () => const AboutView()),
+
+    GetPage(
+      name: _Paths.UPDATE_REQUIRED,
+      page: () => const UpdateRequiredView(),
+      transition: Transition.fadeIn,
+    ),
   ];
 }

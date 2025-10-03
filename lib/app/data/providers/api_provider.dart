@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
 import '../models/abonent_sync_response_model.dart';
+import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
 import '../models/full_sync_response_model.dart';
 import '../models/region_model.dart';
@@ -500,6 +501,59 @@ class ApiProvider extends GetxService {
         // При запросе меньше 3 символов возвращаем пустой массив
         return [];
       }
+      throw _handleError(e);
+    }
+  }
+
+  // Добавь этот метод в lib/app/data/providers/api_provider.dart
+// В конец класса ApiProvider, перед закрывающей скобкой }
+
+// Не забудь добавить импорт в начале файла:
+// import '../models/app_version_model.dart';
+
+// ========================================
+// APP VERSION CHECK ENDPOINT
+// ========================================
+
+  /// Проверка версии приложения
+  /// GET /api/mobile/app-version
+  Future<AppVersionModel> checkAppVersion() async {
+    try {
+      print('[API] Checking app version...');
+      final response = await _dio.get('/auth/app-version');
+      print('[API] App version response: ${response.data}');
+
+      return AppVersionModel.fromJson(response.data);
+    } catch (e) {
+      print('[API] Error checking app version: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Скачивание APK файла с прогрессом
+  /// GET /api/mobile/download-apk
+  Future<void> downloadApk({
+    required String savePath,
+    required Function(int received, int total) onProgress,
+  }) async {
+    try {
+      print('[API] Starting APK download to: $savePath');
+
+      await _dio.download(
+        '/auth/download-apk',
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = (received / total * 100).toStringAsFixed(0);
+            print('[API] Download progress: $progress% ($received/$total bytes)');
+            onProgress(received, total);
+          }
+        },
+      );
+
+      print('[API] APK download completed: $savePath');
+    } catch (e) {
+      print('[API] Error downloading APK: $e');
       throw _handleError(e);
     }
   }
