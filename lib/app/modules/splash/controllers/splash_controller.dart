@@ -1,9 +1,13 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import '../../../core/services/biometric_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../routes/app_pages.dart';
 
 class SplashController extends GetxController {
   late final AuthRepository _authRepository;
+  late final BiometricService _biometricService;
+  final GetStorage _storage = GetStorage();
 
   // Observable states для UI
   final _isLoading = true.obs;
@@ -16,49 +20,114 @@ class SplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print('[SPLASH] Controller onInit');
     try {
       _authRepository = Get.find<AuthRepository>();
-      print('[SPLASH] AuthRepository found');
+      _biometricService = Get.find<BiometricService>();
     } catch (e) {
-      print('[SPLASH] Error finding AuthRepository: $e');
       Get.put(AuthRepository());
+      Get.put(BiometricService());
       _authRepository = Get.find<AuthRepository>();
+      _biometricService = Get.find<BiometricService>();
     }
   }
 
   @override
   void onReady() {
     super.onReady();
-    print('[SPLASH] Controller onReady');
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
-    print('[SPLASH] Starting initialization...');
     _loadingText.value = 'Загрузка данных...';
 
-    // Simulate loading time
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
-    print('[SPLASH] Initializing auth repository...');
     _loadingText.value = 'Проверка авторизации...';
 
-    // Initialize auth repository
     await _authRepository.init();
 
-    print('[SPLASH] Checking auth status...');
-    // Check authentication status
-    _checkAuthStatus();
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    await _checkAuthStatus();
   }
 
-  void _checkAuthStatus() {
+  Future<void> _checkAuthStatus() async {
+    // Проверяем, настроена ли биометрия
+    final hasBiometricCredentials = _biometricService.savedCredentials != null &&
+        _biometricService.isBiometricEnabled;
+
+    // Если биометрия настроена - ВСЕГДА запрашиваем её
+    if (hasBiometricCredentials) {
+      _loadingText.value = 'Проверка биометрии...';
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final success = await _tryBiometricLogin();
+
+      if (success) {
+        Get.offAllNamed(Routes.NAVBAR);
+      } else {
+        Get.offAllNamed(Routes.AUTH);
+      }
+      return;
+    }
+
+    // Если биометрии нет, проверяем галочку "Запомнить меня"
+    final rememberMe = _storage.read('remember_me') ?? false;
+
+    if (!rememberMe) {
+      // Пользователь НЕ хотел сохранять сессию
+      await _authRepository.logout();
+      Get.offAllNamed(Routes.AUTH);
+      return;
+    }
+
+    // Если галочка "Запомнить меня" стоит, проверяем активную сессию
     if (_authRepository.isAuthenticated) {
-      print('[SPLASH] User authenticated, going to NAVBAR');
       Get.offAllNamed(Routes.NAVBAR);
     } else {
-      print('[SPLASH] User not authenticated, going to AUTH');
       Get.offAllNamed(Routes.AUTH);
+    }
+  }
+
+  /// Попытка автоматического входа через биометрию
+  Future<bool> _tryBiometricLogin() async {
+    try {
+      final authenticated = await _biometricService.authenticateWithBiometrics();
+
+      if (!authenticated) {
+        return false;
+      }
+
+      final credentials = _biometricService.savedCredentials;
+      final savedRegionCode = _storage.read('saved_region_code');
+
+      if (credentials == null || savedRegionCode == null) {
+        return false;
+      }
+
+      final username = credentials['username'] as String?;
+      final password = credentials['password'] as String?;
+
+      if (username == null || password == null) {
+        return false;
+      }
+
+      final response = await _authRepository.login(
+        username: username,
+        password: password,
+        regionCode: savedRegionCode,
+      );
+
+      if (response.status == 'SUCCESS') {
+        return true;
+      } else if (response.status == 'SYNCING') {
+        return false;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      return false;
     }
   }
 }
