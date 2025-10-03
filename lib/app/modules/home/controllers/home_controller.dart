@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/dashboard_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
@@ -8,12 +9,14 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/providers/api_provider.dart';
 import '../../../routes/app_pages.dart';
 import '../../../core/values/constants.dart';
+import '../../../widgets/soft_update_dialog.dart';
 import '../../navbar/main_nav_controller.dart';
 
 class HomeController extends GetxController {
   final StatisticsRepository _statisticsRepository = Get.find<StatisticsRepository>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
+  final AppUpdateService _appUpdateService = Get.find<AppUpdateService>();
 
   // Все состояния как реактивные переменные
   final isLoading = false.obs;
@@ -155,6 +158,14 @@ class HomeController extends GetxController {
     } finally {
       isLoading.value = false;
       isRefreshing.value = false;
+
+      if (showLoading && _appUpdateService.softUpdateAvailable) {
+        // Показываем диалог после небольшой задержки
+        Future.delayed(const Duration(milliseconds: 500), () {
+          SoftUpdateDialog.show();
+        });
+      }
+
     }
   }
 

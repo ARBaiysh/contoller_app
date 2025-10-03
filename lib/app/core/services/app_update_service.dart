@@ -32,6 +32,12 @@ class AppUpdateService extends GetxService {
   int get totalBytes => _totalBytes.value;
   AppVersionModel? get versionInfo => _versionInfo;
 
+  final _softUpdateAvailable = false.obs;
+
+  bool get softUpdateAvailable => _softUpdateAvailable.value;
+  set softUpdateAvailable(bool value) => _softUpdateAvailable.value = value;
+  int? get currentBuildNumber => _currentBuildNumber;
+
   @override
   void onInit() {
     super.onInit();

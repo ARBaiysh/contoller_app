@@ -48,29 +48,40 @@ class SplashController extends GetxController {
     await Future.delayed(const Duration(seconds: 1));
 
     // ========================================
-    // ПРОВЕРКА ВЕРСИИ ПРИЛОЖЕНИЯ - НОВОЕ
+    // ПРОВЕРКА ВЕРСИИ ПРИЛОЖЕНИЯ
     // ========================================
     _loadingText.value = 'Проверка версии...';
 
     try {
       // Проверяем, требуется ли обновление
       final needsUpdate = await _appUpdateService.checkForUpdate();
+      final versionInfo = _appUpdateService.versionInfo;
 
-      if (needsUpdate) {
-        print('[SPLASH] ⚠️ Update required! Redirecting to update screen...');
+      if (versionInfo != null && _appUpdateService.currentBuildNumber != null) {
+        final currentAppBuildNumber = _appUpdateService.currentBuildNumber!;
 
-        // Небольшая задержка для плавности
-        await Future.delayed(const Duration(milliseconds: 500));
+        // ЖЕСТКАЯ БЛОКИРОВКА (forceUpdate = true И версия устарела)
+        if (needsUpdate && versionInfo.forceUpdate) {
+          print('[SPLASH] ⚠️ CRITICAL update required! Force blocking...');
 
-        // Переходим на экран обновления
-        Get.offAllNamed(Routes.UPDATE_REQUIRED);
-        return; // Останавливаем дальнейшую инициализацию
+          await Future.delayed(const Duration(milliseconds: 500));
+          Get.offAllNamed(Routes.UPDATE_REQUIRED);
+          return; // Останавливаем дальнейшую инициализацию
+        }
+
+        // МЯГКОЕ ОБНОВЛЕНИЕ (есть новая версия, но не критично)
+        if (versionInfo.hasNewerVersion(currentAppBuildNumber) && !needsUpdate) {
+          print('[SPLASH] 💡 Soft update available (optional)');
+          print('[SPLASH] Current: $currentAppBuildNumber, Latest: ${versionInfo.currentBuildNumber}');
+
+          // Сохраняем информацию о доступном обновлении
+          Get.find<AppUpdateService>().softUpdateAvailable = true;
+        }
+
+        print('[SPLASH] ✅ App version check completed');
       }
-
-      print('[SPLASH] ✅ App version is up to date');
     } catch (e) {
       // Если произошла ошибка при проверке версии, продолжаем работу
-      // (чтобы не блокировать пользователя из-за проблем с сетью)
       print('[SPLASH] ⚠️ Error checking app version: $e');
       print('[SPLASH] Continuing without version check...');
     }

@@ -17,28 +17,44 @@ class UpdateRequiredView extends StatelessWidget {
     final updateService = Get.find<AppUpdateService>();
     final versionInfo = updateService.versionInfo;
 
+    // Проверяем, обязательное ли обновление
+    final isForceUpdate = versionInfo?.forceUpdate ?? true;
+    final accentColor = isForceUpdate ? AppColors.error : AppColors.info;
+
     return PopScope(
-      canPop: false, // Запрещаем закрытие экрана кнопкой "Назад"
+      canPop: !isForceUpdate, // Можно закрыть только если не forceUpdate
       child: Scaffold(
+        // AppBar только если необязательное обновление
+        appBar: !isForceUpdate ? AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Get.back(),
+          ),
+          title: const Text('Доступно обновление'),
+          centerTitle: true,
+        ) : null,
+
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(Constants.paddingL),
             child: Column(
               children: [
-                const Spacer(),
+                // Spacer только если нет AppBar (forceUpdate)
+                if (isForceUpdate) const Spacer(),
+                if (!isForceUpdate) const SizedBox(height: Constants.paddingL),
 
-                // Иконка предупреждения
+                // Иконка предупреждения/обновления
                 Container(
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: accentColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.system_update_alt,
+                  child: Icon(
+                    isForceUpdate ? Icons.system_update_alt : Icons.system_update,
                     size: 60,
-                    color: AppColors.error,
+                    color: accentColor,
                   ),
                 ),
 
@@ -46,10 +62,10 @@ class UpdateRequiredView extends StatelessWidget {
 
                 // Заголовок
                 Text(
-                  'Требуется обновление',
+                  isForceUpdate ? 'Требуется обновление' : 'Доступно обновление',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.error,
+                    color: accentColor,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -69,10 +85,10 @@ class UpdateRequiredView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(Constants.paddingM),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
+                      color: accentColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(Constants.borderRadius),
                       border: Border.all(
-                        color: AppColors.info.withOpacity(0.3),
+                        color: accentColor.withOpacity(0.3),
                       ),
                     ),
                     child: Column(
@@ -80,13 +96,13 @@ class UpdateRequiredView extends StatelessWidget {
                         _buildVersionRow(
                           context,
                           'Текущая версия',
-                          '${versionInfo.minVersion}',
+                          versionInfo.minVersion,
                         ),
                         const SizedBox(height: Constants.paddingS),
                         _buildVersionRow(
                           context,
                           'Новая версия',
-                          '${versionInfo.currentVersion}',
+                          versionInfo.currentVersion,
                           isNew: true,
                         ),
                         const SizedBox(height: Constants.paddingS),
@@ -197,39 +213,70 @@ class UpdateRequiredView extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: Constants.paddingM),
-
-                      // Кнопка "Выйти"
-                      SizedBox(
-                        width: double.infinity,
-                        height: Constants.buttonHeight,
-                        child: OutlinedButton(
-                          onPressed: () => _exitApp(context),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                            side: const BorderSide(color: AppColors.error),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.exit_to_app),
-                              SizedBox(width: Constants.paddingS),
-                              Text(
-                                'Выйти из приложения',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                      // Кнопка "Назад" (если необязательное обновление)
+                      if (!isForceUpdate) ...[
+                        const SizedBox(height: Constants.paddingM),
+                        SizedBox(
+                          width: double.infinity,
+                          height: Constants.buttonHeight,
+                          child: OutlinedButton(
+                            onPressed: () => Get.back(),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.arrow_back),
+                                SizedBox(width: Constants.paddingS),
+                                Text(
+                                  'Вернуться назад',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
+
+                      // Кнопка "Выйти" (только для обязательного обновления)
+                      if (isForceUpdate) ...[
+                        const SizedBox(height: Constants.paddingM),
+                        SizedBox(
+                          width: double.infinity,
+                          height: Constants.buttonHeight,
+                          child: OutlinedButton(
+                            onPressed: () => _exitApp(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: const BorderSide(color: AppColors.error),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.exit_to_app),
+                                SizedBox(width: Constants.paddingS),
+                                Text(
+                                  'Выйти из приложения',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   );
                 }),
 
-                const SizedBox(height: Constants.paddingL),
+                SizedBox(height: isForceUpdate ? Constants.paddingL : Constants.paddingM),
               ],
             ),
           ),
@@ -316,7 +363,7 @@ class UpdateRequiredView extends StatelessWidget {
     }
   }
 
-  // Выход из приложения
+  // Выход из приложения (только для forceUpdate)
   void _exitApp(BuildContext context) {
     Get.dialog(
       AlertDialog(
