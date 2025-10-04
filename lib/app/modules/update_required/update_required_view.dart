@@ -96,7 +96,7 @@ class UpdateRequiredView extends StatelessWidget {
                         _buildVersionRow(
                           context,
                           'Текущая версия',
-                          versionInfo.minVersion,
+                          updateService.currentVersion ?? '1.0.0',
                         ),
                         const SizedBox(height: Constants.paddingS),
                         _buildVersionRow(

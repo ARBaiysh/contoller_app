@@ -27,8 +27,10 @@ class InitialBinding extends Bindings {
   void dependencies() {
     // Core Services - Permanent
     Get.put(ThemeController(), permanent: true);
-    Get.put(BiometricService(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
+    Get.put(AppUpdateService(), permanent: true);
+    Get.put(BiometricService(), permanent: true);
+
 
     // Repositories СНАЧАЛА - Lazy loaded but kept in memory
     Get.lazyPut<AuthRepository>(() => AuthRepository(), fenix: true);
@@ -39,8 +41,6 @@ class InitialBinding extends Bindings {
     // SyncService ПОСЛЕ репозиториев
     Get.put(SyncService(), permanent: true);
 
-    // AppUpdateService
-    Get.put(AppUpdateService(), permanent: true);
 
     // Controllers - Lazy loaded with fenix for auto-recreation
     Get.lazyPut<SplashController>(() => SplashController(), fenix: true);

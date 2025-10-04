@@ -70,7 +70,7 @@ class SoftUpdateDialog {
                 children: [
                   _buildVersionRow(
                     'Текущая версия',
-                    versionInfo.minVersion,
+                    updateService.currentVersion ?? '1.0.0',
                   ),
                   const SizedBox(height: 8),
                   _buildVersionRow(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/values/constants.dart';
+
 class AboutView extends StatelessWidget {
   const AboutView({super.key});
 
@@ -16,18 +18,18 @@ class AboutView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             // ===== APP INFO =====
-            _SectionTitle(title: 'Информация'),
-            _InfoTile(
+            const _SectionTitle(title: 'Информация'),
+            const _InfoTile(
               icon: Icons.apps,
               title: 'Название',
-              subtitle: 'MyApp', // TODO: заменить на реальное название
+              subtitle: Constants.appName,
             ),
             _InfoTile(
               icon: Icons.verified,
               title: 'Версия',
-              subtitle: '1.0.0', // TODO: при необходимости подставить актуальную
+              subtitle: Constants.appVersion,
             ),
-            _InfoTile(
+            const _InfoTile(
               icon: Icons.developer_mode,
               title: 'Разработчик',
               subtitle: 'Ваша компания / имя',
@@ -36,8 +38,8 @@ class AboutView extends StatelessWidget {
             const SizedBox(height: 16),
         
             // ===== DESCRIPTION =====
-            _SectionTitle(title: 'Описание'),
-            _DescriptionCard(
+            const _SectionTitle(title: 'Описание'),
+            const _DescriptionCard(
               text:
               'Мобильное приложение для работы с трансформаторными подстанциями, '
                   'поиска абонентов и формирования отчетов. '
@@ -68,7 +70,7 @@ class AboutView extends StatelessWidget {
             const SizedBox(height: 16),
         
             // ===== LICENSES =====
-            _SectionTitle(title: 'Открытые лицензии'),
+            const _SectionTitle(title: 'Открытые лицензии'),
             _ActionTile(
               icon: Icons.code,
               title: 'Показать лицензии',
@@ -76,8 +78,8 @@ class AboutView extends StatelessWidget {
               onTap: () {
                 showLicensePage(
                   context: context,
-                  applicationName: 'MyApp', // TODO: название
-                  applicationVersion: '1.0.0', // TODO: версия
+                  applicationName: Constants.appName,
+                  applicationVersion: Constants.appVersion,
                 );
               },
             ),

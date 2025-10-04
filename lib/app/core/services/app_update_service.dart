@@ -18,6 +18,7 @@ class AppUpdateService extends GetxService {
 
   // Информация о доступной версии
   AppVersionModel? _versionInfo;
+  String? get currentVersion => _currentVersion;
 
   // Состояние скачивания
   final _isDownloading = false.obs;

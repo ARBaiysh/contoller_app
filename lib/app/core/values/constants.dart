@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../services/app_update_service.dart';
 
 class Constants {
   Constants._();
@@ -52,8 +55,17 @@ class Constants {
 
   // App Info
   static const String appName = 'ОшПЭС: Контролер';
-  static const String appVersion = '1.0.0';
+
   static const String companyName = 'ОАО «ОшПЭС»';
+
+  static String get appVersion {
+    try {
+      final appUpdateService = Get.find<AppUpdateService>();
+      return appUpdateService.currentVersion ?? '1.0.0';
+    } catch (e) {
+      return '1.0.0'; // fallback если сервис еще не инициализирован
+    }
+  }
 
   // Pagination
   static const int itemsPerPage = 20;
