@@ -1,8 +1,30 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// ✅ Читаем local.properties (Flutter генерирует его из pubspec.yaml)
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { stream ->
+        localProperties.load(stream)
+    }
+}
+
+// ✅ Получаем версию из Flutter (из pubspec.yaml через local.properties)
+fun getFlutterVersionCode(): Int {
+    val versionCode = localProperties.getProperty("flutter.versionCode")
+    return versionCode?.toIntOrNull() ?: 1
+}
+
+fun getFlutterVersionName(): String {
+    val versionName = localProperties.getProperty("flutter.versionName")
+    return versionName ?: "1.0.0"
 }
 
 android {
@@ -20,25 +42,54 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "kg.asdf.contoller_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+
+        minSdk = 21
         targetSdk = 34
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+
+        // ✅ ПРАВИЛЬНО: Берём версию из pubspec.yaml через Flutter
+        versionCode = getFlutterVersionCode()
+        versionName = getFlutterVersionName()
+
+        multiDexEnabled = true
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            isDebuggable = true
+        }
+
+        getByName("release") {
+            // Используем debug ключ для подписи
             signingConfig = signingConfigs.getByName("debug")
+
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/LICENSE",
+                "/META-INF/LICENSE.txt",
+                "/META-INF/license.txt",
+                "/META-INF/NOTICE",
+                "/META-INF/NOTICE.txt",
+                "/META-INF/notice.txt",
+                "/META-INF/ASL2.0"
+            )
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("androidx.multidex:multidex:2.0.1")
 }
