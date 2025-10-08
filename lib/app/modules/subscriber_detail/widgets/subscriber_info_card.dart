@@ -70,7 +70,7 @@ class SubscriberInfoCard extends StatelessWidget {
             if (subscriber.lastSync != null)
               _InfoRow(
                 label: 'Последняя синхронизация',
-                value: subscriber.fullFormattedLastSync,
+                value: subscriber.formattedLastSync,
               ),
 
             // КНОПКИ ДЕЙСТВИЙ (ТОЛЬКО если есть валидный телефон)

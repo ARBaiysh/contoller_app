@@ -11,6 +11,11 @@ class SubscriberModel {
   final double balance;
   final int? lastReading;
   final DateTime? lastReadingDate;
+
+  // ✅ НОВЫЕ ПОЛЯ
+  final int currentMonthConsumption;
+  final double currentMonthCharge;
+
   final bool canTakeReading;
 
   // Информация о счетчике
@@ -27,7 +32,7 @@ class SubscriberModel {
   final String transformerPointCode;
   final String transformerPointName;
 
-  // НОВОЕ ПОЛЕ: Информация о синхронизации
+  // Информация о синхронизации
   final DateTime? lastSync;
 
   SubscriberModel({
@@ -39,6 +44,9 @@ class SubscriberModel {
     this.balance = 0.0,
     this.lastReading,
     this.lastReadingDate,
+    // ✅ НОВЫЕ ПАРАМЕТРЫ
+    this.currentMonthConsumption = 0,
+    this.currentMonthCharge = 0.0,
     this.canTakeReading = true,
     required this.meterType,
     required this.meterSerialNumber,
@@ -48,7 +56,7 @@ class SubscriberModel {
     this.lastPaymentDate,
     required this.transformerPointCode,
     required this.transformerPointName,
-    this.lastSync, // НОВОЕ ПОЛЕ
+    this.lastSync,
   });
 
   // ========================================
@@ -74,6 +82,16 @@ class SubscriberModel {
     return balance > 0 ? '$formatted сом.' : '$formatted сом.';
   }
 
+  /// ✅ НОВОЕ: Форматированное потребление
+  String get formattedConsumption {
+    return '${NumberFormat('#,###', 'ru').format(currentMonthConsumption)} кВт·ч';
+  }
+
+  /// ✅ НОВОЕ: Форматированное начисление
+  String get formattedCharge {
+    return '${NumberFormat('#,###.##', 'ru').format(currentMonthCharge)} сом';
+  }
+
   /// Статус для цветовой индикации
   SubscriberStatus get status {
     if (!canTakeReading) return SubscriberStatus.disabled;
@@ -81,7 +99,7 @@ class SubscriberModel {
     return SubscriberStatus.normal;
   }
 
-  /// НОВОЕ: Форматированная дата последней синхронизации
+  /// Форматированная дата последней синхронизации
   String get formattedLastSync {
     if (lastSync == null) return 'Не синхронизировано';
 
@@ -102,67 +120,25 @@ class SubscriberModel {
     }
   }
 
-  /// НОВОЕ: Полная форматированная дата синхронизации
-  String get fullFormattedLastSync {
-    if (lastSync == null) return 'Не синхронизировано';
-    final formatter = DateFormat('dd.MM.yyyy в HH:mm');
-    return formatter.format(lastSync!);
-  }
-
+  /// Проверка наличия валидного телефона
   bool get hasValidPhone {
-    if (phone == null) return false;
-    if (phone!.isEmpty) return false;
-    if (phone!.trim().isEmpty) return false;
-    if (phone!.toLowerCase() == 'null') return false;
-    // Дополнительно: проверка на минимальную длину номера
-    if (phone!.replaceAll(RegExp(r'[\s\-\(\)]'), '').length < 9) return false;
-    return true;
+    if (phone == null || phone!.isEmpty) return false;
+    final digits = phone!.replaceAll(RegExp(r'[^\d]'), '');
+    return digits.length >= 9;
   }
 
-  /// НОВОЕ: Форматированный телефон для звонка (формат Кыргызстана)
-  /// Преобразует номер в международный формат +996XXXXXXXXX
+  /// Телефон для звонка (с +996)
   String? get phoneForCall {
-    if (phone == null || phone!.isEmpty) return null;
-
-    // Убираем все пробелы, скобки, дефисы
-    String cleaned = phone!.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-
-    // Если номер начинается с 0, заменяем на +996
-    if (cleaned.startsWith('0')) {
-      return '+996${cleaned.substring(1)}';
-    }
-
-    // Если начинается с 996 без +, добавляем +
-    if (cleaned.startsWith('996')) {
-      return '+$cleaned';
-    }
-
-    // Если уже с +996, возвращаем как есть
-    if (cleaned.startsWith('+996')) {
-      return cleaned;
-    }
-
-    // Если формат непонятен, добавляем +996 в начало
-    return '+996$cleaned';
+    if (!hasValidPhone) return null;
+    String clean = phone!.replaceAll(RegExp(r'[^\d]'), '');
+    if (clean.startsWith('0')) clean = '996${clean.substring(1)}';
+    return '+$clean';
   }
 
-  /// НОВОЕ: Красиво отформатированный телефон для отображения
-  /// Формат: +996 (XXX) XX-XX-XX
+  /// Отформатированный телефон для отображения
   String? get formattedPhone {
-    if (phone == null || phone!.isEmpty) return null;
-
-    String? callPhone = phoneForCall;
-    if (callPhone == null) return phone;
-
-    // Убираем +996
-    String digits = callPhone.replaceAll('+996', '');
-
-    // Форматируем: (XXX) XX-XX-XX
-    if (digits.length == 9) {
-      return '+996 (${digits.substring(0, 3)}) ${digits.substring(3, 5)}-${digits.substring(5, 7)}-${digits.substring(7, 9)}';
-    }
-
-    return phone; // Если формат неожиданный, возвращаем оригинал
+    if (!hasValidPhone) return null;
+    return phone;
   }
 
   // ========================================
@@ -170,16 +146,13 @@ class SubscriberModel {
   // ========================================
 
   factory SubscriberModel.fromJson(Map<String, dynamic> json) {
-    // Обработка телефона: преобразуем невалидные значения в null
     String? processPhone(dynamic phoneValue) {
       if (phoneValue == null) return null;
 
       final phoneStr = phoneValue.toString().trim();
 
-      // Пустая строка
       if (phoneStr.isEmpty) return null;
 
-      // Строки-заполнители
       final invalidPlaceholders = [
         'неопределено',
         'не указано',
@@ -202,7 +175,6 @@ class SubscriberModel {
         return null;
       }
 
-      // Проверка на наличие хотя бы 9 цифр
       final digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
       if (digitsOnly.length < 9) {
         return null;
@@ -216,12 +188,15 @@ class SubscriberModel {
       accountNumber: json['accountNumber'] ?? '',
       fullName: json['fullName'] ?? '',
       address: json['address'] ?? '',
-      phone: processPhone(json['phone']), // ← ИСПРАВЛЕНО
+      phone: processPhone(json['phone']),
       balance: (json['balance'] ?? 0).toDouble(),
       lastReading: json['lastReading'],
       lastReadingDate: json['lastReadingDate'] != null
           ? DateTime.tryParse(json['lastReadingDate'])
           : null,
+      // ✅ НОВЫЕ ПОЛЯ
+      currentMonthConsumption: json['currentMonthConsumption'] ?? 0,
+      currentMonthCharge: (json['currentMonthCharge'] ?? 0).toDouble(),
       canTakeReading: json['canTakeReading'] ?? true,
       meterType: json['meterType'] ?? 'СОЭ',
       meterSerialNumber: json['meterSerialNumber'] ?? '',
@@ -249,6 +224,9 @@ class SubscriberModel {
       'balance': balance,
       'lastReading': lastReading,
       'lastReadingDate': lastReadingDate?.toIso8601String(),
+      // ✅ НОВЫЕ ПОЛЯ
+      'currentMonthConsumption': currentMonthConsumption,
+      'currentMonthCharge': currentMonthCharge,
       'canTakeReading': canTakeReading,
       'meterType': meterType,
       'meterSerialNumber': meterSerialNumber,
@@ -258,7 +236,7 @@ class SubscriberModel {
       'lastPaymentDate': lastPaymentDate?.toIso8601String(),
       'transformerPointCode': transformerPointCode,
       'transformerPointName': transformerPointName,
-      'lastSync': lastSync?.toIso8601String(), // НОВОЕ
+      'lastSync': lastSync?.toIso8601String(),
     };
   }
 
@@ -275,6 +253,9 @@ class SubscriberModel {
     double? balance,
     int? lastReading,
     DateTime? lastReadingDate,
+    // ✅ НОВЫЕ ПАРАМЕТРЫ
+    int? currentMonthConsumption,
+    double? currentMonthCharge,
     bool? canTakeReading,
     String? meterType,
     String? meterSerialNumber,
@@ -284,7 +265,7 @@ class SubscriberModel {
     DateTime? lastPaymentDate,
     String? transformerPointCode,
     String? transformerPointName,
-    DateTime? lastSync, // НОВОЕ
+    DateTime? lastSync,
   }) {
     return SubscriberModel(
       id: id ?? this.id,
@@ -295,6 +276,9 @@ class SubscriberModel {
       balance: balance ?? this.balance,
       lastReading: lastReading ?? this.lastReading,
       lastReadingDate: lastReadingDate ?? this.lastReadingDate,
+      // ✅ НОВЫЕ ПОЛЯ
+      currentMonthConsumption: currentMonthConsumption ?? this.currentMonthConsumption,
+      currentMonthCharge: currentMonthCharge ?? this.currentMonthCharge,
       canTakeReading: canTakeReading ?? this.canTakeReading,
       meterType: meterType ?? this.meterType,
       meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
@@ -304,7 +288,7 @@ class SubscriberModel {
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
       transformerPointCode: transformerPointCode ?? this.transformerPointCode,
       transformerPointName: transformerPointName ?? this.transformerPointName,
-      lastSync: lastSync ?? this.lastSync, // НОВОЕ
+      lastSync: lastSync ?? this.lastSync,
     );
   }
 
@@ -318,6 +302,8 @@ class SubscriberModel {
       balance: 0.0,
       lastReading: null,
       lastReadingDate: null,
+      currentMonthConsumption: 0,
+      currentMonthCharge: 0.0,
       canTakeReading: false,
       meterType: '',
       meterSerialNumber: '',
@@ -327,7 +313,7 @@ class SubscriberModel {
       lastPaymentDate: null,
       transformerPointCode: '',
       transformerPointName: '',
-      lastSync: null, // НОВОЕ
+      lastSync: null,
     );
   }
 

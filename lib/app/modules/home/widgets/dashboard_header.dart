@@ -5,9 +5,9 @@ import '../../../data/models/dashboard_model.dart';
 import '../controllers/home_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
+import '../../../routes/app_pages.dart';
 
 class DashboardHeader extends StatelessWidget {
-
   const DashboardHeader({
     Key? key,
   }) : super(key: key);
@@ -54,97 +54,47 @@ class DashboardHeader extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(Constants.borderRadiusMin),
+                      color: AppColors.success.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${dashboard.completionPercentage.toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                      '${dashboard.completionPercentage.toStringAsFixed(1)}%',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: Constants.paddingM),
-
-              // Показания сегодня
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Сегодня',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dashboard.readingsToday.toString(),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: theme.dividerColor.withOpacity(0.2),
-                  ),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Собрано',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${dashboard.readingsCollected} / ${dashboard.totalReadingsNeeded}',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: Constants.paddingM),
-
-              // Прогресс бар
+              const SizedBox(height: Constants.paddingS),
+              // Progress bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: dashboard.completionPercentage / 100,
-                  minHeight: 8,
-                  backgroundColor: theme.dividerColor.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  backgroundColor: theme.dividerColor.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                  minHeight: 6,
                 ),
               ),
-
               const SizedBox(height: Constants.paddingS),
-
-              Text(
-                'Осталось: ${dashboard.readingsRemaining}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Собрано: ${dashboard.readingsCollected}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                    ),
+                  ),
+                  Text(
+                    'Осталось: ${dashboard.readingsRemaining}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -152,27 +102,36 @@ class DashboardHeader extends StatelessWidget {
 
         const SizedBox(height: Constants.paddingM),
 
-        // Компактная статистика
+        // Компактная статистика (КЛИКАБЕЛЬНАЯ)
         Row(
           children: [
+            // ТП - открывает список ТП
             Expanded(
               child: _buildCompactStat(
                 context: context,
                 icon: Icons.business,
                 value: dashboard.totalTransformerPoints.toString(),
                 label: 'ТП',
+                onTap: () {
+                  Get.toNamed(Routes.TP_LIST);
+                },
               ),
             ),
             const SizedBox(width: Constants.paddingS),
+            // Абонентов - открывает поиск
             Expanded(
               child: _buildCompactStat(
                 context: context,
                 icon: Icons.people,
                 value: dashboard.totalAbonents.toString(),
                 label: 'Абонентов',
+                onTap: () {
+                  Get.toNamed(Routes.SEARCH);
+                },
               ),
             ),
             const SizedBox(width: Constants.paddingS),
+            // Должников - открывает поиск
             Expanded(
               child: _buildCompactStat(
                 context: context,
@@ -180,6 +139,9 @@ class DashboardHeader extends StatelessWidget {
                 value: dashboard.debtorsCount.toString(),
                 label: 'Должников',
                 isWarning: true,
+                onTap: () {
+                  Get.toNamed(Routes.SEARCH);
+                },
               ),
             ),
           ],
@@ -193,44 +155,74 @@ class DashboardHeader extends StatelessWidget {
     required IconData icon,
     required String value,
     required String label,
+    required VoidCallback onTap,
     bool isWarning = false,
   }) {
     final theme = Theme.of(context);
     final color = isWarning ? AppColors.error : theme.textTheme.bodyMedium?.color;
 
-    return Container(
-      padding: const EdgeInsets.all(Constants.paddingM),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(Constants.borderRadius),
-        border: Border.all(
-          color: theme.dividerColor.withOpacity(0.1),
-          width: 1,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(Constants.borderRadius),
+            border: Border.all(
+              color: theme.dividerColor.withOpacity(0.1),
+              width: 1,
+            ),
+            // ✅ ДОБАВЛЕНА ТЕНЬ для кликабельного вида
+            boxShadow: [
+              BoxShadow(
+                color: theme.brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(Constants.paddingM),
+            child: Column(
+              children: [
+                // Иконка
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: (color ?? theme.primaryColor).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: color?.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: Constants.paddingXS),
+                // Значение
+                Text(
+                  value,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                // Метка
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: color?.withOpacity(0.6),
-          ),
-          const SizedBox(height: Constants.paddingXS),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 11,
-              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/subscriber_detail_controller.dart';
+import '../widgets/consumption_card.dart';
 import '../widgets/subscriber_info_card.dart';
 import '../widgets/reading_form_card.dart';
 import '../widgets/meter_info_card.dart';
@@ -60,6 +61,8 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
 
                   // Balance info card
                   const BalanceInfoCard(),
+
+                  const ConsumptionCard(),
 
                   // Reading history card
                   const ReadingHistoryCard(),
