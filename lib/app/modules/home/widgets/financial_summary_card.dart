@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../../data/models/dashboard_model.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 
-class FinancialSummaryCard extends StatefulWidget {
+class FinancialSummaryCard extends StatelessWidget {
   final DashboardModel dashboard;
 
   const FinancialSummaryCard({
@@ -13,20 +12,8 @@ class FinancialSummaryCard extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<FinancialSummaryCard> createState() => _FinancialSummaryCardState();
-}
-
-class _FinancialSummaryCardState extends State<FinancialSummaryCard> {
-  bool _isExpanded = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dashboard = widget.dashboard;
-
-    // Вычисляем общий баланс
-    final totalBalance = dashboard.totalPaymentsThisMonth - dashboard.totalDebtAmount;
-    final isPositiveBalance = totalBalance >= 0;
 
     return Container(
       margin: const EdgeInsets.only(top: Constants.paddingM),
@@ -40,157 +27,138 @@ class _FinancialSummaryCardState extends State<FinancialSummaryCard> {
       ),
       child: Column(
         children: [
-          // Заголовок (всегда видимый)
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(Constants.borderRadius),
-              bottom: Radius.circular(_isExpanded ? 0 : Constants.borderRadius),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(Constants.paddingM),
-              child: Row(
-                children: [
-                  // Иконка
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.account_balance_wallet,
-                      size: 20,
-                      color: theme.colorScheme.primary,
-                    ),
+          // Заголовок
+          Padding(
+            padding: const EdgeInsets.all(Constants.paddingM),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 20,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                ),
+                const SizedBox(width: Constants.paddingS),
+                Text(
+                  'ПОКАЗАТЕЛИ',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
                   ),
-
-                  const SizedBox(width: Constants.paddingM),
-
-                  // Заголовок и краткая информация
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ФИНАНСОВЫЕ ПОКАЗАТЕЛИ',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Платежи сегодня: ${dashboard.formattedPaymentsToday}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.success,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Иконка разворота
-                  AnimatedRotation(
-                    duration: const Duration(milliseconds: 200),
-                    turns: _isExpanded ? 0.5 : 0,
-                    child: Icon(
-                      Icons.expand_more,
-                      color: theme.iconTheme.color?.withOpacity(0.5),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
-          // Развернутое содержимое
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 200),
-            crossFadeState: _isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            firstChild: const SizedBox.shrink(),
-            secondChild: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: theme.dividerColor.withOpacity(0.1),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(Constants.paddingM),
-                child: Column(
+          Divider(height: 1, color: theme.dividerColor.withOpacity(0.1)),
+
+          // Показатели (всегда видны)
+          Padding(
+            padding: const EdgeInsets.all(Constants.paddingM),
+            child: Column(
+              children: [
+                // ===== Потребление и начисления =====
+
+                Row(
                   children: [
-                    // Платежи
-                    _buildSection(
-                      context: context,
-                      title: 'Платежи',
-                      icon: Icons.trending_up,
-                      iconColor: AppColors.success,
-                      items: [
-                        _FinancialItem(
-                          label: 'Сегодня',
-                          count: '${dashboard.paidToday} абонентов',
-                          amount: dashboard.formattedPaymentsToday,
-                        ),
-                        _FinancialItem(
-                          label: 'За месяц',
-                          count: '${dashboard.paidThisMonth} абонентов',
-                          amount: dashboard.formattedPaymentsThisMonth,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: Constants.paddingM),
-
-                    // Задолженности
-                    _buildSection(
-                      context: context,
-                      title: 'Задолженности',
-                      icon: Icons.warning_amber,
-                      iconColor: AppColors.error,
-                      items: [
-                        _FinancialItem(
-                          label: 'Должники',
-                          count: '${dashboard.debtorsCount} абонентов',
-                          amount: dashboard.formattedDebtAmount,
-                          isNegative: true,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: Constants.paddingM),
-
-                    // Переплаты
-                    if (dashboard.totalOverpaymentAmount > 0) ...[
-                      _buildSection(
+                    Expanded(
+                      child: _buildMetricCard(
                         context: context,
-                        title: 'Переплаты',
-                        icon: Icons.add_circle_outline,
-                        iconColor: AppColors.info,
-                        items: [
-                          _FinancialItem(
-                            label: 'Общая сумма',
-                            count: null,
-                            amount: dashboard.formattedOverpaymentAmount,
-                          ),
-                        ],
+                        icon: Icons.electric_bolt_outlined,
+                        label: 'Начислено за месяц (кВт·ч)',
+                        value: '${NumberFormat('#,###', 'ru').format(dashboard.totalConsumptionThisMonth)} кВт·ч',
+                        iconColor: Colors.amber,
+                        iconBgColor: Colors.amber.withOpacity(0.15),
                       ),
-                      const SizedBox(height: Constants.paddingM),
-                    ],
+                    ),
                   ],
                 ),
-              ),
+
+                const SizedBox(height: Constants.paddingS),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.receipt_long_outlined,
+                        label: 'Начислено за месяц (сом)',
+                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalChargeThisMonth)} сом',
+                        iconColor: Colors.deepPurple,
+                        iconBgColor: Colors.deepPurple.withOpacity(0.15),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Constants.paddingS),
+
+                // Оплаты за месяц
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.payments_outlined,
+                        label: 'Оплачено за месяц',
+                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalPaymentsThisMonth)} сом',
+                        subtitle: '${dashboard.paidThisMonth} абонентов',
+                        iconColor: Colors.green,
+                        iconBgColor: Colors.green.withOpacity(0.15),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Constants.paddingS),
+
+                // Должники и переплаты
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.warning_amber_outlined,
+                        label: 'Задолженность',
+                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalDebtAmount)} сом',
+                        subtitle: '${dashboard.debtorsCount} должников',
+                        iconColor: Colors.red,
+                        iconBgColor: Colors.red.withOpacity(0.15),
+                      ),
+                    ),
+                    const SizedBox(width: Constants.paddingS),
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.trending_up_outlined,
+                        label: 'Переплата',
+                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalOverpaymentAmount)} сом',
+                        subtitle: '',
+                        iconColor: Colors.blue,
+                        iconBgColor: Colors.blue.withOpacity(0.15),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Constants.paddingS),
+
+                // Сегодня
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.today_outlined,
+                        label: 'Оплачено (сегодня)',
+                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalPaymentsToday)} сом',
+                        subtitle: '${dashboard.paidToday} абонентов',
+                        iconColor: Colors.teal,
+                        iconBgColor: Colors.teal.withOpacity(0.15),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -198,83 +166,84 @@ class _FinancialSummaryCardState extends State<FinancialSummaryCard> {
     );
   }
 
-  Widget _buildSection({
+  Widget _buildMetricCard({
     required BuildContext context,
-    required String title,
     required IconData icon,
+    required String label,
+    required String value,
+    String? subtitle,
     required Color iconColor,
-    required List<_FinancialItem> items,
+    required Color iconBgColor,
   }) {
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Заголовок секции
-        Row(
-          children: [
-            Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: Constants.paddingS),
-            Text(
-              title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(Constants.paddingM),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? theme.colorScheme.surface
+            : theme.cardColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadius - 2),
+        border: Border.all(
+          color: theme.dividerColor.withOpacity(0.1),
+          width: 1,
         ),
-        const SizedBox(height: Constants.paddingS),
-
-        // Элементы
-        ...items.map((item) => Padding(
-          padding: const EdgeInsets.only(left: 26, bottom: Constants.paddingS),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                    ),
-                  ),
-                  if (item.count != null)
-                    Text(
-                      item.count!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
-                      ),
-                    ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: iconColor,
+                ),
               ),
-              Text(
-                item.amount,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: item.isNegative ? AppColors.error : null,
+              const SizedBox(width: Constants.paddingS),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-        )),
-      ],
+          const SizedBox(height: Constants.paddingS),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
     );
   }
-}
-
-class _FinancialItem {
-  final String label;
-  final String? count;
-  final String amount;
-  final bool isNegative;
-
-  _FinancialItem({
-    required this.label,
-    this.count,
-    required this.amount,
-    this.isNegative = false,
-  });
 }

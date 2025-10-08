@@ -55,13 +55,12 @@ class AppDrawer extends StatelessWidget {
                   context: context,
                   icon: Icons.newspaper,
                   title: 'Новости',
-                  subtitle: 'Новости',
+                  subtitle: 'Последние новости',
                   onTap: () {
                     Get.back();
                     Get.toNamed(Routes.NEWS);
                   },
                 ),
-
                 _buildMenuItem(
                   context: context,
                   icon: Icons.notifications_outlined,
@@ -103,20 +102,22 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User name
-          Text(
-            controller.userName.value,
+          // ✅ ИСПРАВЛЕНО: Используем Obx для реактивного обновления имени
+          Obx(() => Text(
+            controller.userName.value.isEmpty
+                ? 'Загрузка...'
+                : controller.userName.value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
-          ),
+          )),
           const SizedBox(height: Constants.paddingXS),
 
           // Role
           Text(
             'Контролер',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
             ),
           ),
         ],
@@ -135,7 +136,7 @@ class AppDrawer extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -153,7 +154,7 @@ class AppDrawer extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
         ),
       ),
       onTap: onTap,
@@ -180,7 +181,7 @@ class AppDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // ИСПРАВЛЕННЫЙ Theme switcher с динамическим текстом
+          // Theme switcher с динамическим текстом
           Obx(() => SwitchListTile(
             title: Text(
               'Тема оформления',
@@ -191,14 +192,13 @@ class AppDrawer extends StatelessWidget {
             subtitle: Text(
               themeController.isDarkMode ? 'Темная тема' : 'Светлая тема',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
               ),
             ),
             value: themeController.isDarkMode,
             onChanged: (value) {
               themeController.setTheme(value);
 
-              // Опциональное уведомление
               Get.snackbar(
                 'Тема изменена',
                 value ? 'Включена темная тема' : 'Включена светлая тема',
@@ -212,13 +212,11 @@ class AppDrawer extends StatelessWidget {
             secondary: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                themeController.isDarkMode
-                    ? Icons.dark_mode
-                    : Icons.light_mode,
+                themeController.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 color: AppColors.primary,
                 size: 20,
               ),
@@ -227,40 +225,72 @@ class AppDrawer extends StatelessWidget {
             activeColor: AppColors.primary,
           )),
 
-          const SizedBox(height: Constants.paddingS),
+
+          // Help & Support button
+          // ListTile(
+          //   leading: Container(
+          //     padding: const EdgeInsets.all(8),
+          //     decoration: BoxDecoration(
+          //       color: Colors.blue.withOpacity(0.1),
+          //       borderRadius: BorderRadius.circular(8),
+          //     ),
+          //     child: const Icon(
+          //       Icons.help_outline,
+          //       color: Colors.blue,
+          //       size: 20,
+          //     ),
+          //   ),
+          //   title: Text(
+          //     'Помощь и поддержка',
+          //     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          //       fontWeight: FontWeight.w500,
+          //     ),
+          //   ),
+          //   subtitle: Text(
+          //     'FAQ и контакты',
+          //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          //       color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+          //     ),
+          //   ),
+          //   onTap: () {
+          //     Get.back();
+          //     Get.toNamed(Routes.HELP_SUPPORT);
+          //   },
+          //   contentPadding: EdgeInsets.zero,
+          // ),
+          //
+          // const SizedBox(height: Constants.paddingS),
 
           // Logout button
-          // Просто замените эту кнопку в app_drawer.dart
-
           ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
+                color: AppColors.error.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
-                Icons.delete_forever,  // Изменено с logout на delete_forever
+                Icons.logout,
                 color: AppColors.error,
                 size: 20,
               ),
             ),
             title: Text(
-              'Удалить аккаунт',  // Изменено с "Выйти из системы"
+              'Удалить аккаунт',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.error,
                 fontWeight: FontWeight.w500,
               ),
             ),
             subtitle: Text(
-              'Безвозвратное удаление данных',  // Изменено с "Завершить текущую сессию"
+              'Завершить текущую сессию',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.error.withValues(alpha: 0.7),
+                color: AppColors.error.withOpacity(0.7),
               ),
             ),
             onTap: () {
-              Get.back(); // Закрываем drawer сначала
-              homeController.logout();  // Оставляем как есть
+              Get.back(); // Закрываем drawer
+              homeController.logout();
             },
             contentPadding: EdgeInsets.zero,
           ),
