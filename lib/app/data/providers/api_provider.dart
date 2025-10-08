@@ -246,9 +246,8 @@ class ApiProvider extends GetxService {
 
   Future<List<Map<String, dynamic>>> getTransformerPoints() async {
     try {
-      print('[API] Getting transformer points...');
+
       final response = await _dio.get('/mobile/transformer-points');
-      print('[API] TP list response: ${response.data}');
 
       // Теперь ожидаем прямой список без обертки
       return List<Map<String, dynamic>>.from(response.data);
@@ -414,9 +413,8 @@ class ApiProvider extends GetxService {
   /// GET /api/mobile/dashboard
   Future<Map<String, dynamic>> getDashboardStatistics() async {
     try {
-      print('[API] Getting dashboard statistics...');
+
       final response = await _dio.get('/mobile/dashboard');
-      print('[API] Dashboard response: ${response.data}');
 
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
@@ -519,10 +517,7 @@ class ApiProvider extends GetxService {
   /// GET /api/mobile/app-version
   Future<AppVersionModel> checkAppVersion() async {
     try {
-      print('[API] Checking app version...');
       final response = await _dio.get('/auth/app-version');
-      print('[API] App version response: ${response.data}');
-
       return AppVersionModel.fromJson(response.data);
     } catch (e) {
       print('[API] Error checking app version: $e');
@@ -537,8 +532,6 @@ class ApiProvider extends GetxService {
     required Function(int received, int total) onProgress,
   }) async {
     try {
-      print('[API] Starting APK download to: $savePath');
-
       await _dio.download(
         '/auth/download-apk',
         savePath,

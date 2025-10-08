@@ -193,30 +193,52 @@ class SubscribersController extends GetxController {
   // СИНХРОНИЗАЦИЯ С ПРОГРЕССОМ
   // ========================================
 
-
   /// Запуск синхронизации абонентов с SyncService
   Future<void> syncSubscribers() async {
-    if (_isSyncing.value || _isLoading.value) return;
+    // ✅ ЗАЩИТА: Проверяем, не идет ли уже синхронизация
+    if (_isSyncing.value || _isLoading.value) {
+      print('[SUBSCRIBERS CONTROLLER] ⚠️ Sync already in progress, ignoring click');
+      return;
+    }
+
+    // ✅ СРАЗУ устанавливаем флаг, чтобы заблокировать повторные нажатия
+    _isSyncing.value = true;
+    _syncProgress.value = 'Инициализация синхронизации...';
+    _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted();
 
     print('[SUBSCRIBERS CONTROLLER] Starting abonents sync for TP: $tpCode');
 
-    await _subscriberRepository.syncAbonentsList(
-      tpCode,
-      onSyncStarted: _onSyncStarted,
-      onProgress: _onSyncProgress,
-      onSuccess: _onSyncSuccess,
-      onError: _onSyncError,
-    );
+    try {
+      await _subscriberRepository.syncAbonentsList(
+        tpCode,
+        onSyncStarted: _onSyncStarted,
+        onProgress: _onSyncProgress,
+        onSuccess: _onSyncSuccess,
+        onError: _onSyncError,
+      );
+    } catch (e) {
+      // ✅ Если произошла ошибка ДО вызова колбэков, сбрасываем флаг
+      print('[SUBSCRIBERS CONTROLLER] ❌ Error before sync started: $e');
+      _isSyncing.value = false;
+      _syncProgress.value = '';
+
+      Get.snackbar(
+        'Ошибка',
+        'Не удалось запустить синхронизацию: ${e.toString()}',
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   /// Колбэк: синхронизация запущена
   void _onSyncStarted() {
-    _isSyncing.value = true;
+    // Флаг уже установлен в syncSubscribers()
     _syncProgress.value = 'Запуск синхронизации абонентов...';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
-
-    print('[SUBSCRIBERS CONTROLLER] Abonents sync started for TP: $tpCode');
+    print('[SUBSCRIBERS CONTROLLER] Sync confirmed by server for TP: $tpCode');
 
     Get.snackbar(
       'Синхронизация',
@@ -240,7 +262,7 @@ class SubscribersController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
+    _updateSyncElapsedFormatted();
 
     print('[SUBSCRIBERS CONTROLLER] Abonents sync completed successfully for TP: $tpCode');
 
@@ -262,7 +284,7 @@ class SubscribersController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
+    _updateSyncElapsedFormatted();
 
     print('[SUBSCRIBERS CONTROLLER] Abonents sync failed for TP $tpCode: $error');
 
@@ -275,6 +297,7 @@ class SubscribersController extends GetxController {
       duration: const Duration(seconds: 5),
     );
   }
+
 
   // ========================================
   // ФИЛЬТРАЦИЯ И СОРТИРОВКА

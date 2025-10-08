@@ -101,26 +101,54 @@ class TpListController extends GetxController {
   // СИНХРОНИЗАЦИЯ
   // ========================================
 
+// ========================================
+  // СИНХРОНИЗАЦИЯ
+  // ========================================
+
   Future<void> syncTpList() async {
-    if (_isSyncing.value || _isLoading.value) return;
+    // ✅ ЗАЩИТА: Проверяем, не идет ли уже синхронизация
+    if (_isSyncing.value || _isLoading.value) {
+      print('[TP CONTROLLER] ⚠️ Sync already in progress, ignoring click');
+      return;
+    }
+
+    // ✅ СРАЗУ устанавливаем флаг, чтобы заблокировать повторные нажатия
+    _isSyncing.value = true;
+    _syncProgress.value = 'Инициализация синхронизации...';
+    _syncElapsed.value = Duration.zero;
+    _updateSyncElapsedFormatted();
 
     print('[TP CONTROLLER] Starting TP sync...');
 
-    await _tpRepository.syncTpList(
-      onSyncStarted: _onSyncStarted,
-      onProgress: _onSyncProgress,
-      onSuccess: _onSyncSuccess,
-      onError: _onSyncError,
-    );
+    try {
+      await _tpRepository.syncTpList(
+        onSyncStarted: _onSyncStarted,
+        onProgress: _onSyncProgress,
+        onSuccess: _onSyncSuccess,
+        onError: _onSyncError,
+      );
+    } catch (e) {
+      // ✅ Если произошла ошибка ДО вызова колбэков, сбрасываем флаг
+      print('[TP CONTROLLER] ❌ Error before sync started: $e');
+      _isSyncing.value = false;
+      _syncProgress.value = '';
+
+      Get.snackbar(
+        'Ошибка',
+        'Не удалось запустить синхронизацию: ${e.toString()}',
+        backgroundColor: Constants.error.withValues(alpha: 0.1),
+        colorText: Constants.error,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
+
   /// Колбэк: синхронизация запущена
   void _onSyncStarted() {
-    _isSyncing.value = true;
+    // Флаг уже установлен в syncTpList()
     _syncProgress.value = 'Запуск синхронизации...';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
-
-    print('[TP CONTROLLER] Sync started');
+    print('[TP CONTROLLER] Sync confirmed by server');
 
     Get.snackbar(
       'Синхронизация',
@@ -144,7 +172,7 @@ class TpListController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
+    _updateSyncElapsedFormatted();
 
     print('[TP CONTROLLER] Sync completed successfully');
 
@@ -166,7 +194,7 @@ class TpListController extends GetxController {
     _isSyncing.value = false;
     _syncProgress.value = '';
     _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted(); // ДОБАВЛЕНО
+    _updateSyncElapsedFormatted();
 
     print('[TP CONTROLLER] Sync failed: $error');
 
@@ -176,7 +204,7 @@ class TpListController extends GetxController {
       backgroundColor: Constants.error.withValues(alpha: 0.1),
       colorText: Constants.error,
       snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 5),
     );
   }
 

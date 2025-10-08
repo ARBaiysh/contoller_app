@@ -7,11 +7,8 @@ class DashboardModel {
   final int readingsRemaining;
   final double completionPercentage;
   final int readingsToday;
-
-  // НОВЫЕ ПОЛЯ
   final int totalConsumptionThisMonth;
   final double totalChargeThisMonth;
-
   final int debtorsCount;
   final double totalDebtAmount;
   final double totalOverpaymentAmount;
@@ -19,8 +16,6 @@ class DashboardModel {
   final double totalPaymentsThisMonth;
   final int paidToday;
   final double totalPaymentsToday;
-
-  // Поля для полной синхронизации
   final bool fullSyncInProgress;
   final DateTime? fullSyncStartedAt;
   final DateTime? lastFullSyncCompleted;
@@ -34,7 +29,6 @@ class DashboardModel {
     required this.readingsRemaining,
     required this.completionPercentage,
     required this.readingsToday,
-    // НОВЫЕ ПАРАМЕТРЫ
     required this.totalConsumptionThisMonth,
     required this.totalChargeThisMonth,
     required this.debtorsCount,
@@ -50,24 +44,34 @@ class DashboardModel {
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
-    // Функция для безопасного парсинга дат
+    // ✅ ИСПРАВЛЕННАЯ функция для безопасного парсинга дат
     DateTime? parseDateTime(String? dateString) {
-      if (dateString == null) return null;
+      if (dateString == null || dateString.isEmpty) return null;
+
       try {
-        print('[DashboardModel] Parsing date string: $dateString');
+        print('[DashboardModel] Parsing date string: "$dateString"');
 
         final parsed = DateTime.parse(dateString);
-        print('[DashboardModel] Parsed as: $parsed (isUtc: ${parsed.isUtc})');
+        print('[DashboardModel] Parsed result: $parsed (isUtc: ${parsed.isUtc})');
 
-        if (dateString.endsWith('Z') || dateString.contains('+') || dateString.contains('-')) {
-          print('[DashboardModel] Date has timezone info, using as-is');
+        // ✅ ПРАВИЛЬНАЯ проверка timezone
+        final hasTimezone = dateString.endsWith('Z') ||
+            RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(dateString);
+
+        if (hasTimezone) {
+          print('[DashboardModel] ✅ Date has timezone (UTC)');
           return parsed;
         } else {
-          print('[DashboardModel] No timezone info, treating as local time');
-          return parsed;
+          print('[DashboardModel] ⚠️  Date has NO timezone (LOCAL)');
+          // Явно создаем локальное время
+          return DateTime(
+            parsed.year, parsed.month, parsed.day,
+            parsed.hour, parsed.minute, parsed.second,
+            parsed.millisecond, parsed.microsecond,
+          );
         }
       } catch (e) {
-        print('[DashboardModel] Error parsing date: $dateString - $e');
+        print('[DashboardModel] ❌ Error: $e');
         return null;
       }
     }
@@ -109,7 +113,6 @@ class DashboardModel {
       'readingsRemaining': readingsRemaining,
       'completionPercentage': completionPercentage,
       'readingsToday': readingsToday,
-      // НОВЫЕ ПОЛЯ
       'totalConsumptionThisMonth': totalConsumptionThisMonth,
       'totalChargeThisMonth': totalChargeThisMonth,
       'debtorsCount': debtorsCount,
