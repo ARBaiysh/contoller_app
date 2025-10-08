@@ -126,53 +126,79 @@ class SubscriberDetailController extends GetxController {
 
   // ИСПРАВЛЕНО: Refresh subscriber details
   Future<void> refreshSubscriberDetails() async {
-    if (_subscriber.value == null || _isSyncing.value) return;
+    // ✅ ЗАЩИТА: Проверяем флаги
+    if (_subscriber.value == null || _isSyncing.value) {
+      print('[SUBSCRIBER DETAIL] ⚠️ Sync already in progress or no subscriber data');
+      return;
+    }
 
     final accountNumber = _subscriber.value!.accountNumber;
 
-    await _subscriberRepository.syncSingleSubscriber(
-      accountNumber,
-      onSyncStarted: () {
-        _isSyncing.value = true;
-        _syncMessage.value = 'синхронизация...';
-      },
-      onProgress: (message) {
-        _syncMessage.value = message.toLowerCase();
-      },
-      onSuccess: (updatedSubscriber) async {
-        _subscriber.value = null;
-        await Future.delayed(const Duration(milliseconds: 10));
-        _subscriber.value = updatedSubscriber;
-        _updateCanSubmitReading();
-        update();
+    // ✅ СРАЗУ блокируем повторные нажатия
+    _isSyncing.value = true;
+    _syncMessage.value = 'Инициализация...';
 
-        _isSyncing.value = false;
-        _syncMessage.value = '';
+    print('[SUBSCRIBER DETAIL] Starting sync for: $accountNumber');
 
-        Get.snackbar(
-          'Успешно',
-          'Данные абонента обновлены',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green,
-          duration: const Duration(seconds: 2),
-        );
-      },
-      onError: (error) {
-        _isSyncing.value = false;
-        _syncMessage.value = '';
+    try {
+      await _subscriberRepository.syncSingleSubscriber(
+        accountNumber,
+        onSyncStarted: () {
+          // Флаг уже установлен выше
+          _syncMessage.value = 'Синхронизация...';
+          print('[SUBSCRIBER DETAIL] Sync confirmed by server');
+        },
+        onProgress: (message) {
+          _syncMessage.value = message.toLowerCase();
+        },
+        onSuccess: (updatedSubscriber) async {
+          _subscriber.value = null;
+          await Future.delayed(const Duration(milliseconds: 10));
+          _subscriber.value = updatedSubscriber;
+          _updateCanSubmitReading();
+          update();
 
-        // Показываем старые данные, но с сообщением об ошибке
-        Get.snackbar(
-          'Ошибка синхронизации',
-          error,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red,
-          duration: const Duration(seconds: 3),
-        );
-      },
-    );
+          _isSyncing.value = false;
+          _syncMessage.value = '';
+
+          Get.snackbar(
+            'Успешно',
+            'Данные абонента обновлены',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            duration: const Duration(seconds: 2),
+          );
+        },
+        onError: (error) {
+          _isSyncing.value = false;
+          _syncMessage.value = '';
+
+          Get.snackbar(
+            'Ошибка синхронизации',
+            error,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            duration: const Duration(seconds: 3),
+          );
+        },
+      );
+    } catch (e) {
+      // ✅ Если ошибка ДО вызова колбэков - сбрасываем флаг
+      print('[SUBSCRIBER DETAIL] ❌ Error before sync started: $e');
+      _isSyncing.value = false;
+      _syncMessage.value = '';
+
+      Get.snackbar(
+        'Ошибка',
+        'Не удалось запустить синхронизацию: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   // Validate reading

@@ -9,6 +9,7 @@ import '../widgets/balance_info_card.dart';
 import '../widgets/reading_history_card.dart';
 import '../../../widgets/custom_app_bar.dart';
 import '../../../core/values/constants.dart';
+import '../../../core/theme/app_colors.dart';
 
 class SubscriberDetailView extends GetView<SubscriberDetailController> {
   const SubscriberDetailView({Key? key}) : super(key: key);
@@ -18,12 +19,36 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Данные абонента',
+        actions: [
+          // ✅ ДОБАВЛЕНО: Кнопка синхронизации в AppBar
+          Obx(() {
+            // Если идет синхронизация - показываем индикатор
+            if (controller.isSyncing) {
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                width: 20,
+                height: 20,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              );
+            }
+
+            // Иначе показываем кнопку обновления
+            return IconButton(
+              icon: const Icon(Icons.sync),
+              onPressed: controller.refreshSubscriberDetails,
+              tooltip: 'Обновить данные',
+            );
+          }),
+        ],
       ),
       body: SafeArea(
-        top: false,    // AppBar уже учитывает верхнюю область
-        bottom: true,  // Защищаем от виртуальных кнопок внизу
-        left: true,    // Защищаем от вырезов по бокам
-        right: true,   // Защищаем от вырезов по бокам
+        top: false,
+        bottom: true,
+        left: true,
+        right: true,
         child: Obx(() {
           if (controller.isLoading) {
             return const Center(
@@ -37,10 +62,9 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
 
           return RefreshIndicator(
             onRefresh: controller.isSyncing
-                ? () async {} // Пустая функция, если идет синхронизация
+                ? () async {} // Блокируем если идет синхронизация
                 : controller.refreshSubscriberDetails,
             notificationPredicate: (notification) {
-              // Блокируем pull-to-refresh если идет синхронизация
               return !controller.isSyncing && notification.depth == 0;
             },
             child: SingleChildScrollView(
@@ -48,21 +72,25 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Subscriber info card - оборачиваем в Obx
+                  // ✅ ДОБАВЛЕНО: Баннер статуса синхронизации
+                  _buildSyncStatusBanner(context),
+
+                  // Subscriber info card
                   const SubscriberInfoCard(),
 
-                  // New reading form - оборачиваем в Obx
+                  // New reading form
                   Obx(() => controller.canSubmitReading
                       ? ReadingFormCard(controller: controller)
                       : const SizedBox.shrink()),
+
+                  // Consumption card
+                  const ConsumptionCard(),
 
                   // Meter info card
                   const MeterInfoCard(),
 
                   // Balance info card
                   const BalanceInfoCard(),
-
-                  const ConsumptionCard(),
 
                   // Reading history card
                   const ReadingHistoryCard(),
@@ -77,27 +105,107 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
     );
   }
 
+  // ✅ НОВЫЙ ВИДЖЕТ: Баннер статуса синхронизации
+  Widget _buildSyncStatusBanner(BuildContext context) {
+    return Obx(() {
+      // Показываем только если идет синхронизация
+      if (!controller.isSyncing) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        margin: const EdgeInsets.all(Constants.paddingM),
+        padding: const EdgeInsets.all(Constants.paddingM),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.info.withOpacity(0.1),
+              AppColors.info.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(Constants.borderRadius),
+          border: Border.all(
+            color: AppColors.info.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Анимированная иконка
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.info),
+                ),
+              ),
+            ),
+            const SizedBox(width: Constants.paddingM),
+
+            // Текст прогресса
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Обновление данных абонента',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (controller.syncMessage.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      controller.syncMessage,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.info.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _buildErrorState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-          const SizedBox(height: Constants.paddingM),
-          Text(
-            'Не удалось загрузить данные',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: Constants.paddingM),
-          ElevatedButton(
-            onPressed: controller.loadSubscriberDetails,
-            child: const Text('Повторить'),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(Constants.paddingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 80,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: Constants.paddingL),
+            Text(
+              'Данные абонента не найдены',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: Constants.paddingM),
+            ElevatedButton(
+              onPressed: () => Get.back(),
+              child: const Text('Назад'),
+            ),
+          ],
+        ),
       ),
     );
   }
