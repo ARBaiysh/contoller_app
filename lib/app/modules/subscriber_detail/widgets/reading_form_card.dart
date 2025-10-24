@@ -71,6 +71,9 @@ class ReadingFormCard extends StatelessWidget {
                 onPressed: controller.isSubmitting
                     ? null
                     : () {
+                  // Закрываем клавиатуру перед отправкой
+                  FocusScope.of(context).unfocus();
+
                   if (controller.formKey.currentState!.validate()) {
                     controller.submitReading();
                   }

@@ -164,7 +164,7 @@ class SubscriberDetailController extends GetxController {
           Get.snackbar(
             'Успешно',
             'Данные абонента обновлены',
-            snackPosition: SnackPosition.BOTTOM,
+            snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.green.withOpacity(0.1),
             colorText: Colors.green,
             duration: const Duration(seconds: 2),
@@ -177,7 +177,7 @@ class SubscriberDetailController extends GetxController {
           Get.snackbar(
             'Ошибка синхронизации',
             error,
-            snackPosition: SnackPosition.BOTTOM,
+            snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.red.withOpacity(0.1),
             colorText: Colors.red,
             duration: const Duration(seconds: 3),
@@ -193,7 +193,7 @@ class SubscriberDetailController extends GetxController {
       Get.snackbar(
         'Ошибка',
         'Не удалось запустить синхронизацию: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         duration: const Duration(seconds: 3),
@@ -254,7 +254,7 @@ class SubscriberDetailController extends GetxController {
         Get.snackbar(
           'Успешно',
           'Показание принято и обработано',
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.green,
           duration: const Duration(seconds: 3),
@@ -279,7 +279,7 @@ class SubscriberDetailController extends GetxController {
         Get.snackbar(
           'Ошибка отправки',
           error,
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
           duration: const Duration(seconds: 4),

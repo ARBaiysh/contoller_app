@@ -44,7 +44,7 @@ android {
     defaultConfig {
         applicationId = "kg.asdf.contoller_app"
 
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
 
         // ✅ ПРАВИЛЬНО: Берём версию из pubspec.yaml через Flutter

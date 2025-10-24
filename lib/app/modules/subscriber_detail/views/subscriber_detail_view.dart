@@ -75,13 +75,16 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                   // ✅ ДОБАВЛЕНО: Баннер статуса синхронизации
                   _buildSyncStatusBanner(context),
 
-                  // Subscriber info card
-                  const SubscriberInfoCard(),
-
-                  // New reading form
+                  // New reading form (moved up)
                   Obx(() => controller.canSubmitReading
                       ? ReadingFormCard(controller: controller)
                       : const SizedBox.shrink()),
+
+                  // Reading history card
+                  const ReadingHistoryCard(),
+
+                  // Subscriber info card (moved down)
+                  const SubscriberInfoCard(),
 
                   // Consumption card
                   const ConsumptionCard(),
@@ -91,9 +94,6 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
 
                   // Balance info card
                   const BalanceInfoCard(),
-
-                  // Reading history card
-                  const ReadingHistoryCard(),
 
                   const SizedBox(height: Constants.paddingXL),
                 ],
