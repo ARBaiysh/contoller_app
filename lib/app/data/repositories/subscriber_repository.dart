@@ -303,4 +303,44 @@ class SubscriberRepository {
       throw Exception('Не удалось получить данные абонента');
     }
   }
+
+  // ========================================
+  // PHONE MANAGEMENT METHODS
+  // ========================================
+
+  /// Добавить или обновить номер телефона абонента
+  /// Телефон будет управляться приложением (приоритет над данными из 1С)
+  Future<void> addOrUpdatePhone({
+    required String accountNumber,
+    required String phoneNumber,
+  }) async {
+    try {
+      print('[SUBSCRIBER REPO] Adding/updating phone for account: $accountNumber');
+
+      await _apiProvider.addOrUpdatePhone(
+        accountNumber: accountNumber,
+        phoneNumber: phoneNumber,
+      );
+
+      print('[SUBSCRIBER REPO] Phone added/updated successfully');
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error adding/updating phone: $e');
+      rethrow; // Пробрасываем исключение для обработки в контроллере
+    }
+  }
+
+  /// Удалить номер телефона абонента
+  /// После удаления будет использоваться номер из 1С (если есть)
+  Future<void> deletePhone(String accountNumber) async {
+    try {
+      print('[SUBSCRIBER REPO] Deleting phone for account: $accountNumber');
+
+      await _apiProvider.deletePhone(accountNumber);
+
+      print('[SUBSCRIBER REPO] Phone deleted successfully');
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error deleting phone: $e');
+      rethrow; // Пробрасываем исключение для обработки в контроллере
+    }
+  }
 }

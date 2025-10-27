@@ -5,7 +5,7 @@ import '../../../core/values/constants.dart';
 import '../controllers/subscriber_detail_controller.dart';
 
 class MeterInfoCard extends StatelessWidget {
-  const MeterInfoCard({Key? key}) : super(key: key);
+  const MeterInfoCard({super.key});
 
   @override
   Widget build(BuildContext context) {

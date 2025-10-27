@@ -40,4 +40,38 @@ class StatisticsRepository {
       return StatisticsModel.empty();
     }
   }
+
+  // ========================================
+  // REPORTS STATISTICS
+  // ========================================
+
+  /// Получить статистику отчетов
+  Future<Map<String, dynamic>> getReportsStatistics() async {
+    try {
+      print('[STATS REPO] Fetching reports statistics...');
+      final data = await _apiProvider.getReportsStatistics();
+      return data;
+    } catch (e) {
+      print('[STATS REPO] Error getting reports statistics: $e');
+      throw Exception('Не удалось загрузить статистику отчетов');
+    }
+  }
+
+  /// Сформировать отчет
+  Future<Map<String, dynamic>> generateReport({
+    required String reportType,
+    String? tpId,
+  }) async {
+    try {
+      print('[STATS REPO] Generating report - type: $reportType, tpId: $tpId');
+      final data = await _apiProvider.generateReport(
+        reportType: reportType,
+        tpId: tpId,
+      );
+      return data;
+    } catch (e) {
+      print('[STATS REPO] Error generating report: $e');
+      rethrow; // Пробрасываем исключение для обработки в контроллере
+    }
+  }
 }

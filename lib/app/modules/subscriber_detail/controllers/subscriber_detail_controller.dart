@@ -292,4 +292,112 @@ class SubscriberDetailController extends GetxController {
   String get subscriberName => subscriber?.fullName ?? 'Неизвестно';
 
   String get subscriberAccount => subscriber?.accountNumber ?? '';
+
+  // ========================================
+  // PHONE MANAGEMENT METHODS
+  // ========================================
+
+  final _isPhoneUpdating = false.obs;
+  bool get isPhoneUpdating => _isPhoneUpdating.value;
+
+  /// Добавить или обновить телефон абонента
+  Future<void> addOrUpdatePhone(String phoneNumber) async {
+    if (_subscriber.value == null || _isPhoneUpdating.value) {
+      return;
+    }
+
+    final accountNumber = _subscriber.value!.accountNumber;
+
+    _isPhoneUpdating.value = true;
+
+    try {
+      print('[SUBSCRIBER DETAIL] Updating phone for: $accountNumber');
+
+      await _subscriberRepository.addOrUpdatePhone(
+        accountNumber: accountNumber,
+        phoneNumber: phoneNumber,
+      );
+
+      // Обновляем локальные данные абонента
+      // ВАЖНО: Сначала обнуляем, потом устанавливаем новое значение для правильной реактивности
+      final updatedSubscriber = _subscriber.value!.copyWith(phone: phoneNumber);
+      _subscriber.value = null;
+      await Future.delayed(const Duration(milliseconds: 10));
+      _subscriber.value = updatedSubscriber;
+
+      _isPhoneUpdating.value = false;
+
+      Get.snackbar(
+        'Успешно',
+        'Номер телефона обновлен',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      _isPhoneUpdating.value = false;
+
+      print('[SUBSCRIBER DETAIL] Error updating phone: $e');
+
+      Get.snackbar(
+        'Ошибка',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 3),
+      );
+
+      rethrow; // Пробрасываем для обработки в диалоге
+    }
+  }
+
+  /// Удалить телефон абонента
+  Future<void> deletePhone() async {
+    if (_subscriber.value == null || _isPhoneUpdating.value) {
+      return;
+    }
+
+    final accountNumber = _subscriber.value!.accountNumber;
+
+    _isPhoneUpdating.value = true;
+
+    try {
+      print('[SUBSCRIBER DETAIL] Deleting phone for: $accountNumber');
+
+      await _subscriberRepository.deletePhone(accountNumber);
+
+      // Обновляем локальные данные абонента (удаляем телефон)
+      // ВАЖНО: Сначала обнуляем, потом устанавливаем новое значение для правильной реактивности
+      final updatedSubscriber = _subscriber.value!.copyWith(phone: null);
+      _subscriber.value = null;
+      await Future.delayed(const Duration(milliseconds: 10));
+      _subscriber.value = updatedSubscriber;
+
+      _isPhoneUpdating.value = false;
+
+      Get.snackbar(
+        'Успешно',
+        'Номер телефона удален',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      _isPhoneUpdating.value = false;
+
+      print('[SUBSCRIBER DETAIL] Error deleting phone: $e');
+
+      Get.snackbar(
+        'Ошибка',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
 }

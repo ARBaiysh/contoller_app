@@ -89,11 +89,11 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                   // Consumption card
                   const ConsumptionCard(),
 
-                  // Meter info card
-                  const MeterInfoCard(),
-
                   // Balance info card
                   const BalanceInfoCard(),
+
+                  // Meter info card
+                  const MeterInfoCard(),
 
                   const SizedBox(height: Constants.paddingXL),
                 ],

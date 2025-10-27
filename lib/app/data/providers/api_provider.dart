@@ -551,4 +551,167 @@ class ApiProvider extends GetxService {
     }
   }
 
+  // ========================================
+  // PHONE MANAGEMENT ENDPOINTS
+  // ========================================
+
+  /// Добавить или обновить телефон абонента
+  /// POST /api/mobile/phones
+  /// Body: { "accountNumber": "12345", "phoneNumber": "+996700123456" }
+  /// Returns: 200 - успешно, 400 - неверный формат, 403 - нет доступа, 404 - абонент не найден
+  Future<Map<String, dynamic>> addOrUpdatePhone({
+    required String accountNumber,
+    required String phoneNumber,
+  }) async {
+    try {
+      print('[API] Adding/updating phone for account: $accountNumber, phone: $phoneNumber');
+      final response = await _dio.post(
+        '/mobile/phones',
+        data: {
+          'accountNumber': accountNumber,
+          'phoneNumber': phoneNumber,
+        },
+      );
+      print('[API] Add/update phone response (${response.statusCode}): ${response.data}');
+
+      return response.data;
+    } on DioException catch (e) {
+      print('[API] Error adding/updating phone: $e');
+
+      // Специальная обработка различных статусов
+      if (e.response?.statusCode == 400) {
+        throw Exception('Неверный формат номера телефона');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Нет доступа к данному абоненту');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Абонент не найден');
+      }
+
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error adding/updating phone: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Удалить телефон абонента
+  /// DELETE /api/mobile/phones/{accountNumber}
+  /// Returns: 200 - успешно, 403 - нет доступа, 404 - телефон не найден
+  Future<void> deletePhone(String accountNumber) async {
+    try {
+      print('[API] Deleting phone for account: $accountNumber');
+      final response = await _dio.delete('/mobile/phones/$accountNumber');
+      print('[API] Delete phone response (${response.statusCode}): ${response.data}');
+    } on DioException catch (e) {
+      print('[API] Error deleting phone: $e');
+
+      // Специальная обработка различных статусов
+      if (e.response?.statusCode == 403) {
+        throw Exception('Нет доступа к данному абоненту');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Телефон не найден или уже удален');
+      }
+
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error deleting phone: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
+  // REPORTS ENDPOINTS
+  // ========================================
+
+  /// Получить статистику отчетов
+  /// GET /api/mobile/reports/statistics
+  /// Returns: Статистика по отчетам контролера
+  Future<Map<String, dynamic>> getReportsStatistics() async {
+    try {
+      print('[API] Getting reports statistics...');
+      final response = await _dio.get('/mobile/reports/statistics');
+      print('[API] Reports statistics response (${response.statusCode}): ${response.data}');
+
+      // Ожидаем структуру: { "success": true, "data": { ... } }
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'];
+      }
+
+      throw Exception('Неверный формат ответа сервера');
+    } on DioException catch (e) {
+      print('[API] Error getting reports statistics: $e');
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error getting reports statistics: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Сформировать отчет
+  /// POST /api/mobile/reports/generate
+  /// Body: { "reportType": "disconnections", "tpId": "ТП-001" }
+  /// Returns: Данные отчета с массивом абонентов
+  Future<Map<String, dynamic>> generateReport({
+    required String reportType,
+    String? tpId,
+  }) async {
+    try {
+      print('[API] Generating report - type: $reportType, tpId: $tpId');
+
+      final requestData = <String, dynamic>{
+        'reportType': reportType,
+      };
+
+      if (tpId != null && tpId.isNotEmpty) {
+        requestData['tpId'] = tpId;
+      }
+
+      final response = await _dio.post(
+        '/mobile/reports/generate',
+        data: requestData,
+      );
+
+      print('[API] Generate report response (${response.statusCode})');
+      print('[API] Response data keys: ${response.data?.keys}');
+
+      // Ожидаем структуру: { "success": true, "data": { ... } }
+      if (response.data['success'] == true && response.data['data'] != null) {
+        final reportData = response.data['data'];
+        print('[API] Report data keys: ${reportData.keys}');
+        print('[API] Subscribers count: ${reportData['subscribers']?.length ?? 0}');
+        print('[API] Total count: ${reportData['count']}');
+        return reportData;
+      }
+
+      throw Exception('Неверный формат ответа сервера');
+    } on DioException catch (e) {
+      print('[API] Error generating report: $e');
+
+      // Специальная обработка различных статусов
+      if (e.response?.statusCode == 400) {
+        final errorCode = e.response?.data['error']?['code'];
+        final errorMessage = e.response?.data['error']?['message'] ?? 'Неверный запрос';
+
+        if (errorCode == 'INVALID_REPORT_TYPE') {
+          throw Exception('Неверный тип отчета');
+        } else if (errorCode == 'INVALID_TP_ID') {
+          throw Exception('Указанная ТП не существует или не доступна');
+        }
+
+        throw Exception(errorMessage);
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Нет доступа к данной трансформаторной подстанции');
+      } else if (e.response?.statusCode == 404) {
+        final errorMessage = e.response?.data['error']?['message'] ??
+                            'По указанным критериям не найдено ни одного абонента';
+        throw Exception(errorMessage);
+      }
+
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error generating report: $e');
+      throw _handleError(e);
+    }
+  }
+
 }

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
+import '../../../widgets/phone_edit_dialog.dart';
 import '../controllers/subscriber_detail_controller.dart';
 
 class SubscriberInfoCard extends StatelessWidget {
@@ -57,12 +58,11 @@ class SubscriberInfoCard extends StatelessWidget {
             _InfoRow(label: 'Лицевой счет', value: subscriber.accountNumber),
             _InfoRow(label: 'Адрес', value: subscriber.address),
 
-            // Телефон (показываем только если есть валидный номер)
-            if (_hasValidPhone(subscriber))
-              _InfoRow(
-                label: 'Телефон',
-                value: subscriber.formattedPhone ?? subscriber.phone!,
-              ),
+            // Телефон с кнопкой редактирования
+            _PhoneRow(
+              subscriber: subscriber,
+              hasValidPhone: _hasValidPhone(subscriber),
+            ),
 
             _InfoRow(label: 'Тариф', value: subscriber.tariffName),
 
@@ -155,6 +155,81 @@ class _InfoRow extends StatelessWidget {
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Строка с телефоном и кнопкой редактирования
+class _PhoneRow extends StatelessWidget {
+  final SubscriberModel subscriber;
+  final bool hasValidPhone;
+
+  const _PhoneRow({
+    required this.subscriber,
+    required this.hasValidPhone,
+  });
+
+  void _showPhoneEditDialog() {
+    final controller = Get.find<SubscriberDetailController>();
+
+    Get.dialog(
+      PhoneEditDialog(
+        currentPhone: subscriber.phone,
+        accountNumber: subscriber.accountNumber,
+        onSave: (phoneNumber) async {
+          await controller.addOrUpdatePhone(phoneNumber);
+        },
+        onDelete: hasValidPhone
+            ? () async {
+                await controller.deletePhone();
+              }
+            : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Constants.paddingS),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              'Телефон',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              hasValidPhone
+                  ? (subscriber.formattedPhone ?? subscriber.phone!)
+                  : 'Не указан',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: hasValidPhone ? null : Colors.grey,
+              ),
+            ),
+          ),
+          // Кнопка редактирования
+          InkWell(
+            onTap: _showPhoneEditDialog,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                hasValidPhone ? Icons.edit_outlined : Icons.add_circle_outline,
+                size: 18,
+                color: AppColors.primary,
               ),
             ),
           ),

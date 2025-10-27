@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
-import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
-import '../../../data/repositories/tp_repository.dart';
-import '../../../data/repositories/subscriber_repository.dart';
 import '../../../routes/app_pages.dart';
 import '../../../core/values/constants.dart';
 
 class ReportsController extends GetxController {
   final StatisticsRepository _statisticsRepository = Get.find<StatisticsRepository>();
-  final TpRepository _tpRepository = Get.find<TpRepository>();
-  final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
 
   // Observable states
   final _isGenerating = false.obs;
@@ -42,6 +37,18 @@ class ReportsController extends GetxController {
       title: 'Отчет по оплатам',
       description: 'Список оплаченных абонентов',
       icon: Icons.payment_outlined,
+    ),
+    ReportType(
+      id: 'consumption',
+      title: 'Расход электроэнергии',
+      description: 'Отчёт по потреблению',
+      icon: Icons.electric_bolt_outlined,
+    ),
+    ReportType(
+      id: 'charges',
+      title: 'Начисления',
+      description: 'Отчёт по начислениям',
+      icon: Icons.receipt_long_outlined,
     ),
   ];
 
@@ -95,87 +102,27 @@ class ReportsController extends GetxController {
 
   // Get report data based on selected type
   Future<Map<String, dynamic>> _getReportData() async {
-    switch (_selectedReportType.value) {
-      case 'disconnections':
-        return await _getDisconnectionsList();
-      case 'debtors':
-        return await _getDebtorsList();
-      case 'payments':
-        return await _getPaidSubscribersList();
-      default:
-        throw Exception('Неизвестный тип отчета');
-    }
-  }
-
-  // Get disconnections list (debtors with high debt)
-  Future<Map<String, dynamic>> _getDisconnectionsList() async {
-    final debtors = <SubscriberModel>[];
-
-    // Filter for disconnection (debt > 1000 som)
-    final forDisconnection = debtors.where((s) => s.debtAmount > 1000).toList();
-
-    return {
-      'type': 'disconnections',
-      'title': 'Список абонентов для отключения',
-      'data': forDisconnection,
-      'count': forDisconnection.length,
-      'total_debt': forDisconnection.fold<double>(0, (sum, s) => sum + s.debtAmount),
-    };
-  }
-
-  // Get debtors list
-  Future<Map<String, dynamic>> _getDebtorsList() async {
-    final debtors = <SubscriberModel>[];
-
-    return {
-      'type': 'debtors',
-      'title': 'Список должников',
-      'data': debtors,
-      'count': debtors.length,
-      'total_debt': debtors.fold<double>(0, (sum, s) => sum + s.debtAmount),
-    };
-  }
-
-  // Get paid subscribers list
-  Future<Map<String, dynamic>> _getPaidSubscribersList() async {
-    List<dynamic> allSubscribers;
-
-    if (_selectedTpId.value.isEmpty) {
-      // Get all subscribers from all TPs
-      final tps = await _tpRepository.getTpList();
-      allSubscribers = [];
-      for (final tp in tps) {
-        final tpSubscribers = await _subscriberRepository.getSubscribersByTp(tp.id);
-        allSubscribers.addAll(tpSubscribers);
-      }
-    } else {
-      allSubscribers = await _subscriberRepository.getSubscribersByTp(_selectedTpId.value);
-    }
-
-    // Filter paid subscribers (balance >= 0)
-    final paidSubscribers = allSubscribers.where((s) => !s.isDebtor).toList();
-
-    return {
-      'type': 'payments',
-      'title': 'Список оплаченных абонентов',
-      'data': paidSubscribers,
-      'count': paidSubscribers.length,
-      'total_balance': paidSubscribers.fold<double>(0, (sum, s) => sum + s.balance),
-    };
+    // Используем реальное API для формирования отчета
+    return await _statisticsRepository.generateReport(
+      reportType: _selectedReportType.value,
+      tpId: _selectedTpId.value.isNotEmpty ? _selectedTpId.value : null,
+    );
   }
 
   // Get report statistics
   Future<Map<String, dynamic>> getReportStats() async {
     try {
-      final stats = await _statisticsRepository.getStatistics();
-      return {
-        'total_reports_generated': 45,
-        'last_report_date': DateTime.now().subtract(const Duration(days: 2)),
-        'readings_collected': stats.readingsCollected,
-        'total_subscribers': stats.totalSubscribers,
-      };
+      // Используем реальное API для получения статистики отчетов
+      return await _statisticsRepository.getReportsStatistics();
     } catch (e) {
-      return {};
+      print('[REPORTS CONTROLLER] Error getting report stats: $e');
+      // Возвращаем пустую статистику при ошибке
+      return {
+        'total_reports_generated': 0,
+        'last_report_date': null,
+        'readings_collected': 0,
+        'total_subscribers': 0,
+      };
     }
   }
 }

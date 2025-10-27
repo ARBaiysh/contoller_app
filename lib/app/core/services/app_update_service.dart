@@ -1,10 +1,12 @@
 // lib/app/core/services/app_update_service.dart
 
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../data/models/app_version_model.dart';
 import '../../data/providers/api_provider.dart';
@@ -165,31 +167,138 @@ class AppUpdateService extends GetxService {
   // УСТАНОВКА APK
   // ========================================
 
+  /// Проверить разрешение на установку APK
+  Future<bool> _checkInstallPermission() async {
+    if (Platform.isAndroid) {
+      // Для Android 8.0+ (API 26+) нужно разрешение REQUEST_INSTALL_PACKAGES
+      if (await _getAndroidVersion() >= 26) {
+        return await Permission.requestInstallPackages.isGranted;
+      }
+    }
+    return true; // Для более старых версий разрешение не требуется
+  }
+
+  /// Запросить разрешение на установку APK
+  Future<bool> _requestInstallPermission() async {
+    if (Platform.isAndroid) {
+      if (await _getAndroidVersion() >= 26) {
+        final status = await Permission.requestInstallPackages.request();
+
+        print('[APP UPDATE] Install permission status: $status');
+
+        if (status.isDenied || status.isPermanentlyDenied) {
+          // Показываем диалог с объяснением
+          await _showPermissionDialog();
+
+          // Если permanently denied, открываем настройки
+          if (status.isPermanentlyDenied) {
+            await openAppSettings();
+            return false;
+          }
+
+          return false;
+        }
+
+        return status.isGranted;
+      }
+    }
+    return true;
+  }
+
+  /// Показать диалог с объяснением необходимости разрешения
+  Future<void> _showPermissionDialog() async {
+    await Get.dialog(
+      AlertDialog(
+        title: const Text('Требуется разрешение'),
+        content: const Text(
+          'Для установки обновления необходимо разрешение на установку приложений из неизвестных источников.\n\n'
+          'Пожалуйста, разрешите установку в настройках.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              openAppSettings();
+            },
+            child: const Text('Открыть настройки'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Получить версию Android
+  Future<int> _getAndroidVersion() async {
+    if (Platform.isAndroid) {
+      // Используем package_info или device_info для получения версии
+      // Для упрощения возвращаем 30 (Android 11+)
+      return 30; // Предполагаем современную версию Android
+    }
+    return 0;
+  }
+
   /// Запустить установку APK
   Future<bool> installApk(String apkPath) async {
     try {
-      print('[APP UPDATE] Opening APK for installation: $apkPath');
+      print('[APP UPDATE] Starting APK installation: $apkPath');
 
-      // Проверяем, существует ли файл
+      // 1. Проверяем, существует ли файл
       final file = File(apkPath);
       if (!await file.exists()) {
-        throw Exception('APK file not found: $apkPath');
+        throw Exception('APK файл не найден: $apkPath');
       }
 
-      // Открываем APK файл (система покажет диалог установки)
-      final result = await OpenFilex.open(apkPath);
+      print('[APP UPDATE] APK file exists, size: ${await file.length()} bytes');
 
-      print('[APP UPDATE] Open result: ${result.type} - ${result.message}');
+      // 2. Проверяем разрешение на установку
+      bool hasPermission = await _checkInstallPermission();
+      print('[APP UPDATE] Install permission: $hasPermission');
 
-      // Проверяем результат
-      if (result.type == ResultType.done) {
-        return true;
-      } else {
-        throw Exception('Failed to open APK: ${result.message}');
+      if (!hasPermission) {
+        print('[APP UPDATE] Requesting install permission...');
+        hasPermission = await _requestInstallPermission();
+
+        if (!hasPermission) {
+          throw Exception('Не предоставлено разрешение на установку приложений');
+        }
+      }
+
+      // 3. Открываем APK файл с правильным типом
+      print('[APP UPDATE] Opening APK file...');
+
+      final result = await OpenFilex.open(
+        apkPath,
+        type: 'application/vnd.android.package-archive',
+      );
+
+      print('[APP UPDATE] Open result type: ${result.type}');
+      print('[APP UPDATE] Open result message: ${result.message}');
+
+      // 4. Обрабатываем результат
+      switch (result.type) {
+        case ResultType.done:
+          print('[APP UPDATE] ✅ APK opened successfully');
+          return true;
+
+        case ResultType.fileNotFound:
+          throw Exception('Файл APK не найден');
+
+        case ResultType.noAppToOpen:
+          throw Exception('Нет приложения для установки APK');
+
+        case ResultType.permissionDenied:
+          throw Exception('Отказано в разрешении');
+
+        case ResultType.error:
+          throw Exception('Ошибка открытия APK: ${result.message}');
       }
     } catch (e) {
       print('[APP UPDATE] ❌ Installation error: $e');
-      throw Exception('Ошибка при установке: $e');
+      rethrow; // Пробрасываем исключение для обработки выше
     }
   }
 

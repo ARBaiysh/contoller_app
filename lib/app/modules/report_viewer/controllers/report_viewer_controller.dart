@@ -18,9 +18,26 @@ class ReportViewerController extends GetxController {
     reportData = args;
     reportTitle = args['title'] ?? 'Отчет';
     reportType = args['type'] ?? '';
-    subscribers = List<SubscriberModel>.from(args['data'] ?? []);
+
+    // Parse subscribers from JSON
+    final subscribersData = args['subscribers'] ?? args['data'] ?? [];
+    if (subscribersData is List) {
+      subscribers = subscribersData
+          .map((json) => SubscriberModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      subscribers = [];
+    }
+
     totalCount = args['count'] ?? 0;
     totalAmount = (args['total_debt'] ?? args['total_balance'] ?? 0.0).toDouble();
+
+    print('[REPORT VIEWER] Loaded report:');
+    print('[REPORT VIEWER] - Type: $reportType');
+    print('[REPORT VIEWER] - Title: $reportTitle');
+    print('[REPORT VIEWER] - Subscribers count: ${subscribers.length}');
+    print('[REPORT VIEWER] - Total count: $totalCount');
+    print('[REPORT VIEWER] - Total amount: $totalAmount');
   }
 
   // Get formatted total amount text
@@ -31,9 +48,29 @@ class ReportViewerController extends GetxController {
         return 'Общий долг: ${totalAmount.toStringAsFixed(2)} сом';
       case 'payments':
         return 'Общий баланс: ${totalAmount.toStringAsFixed(2)} сом';
+      case 'consumption':
+        return 'Общий расход: ${totalConsumption.toStringAsFixed(0)} кВт·ч';
+      case 'charges':
+        return 'Общее начисление: ${totalCharge.toStringAsFixed(2)} сом';
       default:
         return '';
     }
+  }
+
+  // Get total consumption (for consumption report)
+  double get totalConsumption {
+    if (reportType == 'consumption') {
+      return (reportData['total_consumption'] ?? 0).toDouble();
+    }
+    return 0.0;
+  }
+
+  // Get total charge (for charges report)
+  double get totalCharge {
+    if (reportType == 'charges') {
+      return (reportData['total_charge'] ?? 0).toDouble();
+    }
+    return 0.0;
   }
 
   // Get amount for subscriber
@@ -41,9 +78,12 @@ class ReportViewerController extends GetxController {
     switch (reportType) {
       case 'disconnections':
       case 'debtors':
-        return subscriber.balance;
       case 'payments':
         return subscriber.balance;
+      case 'consumption':
+        return subscriber.currentMonthConsumption.toDouble();
+      case 'charges':
+        return subscriber.currentMonthCharge;
       default:
         return 0.0;
     }
@@ -51,13 +91,16 @@ class ReportViewerController extends GetxController {
 
   // Get amount text for subscriber
   String getSubscriberAmountText(SubscriberModel subscriber) {
-    final amount = getSubscriberAmount(subscriber);
     switch (reportType) {
       case 'disconnections':
       case 'debtors':
-        return '${amount.toStringAsFixed(2)} сом долг';
+        return '${subscriber.balance.toStringAsFixed(2)} сом долг';
       case 'payments':
-        return '${amount.toStringAsFixed(2)} сом баланс';
+        return '${subscriber.balance.toStringAsFixed(2)} сом баланс';
+      case 'consumption':
+        return '${subscriber.currentMonthConsumption} кВт·ч расход';
+      case 'charges':
+        return '${subscriber.currentMonthCharge.toStringAsFixed(2)} сом начисление';
       default:
         return '';
     }
