@@ -3,13 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
-import '../models/abonent_sync_response_model.dart';
 import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
-import '../models/full_sync_response_model.dart';
 import '../models/region_model.dart';
-import '../models/sync_status_model.dart';
-import '../models/tp_sync_response_model.dart';
 
 class ApiProvider extends GetxService {
   static const String baseUrl = 'https://ca.asdf.kg/api';
@@ -81,8 +77,6 @@ class ApiProvider extends GetxService {
     ));
   }
 
-  // Refresh token by re-authenticating
-  // Refresh token by re-authenticating
   Future<bool> _refreshToken() async {
     try {
       final username = _storage.read(Constants.usernameKey);
@@ -106,18 +100,9 @@ class ApiProvider extends GetxService {
       );
 
       final authResponse = AuthResponseModel.fromJson(response.data);
-
-      if (authResponse.status == 'SUCCESS' && authResponse.token != null) {
-        await _storage.write(Constants.tokenKey, authResponse.token);
-        print('[API] Token refreshed successfully');
-        return true;
-      }
-
-      // Если логин не прошел - очищаем данные и выкидываем на авторизацию
-      print('[API] Refresh token failed - invalid credentials');
-      _handleAuthFailure();
-      return false;
-
+      await _storage.write(Constants.tokenKey, authResponse.token);
+      print('[API] Token refreshed successfully');
+      return true;
     } catch (e) {
       print('[API] Error refreshing token: $e');
       _handleAuthFailure();
@@ -187,55 +172,13 @@ class ApiProvider extends GetxService {
     }
   }
 
-  Future<SyncStatusModel> checkSyncStatus(int messageId) async {
+  /// Получить профиль текущего инспектора
+  /// GET /api/mobile/profile
+  Future<InspectorData> getProfile() async {
     try {
-      print('[API] Checking sync status for messageId: $messageId');
-      final response = await _dio.get('/auth/sync-status/$messageId');
-      print('[API] Sync status response (${response.statusCode}): ${response.data}');
-
-      return SyncStatusModel.fromJson(response.data);
-    } on DioException catch (e) {
-      // Обработка HTTP 202 для SYNCING статуса
-      if (e.response?.statusCode == 202 && e.requestOptions.path.contains('/auth/sync-status/')) {
-        print('[API] Got 202 (Accepted) for sync-status - process is still running');
-        if (e.response?.data != null) {
-          try {
-            return SyncStatusModel.fromJson(e.response!.data);
-          } catch (parseError) {
-            print('[API] Failed to parse 202 response: $parseError');
-            throw Exception('Ошибка обработки ответа сервера');
-          }
-        }
-      }
-
-      print('[API] Error checking sync status: $e');
-      throw _handleError(e);
+      final response = await _dio.get('/mobile/profile');
+      return InspectorData.fromJson(response.data);
     } catch (e) {
-      print('[API] Unexpected error checking sync status: $e');
-      throw _handleError(e);
-    }
-  }
-
-  Future<AuthResponseModel> retryLogin({
-    required String username,
-    required String password,
-    required String regionCode,
-  }) async {
-    try {
-      print('[API] Retrying login after sync...');
-      final response = await _dio.post(
-        '/auth/login',
-        data: {
-          'username': username,
-          'password': password,
-          'regionCode': regionCode,
-        },
-      );
-      print('[API] Retry login response: ${response.data}');
-
-      return AuthResponseModel.fromJson(response.data);
-    } catch (e) {
-      print('[API] Error in retry login: $e');
       throw _handleError(e);
     }
   }
@@ -244,12 +187,15 @@ class ApiProvider extends GetxService {
   // TRANSFORMER POINTS ENDPOINTS
   // ========================================
 
-  Future<List<Map<String, dynamic>>> getTransformerPoints() async {
+  /// Получить список ТП (с опциональным forceRefresh)
+  /// GET /api/mobile/transformer-points?forceRefresh=true
+  Future<List<Map<String, dynamic>>> getTransformerPoints({bool forceRefresh = false}) async {
     try {
+      final response = await _dio.get(
+        '/mobile/transformer-points',
+        queryParameters: forceRefresh ? {'forceRefresh': true} : null,
+      );
 
-      final response = await _dio.get('/mobile/transformer-points');
-
-      // Теперь ожидаем прямой список без обертки
       return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
       print('[API] Error getting transformer points: $e');
@@ -257,119 +203,53 @@ class ApiProvider extends GetxService {
     }
   }
 
-  Future<TpSyncResponseModel> syncTransformerPoints() async {
-    try {
-      print('[API] Starting TP sync...');
-      final response = await _dio.post('/mobile/transformer-points/sync');
-      print('[API] TP sync response (${response.statusCode}): ${response.data}');
-
-      return TpSyncResponseModel.fromJson(response.data);
-    } on DioException catch (e) {
-      // СПЕЦИАЛЬНАЯ ОБРАБОТКА для 409 Conflict
-      if (e.response?.statusCode == 409) {
-        print('[API] Got 409 - TP sync already in progress');
-        // Возвращаем модель с ошибкой для корректной обработки
-        return TpSyncResponseModel(
-          syncMessageId: null,
-          status: 'ALREADY_RUNNING',
-          message: 'Синхронизация ТП уже выполняется',
-        );
-      }
-
-      print('[API] Error syncing TP: $e');
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error syncing TP: $e');
-      throw _handleError(e);
-    }
-  }
-
   // ========================================
-  // ABONENTS ENDPOINTS (ОБНОВЛЕНО)
+  // ABONENTS ENDPOINTS
   // ========================================
 
-  /// Получение списка абонентов по ТП
-  /// GET /api/mobile/transformer-points/{tpCode}/abonents
-  /// Возвращает прямой список абонентов (новая структура API)
-  Future<List<Map<String, dynamic>>> getAbonentsByTp(String tpCode) async {
+  /// Получить всех абонентов инспектора
+  /// GET /api/mobile/abonents?forceRefresh=true
+  Future<List<Map<String, dynamic>>> getAllAbonents({bool forceRefresh = false}) async {
     try {
-      print('[API] Getting abonents for TP: $tpCode');
-      final response = await _dio.get('/mobile/transformer-points/$tpCode/abonents');
-      print('[API] Abonents response: ${response.data}');
+      print('[API] Getting all abonents');
+      final response = await _dio.get(
+        '/mobile/abonents',
+        queryParameters: forceRefresh ? {'forceRefresh': true} : null,
+      );
 
-      // Новая структура API - ожидаем прямой список абонентов
       return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
-      print('[API] Error getting abonents: $e');
+      print('[API] Error getting all abonents: $e');
       throw _handleError(e);
     }
   }
 
-  /// Синхронизация абонентов по ТП
-  /// POST /api/mobile/transformer-points/{tpCode}/abonents/sync
-  /// Возвращает AbonentSyncResponseModel с messageId для мониторинга
-  Future<AbonentSyncResponseModel> syncAbonentsByTp(String tpCode) async {
+  /// Получение списка абонентов по ТП
+  /// GET /api/mobile/transformer-points/{tpCode}/abonents?forceRefresh=true
+  Future<List<Map<String, dynamic>>> getAbonentsByTp(String tpCode, {bool forceRefresh = false}) async {
     try {
-      print('[API] Starting abonents sync for TP: $tpCode');
-      final response = await _dio.post('/mobile/transformer-points/$tpCode/abonents/sync');
-      print('[API] Abonents sync response (${response.statusCode}): ${response.data}');
+      print('[API] Getting abonents for TP: $tpCode');
+      final response = await _dio.get(
+        '/mobile/transformer-points/$tpCode/abonents',
+        queryParameters: forceRefresh ? {'forceRefresh': true} : null,
+      );
 
-      return AbonentSyncResponseModel.fromJson(response.data);
-    } on DioException catch (e) {
-      // СПЕЦИАЛЬНАЯ ОБРАБОТКА для 409 Conflict
-      if (e.response?.statusCode == 409) {
-        print('[API] Got 409 - abonents sync already in progress for TP: $tpCode');
-        // Возвращаем модель с ошибкой для корректной обработки
-        return AbonentSyncResponseModel(
-          syncMessageId: null,
-          status: 'ALREADY_RUNNING',
-          message: 'Синхронизация абонентов уже выполняется',
-        );
-      }
-
-      print('[API] Error syncing abonents for TP $tpCode: $e');
-      throw _handleError(e);
+      return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
-      print('[API] Unexpected error syncing abonents for TP $tpCode: $e');
+      print('[API] Error getting abonents for TP: $e');
       throw _handleError(e);
     }
   }
 
-  /// Синхронизация одного абонента
-  /// POST /api/mobile/abonents/{accountNumber}/sync
-  Future<Map<String, dynamic>> syncSingleAbonent(String accountNumber) async {
-    try {
-      print('[API] Starting sync for single abonent: $accountNumber');
-      final response = await _dio.post('/mobile/abonents/$accountNumber/sync');
-      print('[API] Single abonent sync response (${response.statusCode}): ${response.data}');
-
-      return response.data;
-    } on DioException catch (e) {
-      // Обработка 409 Conflict
-      if (e.response?.statusCode == 409) {
-        print('[API] Got 409 - single abonent sync already in progress');
-        return {
-          'syncMessageId': null,
-          'status': 'ALREADY_RUNNING',
-          'message': 'Синхронизация абонента уже выполняется',
-        };
-      }
-
-      print('[API] Error syncing single abonent: $e');
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error syncing single abonent: $e');
-      throw _handleError(e);
-    }
-  }
-
-  /// Получение данных одного абонента
-  /// GET /api/mobile/abonents/{accountNumber}
-  Future<Map<String, dynamic>> getAbonentByAccount(String accountNumber) async {
+  /// Получение детальной информации об абоненте
+  /// GET /api/mobile/abonents/{accountNumber}?forceRefresh=true
+  Future<Map<String, dynamic>> getAbonentByAccount(String accountNumber, {bool forceRefresh = false}) async {
     try {
       print('[API] Getting abonent data for: $accountNumber');
-      final response = await _dio.get('/mobile/abonents/$accountNumber');
-      print('[API] Abonent data response: ${response.data}');
+      final response = await _dio.get(
+        '/mobile/abonents/$accountNumber',
+        queryParameters: forceRefresh ? {'forceRefresh': true} : null,
+      );
 
       return response.data;
     } catch (e) {
@@ -378,25 +258,81 @@ class ApiProvider extends GetxService {
     }
   }
 
+  /// Поиск абонентов (живой поиск)
+  /// GET /api/mobile/abonents/search?query=...
+  Future<List<dynamic>> searchAbonents(String query) async {
+    try {
+      print('[API] Searching abonents with query: $query');
+
+      final response = await _dio.get(
+        '/mobile/abonents/search',
+        queryParameters: {'query': query},
+      );
+
+      print('[API] Search returned ${response.data.length} results');
+      return response.data as List<dynamic>;
+    } catch (e) {
+      print('[API] Search error: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Получить абонентов с показаниями за текущий месяц
+  /// GET /api/mobile/abonents/consumption-current-month
+  Future<List<dynamic>> getAbonentsWithConsumption() async {
+    try {
+      print('[API] Fetching abonents with consumption for current month');
+
+      final response = await _dio.get('/mobile/abonents/consumption-current-month');
+
+      print('[API] Consumption list returned ${response.data.length} results');
+      return response.data as List<dynamic>;
+    } catch (e) {
+      print('[API] Get consumption error: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Получить абонентов которые оплатили в текущем месяце
+  /// GET /api/mobile/abonents/paid-current-month
+  Future<List<dynamic>> getAbonentsWithPayments() async {
+    try {
+      print('[API] Fetching abonents with payments for current month');
+
+      final response = await _dio.get('/mobile/abonents/paid-current-month');
+
+      print('[API] Payments list returned ${response.data.length} results');
+      return response.data as List<dynamic>;
+    } catch (e) {
+      print('[API] Get payments error: $e');
+      throw _handleError(e);
+    }
+  }
+
   // ========================================
   // METER READINGS ENDPOINTS
   // ========================================
 
+  /// Отправить показание счетчика
+  /// POST /api/mobile/meter-readings
   Future<Map<String, dynamic>> submitMeterReading({
     required String accountNumber,
-    required String meterSerialNumber,
     required int currentReading,
+    String? meterSerialNumber,
   }) async {
     try {
       print('[API] Submitting meter reading for: $accountNumber, reading: $currentReading');
-      final response = await _dio.post(
-        '/mobile/meter-readings',
-        data: {
-          'accountNumber': accountNumber,
-          'meterSerialNumber': meterSerialNumber,
-          'currentReading': currentReading,
-        },
-      );
+
+      final data = {
+        'accountNumber': accountNumber,
+        'currentReading': currentReading,
+      };
+
+      if (meterSerialNumber != null) {
+        data['meterSerialNumber'] = meterSerialNumber;
+      }
+
+      final response = await _dio.post('/mobile/meter-readings', data: data);
       print('[API] Submit reading response: ${response.data}');
 
       return response.data;
@@ -406,16 +342,41 @@ class ApiProvider extends GetxService {
     }
   }
 
+  /// Проверить статус показания
+  /// GET /api/mobile/meter-readings/{readingId}/status
+  Future<Map<String, dynamic>> checkReadingStatus(int readingId) async {
+    try {
+      print('[API] Checking reading status for: $readingId');
+      final response = await _dio.get('/mobile/meter-readings/$readingId/status');
+      return response.data;
+    } catch (e) {
+      print('[API] Error checking reading status: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// Получить историю показаний по лицевому счету
+  /// GET /api/mobile/meter-readings/by-account/{accountNumber}
+  Future<List<dynamic>> getReadingHistory(String accountNumber) async {
+    try {
+      print('[API] Getting reading history for: $accountNumber');
+      final response = await _dio.get('/mobile/meter-readings/by-account/$accountNumber');
+      print('[API] Reading history response: ${response.data}');
+      return List<dynamic>.from(response.data);
+    } catch (e) {
+      print('[API] Error getting reading history: $e');
+      throw _handleError(e);
+    }
+  }
+
   // ========================================
   // DASHBOARD ENDPOINT
   // ========================================
 
-  /// GET /api/mobile/dashboard
+  /// GET /api/mobile/dashboard/stats
   Future<Map<String, dynamic>> getDashboardStatistics() async {
     try {
-
-      final response = await _dio.get('/mobile/dashboard');
-
+      final response = await _dio.get('/mobile/dashboard/stats');
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
       print('[API] Error getting dashboard statistics: $e');
@@ -447,61 +408,6 @@ class ApiProvider extends GetxService {
     return Exception('Неизвестная ошибка');
   }
 
-  /// Запуск полной синхронизации всех данных
-  Future<FullSyncResponse> startFullSync() async {
-    try {
-      print('[API] Starting full sync...');
-      final response = await _dio.post('/mobile/full-sync');
-      print('[API] Full sync response (${response.statusCode}): ${response.data}');
-
-      return FullSyncResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      // Обработка специальных статусов
-      if (e.response?.statusCode == 409) {
-        print('[API] Got 409 - full sync already running');
-        return FullSyncResponse(
-          status: 'ALREADY_RUNNING',
-          message: 'Полная синхронизация уже выполняется',
-        );
-      }
-
-      if (e.response?.statusCode == 500) {
-        print('[API] Got 500 - server error during full sync');
-        return FullSyncResponse(
-          status: 'ERROR',
-          message: 'Ошибка сервера при запуске синхронизации',
-        );
-      }
-
-      print('[API] Error starting full sync: $e');
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error starting full sync: $e');
-      throw _handleError(e);
-    }
-  }
-
-  /// Поиск абонентов (живой поиск)
-  Future<List<dynamic>> searchAbonents(String query) async {
-    try {
-      print('[API] Searching abonents with query: $query');
-
-      final response = await _dio.get(
-        '/mobile/abonents/search',
-        queryParameters: {'query': query},
-      );
-
-      print('[API] Search returned ${response.data.length} results');
-      return response.data as List<dynamic>;
-    } on DioException catch (e) {
-      print('[API] Search error: ${e.message}');
-      if (e.response?.statusCode == 400) {
-        // При запросе меньше 3 символов возвращаем пустой массив
-        return [];
-      }
-      throw _handleError(e);
-    }
-  }
 
   // Добавь этот метод в lib/app/data/providers/api_provider.dart
 // В конец класса ApiProvider, перед закрывающей скобкой }
@@ -514,7 +420,7 @@ class ApiProvider extends GetxService {
 // ========================================
 
   /// Проверка версии приложения
-  /// GET /api/mobile/app-version
+  /// GET /api/auth/app-version
   Future<AppVersionModel> checkAppVersion() async {
     try {
       final response = await _dio.get('/auth/app-version');
@@ -526,7 +432,7 @@ class ApiProvider extends GetxService {
   }
 
   /// Скачивание APK файла с прогрессом
-  /// GET /api/mobile/download-apk
+  /// GET /api/auth/download-apk
   Future<void> downloadApk({
     required String savePath,
     required Function(int received, int total) onProgress,
@@ -555,30 +461,28 @@ class ApiProvider extends GetxService {
   // PHONE MANAGEMENT ENDPOINTS
   // ========================================
 
-  /// Добавить или обновить телефон абонента
-  /// POST /api/mobile/phones
+  /// Обновить номер телефона абонента
+  /// POST /api/mobile/abonents/phone
   /// Body: { "accountNumber": "12345", "phoneNumber": "+996700123456" }
-  /// Returns: 200 - успешно, 400 - неверный формат, 403 - нет доступа, 404 - абонент не найден
-  Future<Map<String, dynamic>> addOrUpdatePhone({
+  Future<Map<String, dynamic>> updatePhone({
     required String accountNumber,
     required String phoneNumber,
   }) async {
     try {
-      print('[API] Adding/updating phone for account: $accountNumber, phone: $phoneNumber');
+      print('[API] Updating phone for account: $accountNumber, phone: $phoneNumber');
       final response = await _dio.post(
-        '/mobile/phones',
+        '/mobile/abonents/phone',
         data: {
           'accountNumber': accountNumber,
           'phoneNumber': phoneNumber,
         },
       );
-      print('[API] Add/update phone response (${response.statusCode}): ${response.data}');
+      print('[API] Update phone response (${response.statusCode}): ${response.data}');
 
       return response.data;
     } on DioException catch (e) {
-      print('[API] Error adding/updating phone: $e');
+      print('[API] Error updating phone: $e');
 
-      // Специальная обработка различных статусов
       if (e.response?.statusCode == 400) {
         throw Exception('Неверный формат номера телефона');
       } else if (e.response?.statusCode == 403) {
@@ -589,32 +493,7 @@ class ApiProvider extends GetxService {
 
       throw _handleError(e);
     } catch (e) {
-      print('[API] Unexpected error adding/updating phone: $e');
-      throw _handleError(e);
-    }
-  }
-
-  /// Удалить телефон абонента
-  /// DELETE /api/mobile/phones/{accountNumber}
-  /// Returns: 200 - успешно, 403 - нет доступа, 404 - телефон не найден
-  Future<void> deletePhone(String accountNumber) async {
-    try {
-      print('[API] Deleting phone for account: $accountNumber');
-      final response = await _dio.delete('/mobile/phones/$accountNumber');
-      print('[API] Delete phone response (${response.statusCode}): ${response.data}');
-    } on DioException catch (e) {
-      print('[API] Error deleting phone: $e');
-
-      // Специальная обработка различных статусов
-      if (e.response?.statusCode == 403) {
-        throw Exception('Нет доступа к данному абоненту');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('Телефон не найден или уже удален');
-      }
-
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error deleting phone: $e');
+      print('[API] Unexpected error updating phone: $e');
       throw _handleError(e);
     }
   }
@@ -623,29 +502,8 @@ class ApiProvider extends GetxService {
   // REPORTS ENDPOINTS
   // ========================================
 
-  /// Получить статистику отчетов
-  /// GET /api/mobile/reports/statistics
-  /// Returns: Статистика по отчетам контролера
-  Future<Map<String, dynamic>> getReportsStatistics() async {
-    try {
-      print('[API] Getting reports statistics...');
-      final response = await _dio.get('/mobile/reports/statistics');
-      print('[API] Reports statistics response (${response.statusCode}): ${response.data}');
-
-      // Ожидаем структуру: { "success": true, "data": { ... } }
-      if (response.data['success'] == true && response.data['data'] != null) {
-        return response.data['data'];
-      }
-
-      throw Exception('Неверный формат ответа сервера');
-    } on DioException catch (e) {
-      print('[API] Error getting reports statistics: $e');
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error getting reports statistics: $e');
-      throw _handleError(e);
-    }
-  }
+  // УДАЛЕНО: getReportsStatistics() - в новом API нет этого эндпоинта
+  // Теперь используется getDashboardStatistics() в StatisticsRepository
 
   /// Сформировать отчет
   /// POST /api/mobile/reports/generate

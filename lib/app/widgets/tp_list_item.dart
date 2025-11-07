@@ -83,16 +83,17 @@ class TpListItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-
                       // Fider
-                      Text(
-                        tp.fider,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                      if (tp.fider.isNotEmpty)
+                        Text(
+                          tp.fider,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ],
                   ),
                 ),
@@ -137,14 +138,15 @@ class TpListItem extends StatelessWidget {
   }
 
   Color _getStatusColor() {
-    if (tp.totalSubscribers == 0) return Colors.grey;
+    if (!tp.active) return Colors.grey;
+    if (tp.totalSubscribers == 0) return Colors.orange;
     if (tp.isCompleted) return AppColors.success;
     if (tp.readingsCollected > 0) return AppColors.warning;
     return AppColors.primary;
   }
 
   Widget _buildStatusBadge(BuildContext context) {
-    if (tp.totalSubscribers == 0) {
+    if (!tp.active) {
       return Container(
         padding: const EdgeInsets.symmetric(
           horizontal: Constants.paddingS,
@@ -155,9 +157,30 @@ class TpListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
+          'Неактивен',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    if (tp.totalSubscribers == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
           'Нет абонентов',
           style: TextStyle(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+            color: Colors.orange,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -202,6 +225,7 @@ class TpListItem extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+            fontSize: 11,
           ),
         ),
         const SizedBox(height: 2),
@@ -258,7 +282,7 @@ class TpListItem extends StatelessWidget {
               '${tp.progressPercentage.toStringAsFixed(0)}%',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: tp.isCompleted ? AppColors.success : AppColors.primary,
               ),
             ),
           ],

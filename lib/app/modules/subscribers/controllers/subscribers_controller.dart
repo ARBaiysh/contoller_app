@@ -15,23 +15,15 @@ class SubscribersController extends GetxController {
 
   // Observable states
   final _isLoading = false.obs;
-  final _isSyncing = false.obs;
-  final _syncProgress = ''.obs;
-  final _syncElapsed = Duration.zero.obs;
   final _subscribers = <SubscriberModel>[].obs;
   final _filteredSubscribers = <SubscriberModel>[].obs;
   final _selectedStatus = 'all'.obs;
   final _searchQuery = ''.obs;
   final _sortBy = 'default'.obs;
-  final _filterByTariff = 'all'.obs;
 
-  final _householdCount = 0.obs;
-  final _nonHouseholdCount = 0.obs;
-
-  // ДОБАВЛЕНО: Новые реактивные переменные для замены геттеров с логикой
+  // Новые реактивные переменные для замены геттеров с логикой
   final _isEmpty = true.obs;
   final _hasData = false.obs;
-  final _syncElapsedFormatted = '00:00 / 05:00'.obs;
   final _totalSubscribers = 0.obs;
   final _readingsCollected = 0.obs;
   final _readingsAvailable = 0.obs;
@@ -39,37 +31,28 @@ class SubscribersController extends GetxController {
   final _blockedCount = 0.obs;
   final _statusFilterOptions = <Map<String, dynamic>>[].obs;
 
-  // Getters - просто возвращают значения
+  // Getters
   bool get isLoading => _isLoading.value;
-  bool get isSyncing => _isSyncing.value;
-  String get syncProgress => _syncProgress.value;
-  Duration get syncElapsed => _syncElapsed.value;
   List<SubscriberModel> get subscribers => _filteredSubscribers;
   String get selectedStatus => _selectedStatus.value;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
   bool get isEmpty => _isEmpty.value;
   bool get hasData => _hasData.value;
-  String get syncElapsedFormatted => _syncElapsedFormatted.value;
   int get totalSubscribers => _totalSubscribers.value;
   int get readingsCollected => _readingsCollected.value;
   int get readingsAvailable => _readingsAvailable.value;
   int get debtorsCount => _debtorsCount.value;
   int get blockedCount => _blockedCount.value;
   List<Map<String, dynamic>> get statusFilterOptions => _statusFilterOptions;
-  String get filterByTariff => _filterByTariff.value;
-  int get householdCount => _householdCount.value;
-  int get nonHouseholdCount => _nonHouseholdCount.value;
 
   @override
   void onInit() {
     super.onInit();
 
-    // ДОБАВЛЕНО: Слушатели для обновления зависимых состояний
+    // Слушатели для обновления зависимых состояний
     _subscribers.listen((_) => _updateStatistics());
-    _syncElapsed.listen((_) => _updateSyncElapsedFormatted());
     _selectedStatus.listen((_) => _updateStatusFilterOptions());
-    _filterByTariff.listen((_) => applyFiltersAndSort());
 
     // Получаем параметры
     final args = Get.arguments as Map<String, dynamic>? ?? {};
@@ -83,7 +66,7 @@ class SubscribersController extends GetxController {
     loadSubscribers();
   }
 
-  // ДОБАВЛЕНО: Вспомогательный метод для проверки показания в текущем месяце
+  // Вспомогательный метод для проверки показания в текущем месяце
   bool _hasReadingInCurrentMonth(SubscriberModel subscriber) {
     if (subscriber.lastReadingDate == null) return false;
     final now = DateTime.now();
@@ -91,7 +74,7 @@ class SubscribersController extends GetxController {
         subscriber.lastReadingDate!.month == now.month;
   }
 
-  // ДОБАВЛЕНО: Обновление всех статистик
+  // Обновление всех статистик
   void _updateStatistics() {
     _isEmpty.value = _subscribers.isEmpty;
     _hasData.value = _subscribers.isNotEmpty;
@@ -101,24 +84,10 @@ class SubscribersController extends GetxController {
     _debtorsCount.value = _subscribers.where((s) => s.isDebtor).length;
     _blockedCount.value = _subscribers.where((s) => !s.canTakeReading).length;
 
-    // НОВАЯ СТАТИСТИКА ПО ТАРИФАМ
-    _householdCount.value = _subscribers.where((s) =>
-        s.tariffName.toLowerCase().contains('населен')).length;
-    _nonHouseholdCount.value = _subscribers.where((s) =>
-    !s.tariffName.toLowerCase().contains('населен')).length;
-
     _updateStatusFilterOptions();
   }
 
-  // ДОБАВЛЕНО: Обновление форматированного времени синхронизации
-  void _updateSyncElapsedFormatted() {
-    final minutes = _syncElapsed.value.inMinutes;
-    final seconds = _syncElapsed.value.inSeconds % 60;
-    final maxMinutes = Constants.abonentsSyncTimeout.inMinutes;
-    _syncElapsedFormatted.value = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')} / ${maxMinutes.toString().padLeft(2, '0')}:00';
-  }
-
-  // ДОБАВЛЕНО: Обновление опций фильтра статуса
+  // Обновление опций фильтра статуса
   void _updateStatusFilterOptions() {
     _statusFilterOptions.value = [
       {
@@ -154,8 +123,6 @@ class SubscribersController extends GetxController {
 
   /// Загрузка списка абонентов
   Future<void> loadSubscribers({bool forceRefresh = false}) async {
-    if (_isSyncing.value) return; // Не загружаем во время синхронизации
-
     try {
       _isLoading.value = true;
       print('[SUBSCRIBERS CONTROLLER] Loading subscribers for TP: $tpCode');
@@ -166,7 +133,7 @@ class SubscribersController extends GetxController {
       );
 
       _subscribers.value = subscribersList;
-      _updateStatistics(); // ДОБАВЛЕНО: обновляем статистику
+      _updateStatistics();
       print('[SUBSCRIBERS CONTROLLER] Loaded ${subscribersList.length} subscribers');
 
       applyFiltersAndSort();
@@ -188,116 +155,6 @@ class SubscribersController extends GetxController {
   Future<void> refreshSubscribers() async {
     await loadSubscribers(forceRefresh: true);
   }
-
-  // ========================================
-  // СИНХРОНИЗАЦИЯ С ПРОГРЕССОМ
-  // ========================================
-
-  /// Запуск синхронизации абонентов с SyncService
-  Future<void> syncSubscribers() async {
-    // ✅ ЗАЩИТА: Проверяем, не идет ли уже синхронизация
-    if (_isSyncing.value || _isLoading.value) {
-      print('[SUBSCRIBERS CONTROLLER] ⚠️ Sync already in progress, ignoring click');
-      return;
-    }
-
-    // ✅ СРАЗУ устанавливаем флаг, чтобы заблокировать повторные нажатия
-    _isSyncing.value = true;
-    _syncProgress.value = 'Инициализация синхронизации...';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[SUBSCRIBERS CONTROLLER] Starting abonents sync for TP: $tpCode');
-
-    try {
-      await _subscriberRepository.syncAbonentsList(
-        tpCode,
-        onSyncStarted: _onSyncStarted,
-        onProgress: _onSyncProgress,
-        onSuccess: _onSyncSuccess,
-        onError: _onSyncError,
-      );
-    } catch (e) {
-      // ✅ Если произошла ошибка ДО вызова колбэков, сбрасываем флаг
-      print('[SUBSCRIBERS CONTROLLER] ❌ Error before sync started: $e');
-      _isSyncing.value = false;
-      _syncProgress.value = '';
-
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось запустить синхронизацию: ${e.toString()}',
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
-    }
-  }
-
-  /// Колбэк: синхронизация запущена
-  void _onSyncStarted() {
-    // Флаг уже установлен в syncSubscribers()
-    _syncProgress.value = 'Запуск синхронизации абонентов...';
-    print('[SUBSCRIBERS CONTROLLER] Sync confirmed by server for TP: $tpCode');
-
-    Get.snackbar(
-      'Синхронизация',
-      'Запущена синхронизация абонентов для $tpName',
-      backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-      colorText: Get.theme.colorScheme.primary,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 2),
-    );
-  }
-
-  /// Колбэк: прогресс синхронизации с таймером
-  void _onSyncProgress(String message, Duration elapsed) {
-    _syncProgress.value = message;
-    _syncElapsed.value = elapsed;
-    print('[SUBSCRIBERS CONTROLLER] Abonents sync progress: $message (${elapsed.inSeconds}s)');
-  }
-
-  /// Колбэк: синхронизация завершена успешно
-  void _onSyncSuccess() async {
-    _isSyncing.value = false;
-    _syncProgress.value = '';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[SUBSCRIBERS CONTROLLER] Abonents sync completed successfully for TP: $tpCode');
-
-    Get.snackbar(
-      'Успешно',
-      'Синхронизация абонентов завершена',
-      backgroundColor: Colors.green.withOpacity(0.1),
-      colorText: Colors.green,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 3),
-    );
-
-    // Автообновление списка после успешной синхронизации
-    await loadSubscribers(forceRefresh: true);
-  }
-
-  /// Колбэк: ошибка синхронизации
-  void _onSyncError(String error) {
-    _isSyncing.value = false;
-    _syncProgress.value = '';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[SUBSCRIBERS CONTROLLER] Abonents sync failed for TP $tpCode: $error');
-
-    Get.snackbar(
-      'Ошибка синхронизации',
-      error,
-      backgroundColor: Get.theme.colorScheme.error,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 5),
-    );
-  }
-
 
   // ========================================
   // ФИЛЬТРАЦИЯ И СОРТИРОВКА
@@ -336,20 +193,6 @@ class SubscribersController extends GetxController {
       ).toList();
     }
 
-    // НОВЫЙ ФИЛЬТР ПО ТАРИФУ
-    if (_filterByTariff.value != 'all') {
-      switch (_filterByTariff.value) {
-        case 'household':
-          filtered = filtered.where((s) =>
-              s.tariffName.toLowerCase().contains('населен')).toList();
-          break;
-        case 'non_household':
-          filtered = filtered.where((s) =>
-          !s.tariffName.toLowerCase().contains('населен')).toList();
-          break;
-      }
-    }
-
     // Применяем сортировку
     switch (_sortBy.value) {
       case 'name':
@@ -386,10 +229,6 @@ class SubscribersController extends GetxController {
     _selectedStatus.value = status;
     applyFiltersAndSort();
     print('[SUBSCRIBERS CONTROLLER] Status filter changed to: $status');
-  }
-
-  void setTariffFilter(String tariff) {
-    _filterByTariff.value = tariff;
   }
 
   /// Поиск абонентов

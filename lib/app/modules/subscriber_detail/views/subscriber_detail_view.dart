@@ -80,8 +80,18 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                       ? ReadingFormCard(controller: controller)
                       : const SizedBox.shrink()),
 
-                  // Reading history card
-                  const ReadingHistoryCard(),
+                  // Reading history card - показываем только если есть показания за текущий месяц
+                  Obx(() {
+                    final subscriber = controller.subscriber;
+                    if (subscriber == null) return const SizedBox.shrink();
+
+                    // Проверяем, есть ли показания за текущий месяц
+                    final hasCurrentMonthReading = subscriber.currentMonthConsumption > 0;
+
+                    return hasCurrentMonthReading
+                        ? const ReadingHistoryCard()
+                        : const SizedBox.shrink();
+                  }),
 
                   // Subscriber info card (moved down)
                   const SubscriberInfoCard(),

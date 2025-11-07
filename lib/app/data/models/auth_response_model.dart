@@ -1,104 +1,82 @@
 class AuthResponseModel {
-  final String status;
-  final String? token;
-  final String? message;
-  final int? syncMessageId;
-  final int? inspectorId;
-  final String? username;
-  final String? fullName;
-  final String? regionCode;
-  final String? regionName;
-  final String? role;
-  final int? expiresIn;
+  final String token;
+  final InspectorData inspector;
 
   AuthResponseModel({
-    required this.status,
-    this.token,
-    this.message,
-    this.syncMessageId,
-    this.inspectorId,
-    this.username,
-    this.fullName,
-    this.regionCode,
-    this.regionName,
-    this.role,
-    this.expiresIn,
+    required this.token,
+    required this.inspector,
   });
 
   factory AuthResponseModel.fromJson(Map<String, dynamic> json) {
     return AuthResponseModel(
-      status: json['status'] ?? 'ERROR',
-      token: json['token'],
-      message: json['message'],
-      syncMessageId: json['syncMessageId'],
-      inspectorId: json['inspectorId'],
-      username: json['username'],
-      fullName: json['fullName'],
-      regionCode: json['regionCode'],
-      regionName: json['regionName'],
-      role: json['role'],
-      expiresIn: json['expiresIn'],
-    );
-  }
-
-  // Преобразуем в InspectorData для совместимости
-  InspectorData? toInspectorData() {
-    if (inspectorId != null && fullName != null && regionName != null && regionCode != null && username != null) {
-      return InspectorData(
-        inspectorId: inspectorId!,
-        fullName: fullName!,
-        regionName: regionName!,
-        regionCode: regionCode!,
-        username: username!,
-      );
-    }
-    return null;
-  }
-}
-
-// Оставляем для совместимости
-class InspectorData {
-  final int inspectorId;
-  final String fullName;
-  final String regionName;
-  final String regionCode;
-  final String username;
-
-  InspectorData({
-    required this.inspectorId,
-    required this.fullName,
-    required this.regionName,
-    required this.regionCode,
-    required this.username,
-  });
-
-  factory InspectorData.fromJson(Map<String, dynamic> json) {
-    return InspectorData(
-      inspectorId: json['inspectorId'] ?? 0,
-      fullName: json['fullName'] ?? '',
-      regionName: json['regionName'] ?? '',
-      regionCode: json['regionCode'] ?? '',
-      username: json['username'] ?? '',
+      token: json['token'] ?? '',
+      inspector: InspectorData.fromJson(json['inspector'] ?? {}),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'inspectorId': inspectorId,
-      'fullName': fullName,
-      'regionName': regionName,
-      'regionCode': regionCode,
-      'username': username,
+      'token': token,
+      'inspector': inspector.toJson(),
     };
   }
 
+  // Для обратной совместимости
+  String get status => 'SUCCESS'; // В новом API всегда успех если пришел ответ
+  String? get message => null;
+  String? get fullName => inspector.fullName;
+}
+
+class InspectorData {
+  final int id;
+  final String username;
+  final String fullName;
+  final String externalId;
+  final String regionCode;
+  final String regionName;
+
+  InspectorData({
+    required this.id,
+    required this.username,
+    required this.fullName,
+    required this.externalId,
+    required this.regionCode,
+    required this.regionName,
+  });
+
+  factory InspectorData.fromJson(Map<String, dynamic> json) {
+    return InspectorData(
+      id: json['id'] ?? 0,
+      username: json['username'] ?? '',
+      fullName: json['fullName'] ?? '',
+      externalId: json['externalId'] ?? '',
+      regionCode: json['regionCode'] ?? '',
+      regionName: json['regionName'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'fullName': fullName,
+      'externalId': externalId,
+      'regionCode': regionCode,
+      'regionName': regionName,
+    };
+  }
+
+  // Для обратной совместимости с кодом, который использует inspectorId
+  int get inspectorId => id;
+
   static InspectorData empty() {
     return InspectorData(
-      inspectorId: 0,
-      fullName: '',
-      regionName: '',
-      regionCode: '',
+      id: 0,
       username: '',
+      fullName: '',
+      externalId: '',
+      regionCode: '',
+      regionName: '',
     );
   }
 }

@@ -21,6 +21,7 @@ abstract class Routes {
   static const HELP_SUPPORT = _Paths.HELP_SUPPORT;
   static const ABOUT = _Paths.ABOUT;
   static const UPDATE_REQUIRED = _Paths.UPDATE_REQUIRED;
+  static const ABONENT_LIST = _Paths.ABONENT_LIST;
 }
 
 abstract class _Paths {
@@ -44,4 +45,5 @@ abstract class _Paths {
   static const HELP_SUPPORT = '/help-support';
   static const ABOUT = '/about';
   static const UPDATE_REQUIRED = '/update-required';
+  static const ABONENT_LIST = '/abonent-list';
 }

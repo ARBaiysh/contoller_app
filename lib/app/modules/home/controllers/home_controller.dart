@@ -1,42 +1,31 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/dashboard_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
+import '../../../data/repositories/subscriber_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
-import '../../../data/providers/api_provider.dart';
 import '../../../routes/app_pages.dart';
-import '../../../core/values/constants.dart';
 import '../../../widgets/soft_update_dialog.dart';
 import '../../navbar/main_nav_controller.dart';
 
 class HomeController extends GetxController {
   final StatisticsRepository _statisticsRepository = Get.find<StatisticsRepository>();
+  final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
-  final ApiProvider _apiProvider = Get.find<ApiProvider>();
   final AppUpdateService _appUpdateService = Get.find<AppUpdateService>();
 
-  // Все состояния как реактивные переменные
+  // Observable states
   final isLoading = false.obs;
   final isRefreshing = false.obs;
+  final isForceRefreshing = false.obs; // Индикатор принудительного обновления
   Rx<DashboardModel> dashboard = Rx<DashboardModel>(DashboardModel.empty());
   final lastError = ''.obs;
   final hasError = false.obs;
 
-  // Состояния синхронизации
-  final isFullSyncStarting = false.obs;
-  final isFullSyncInProgress = false.obs;
-  final minutesUntilSyncAvailable = 0.obs;
-  final canStartSync = true.obs;
-  final syncButtonText = 'Полная синхронизация'.obs;
-
-  // Данные пользователя
+  // User data
   final userName = ''.obs;
-
-  // Таймер для проверки статуса синхронизации
-  Timer? _syncStatusTimer;
 
   @override
   void onInit() {
@@ -46,89 +35,8 @@ class HomeController extends GetxController {
     loadDashboard();
   }
 
-  @override
-  void onClose() {
-    _stopSyncStatusTimer();
-    super.onClose();
-  }
-
   // ========================================
-  // МОНИТОРИНГ СИНХРОНИЗАЦИИ
-  // ========================================
-
-  void _startSyncStatusMonitoring() {
-    _stopSyncStatusTimer();
-
-    _syncStatusTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      await loadDashboard(showLoading: false);
-
-      // Если синхронизация завершена, останавливаем таймер
-      if (!isFullSyncInProgress.value) {
-        _stopSyncStatusTimer();
-      }
-    });
-  }
-
-  void _stopSyncStatusTimer() {
-    _syncStatusTimer?.cancel();
-    _syncStatusTimer = null;
-  }
-
-  void _updateSyncAvailability() {
-    final dashboardData = dashboard.value;
-
-    if (dashboardData == null) {
-      canStartSync.value = false;
-      syncButtonText.value = 'Полная синхронизация';
-      return;
-    }
-
-    // Обновляем флаг синхронизации
-    isFullSyncInProgress.value = dashboardData.fullSyncInProgress;
-
-    if (isFullSyncInProgress.value) {
-      canStartSync.value = false;
-      syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
-      minutesUntilSyncAvailable.value = 0;
-      return;
-    }
-
-    if (dashboardData.lastFullSyncCompleted != null) {
-      final now = DateTime.now();
-      final localLastSync = dashboardData.lastFullSyncCompleted!.toLocal();
-
-      // Защита от будущих дат
-      if (localLastSync.isAfter(now)) {
-        canStartSync.value = false;
-        minutesUntilSyncAvailable.value = Constants.fullSyncCooldown.inMinutes;
-        syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
-        return;
-      }
-
-      final timeSinceLastSync = now.difference(localLastSync);
-      final cooldownMinutes = Constants.fullSyncCooldown.inMinutes;
-      final timeSinceInMinutes = timeSinceLastSync.inMinutes;
-
-      if (timeSinceInMinutes < cooldownMinutes) {
-        final remaining = cooldownMinutes - timeSinceInMinutes;
-        minutesUntilSyncAvailable.value = remaining;
-        canStartSync.value = false;
-        syncButtonText.value = 'Полная синхронизация'; // Всегда один текст
-      } else {
-        minutesUntilSyncAvailable.value = 0;
-        canStartSync.value = !isFullSyncStarting.value;
-        syncButtonText.value = 'Полная синхронизация';
-      }
-    } else {
-      // Никогда не было синхронизации
-      minutesUntilSyncAvailable.value = 0;
-      canStartSync.value = !isFullSyncStarting.value;
-      syncButtonText.value = 'Полная синхронизация';
-    }
-  }
-
-  // ========================================
-  // ЗАГРУЗКА ДАННЫХ DASHBOARD
+  // ЗАГРУЗКА DASHBOARD
   // ========================================
 
   Future<void> loadDashboard({bool showLoading = true}) async {
@@ -141,12 +49,7 @@ class HomeController extends GetxController {
       hasError.value = false;
 
       final dashboardData = await _statisticsRepository.getDashboardStatistics();
-
-
       dashboard.value = dashboardData;
-
-      // Обновляем все связанные состояния
-      _updateSyncAvailability();
 
     } catch (e) {
       lastError.value = e.toString();
@@ -160,84 +63,70 @@ class HomeController extends GetxController {
       isRefreshing.value = false;
 
       if (showLoading && _appUpdateService.softUpdateAvailable) {
-        // Показываем диалог после небольшой задержки
         Future.delayed(const Duration(milliseconds: 500), () {
           SoftUpdateDialog.show();
         });
       }
-
     }
   }
 
+  /// Обновление через свайп (pull to refresh) - из кеша
   Future<void> refreshDashboard() async {
     isRefreshing.value = true;
-    await loadDashboard(showLoading: false);
+    try {
+      // Обновляем статистику
+      await loadDashboard(showLoading: false);
+
+      // Обновляем абонентов из кеша (forceRefresh=false)
+      await _subscriberRepository.getAllSubscribers(forceRefresh: false);
+      print('[HOME] Dashboard and subscribers refreshed from cache');
+    } catch (e) {
+      print('[HOME] Error refreshing dashboard: $e');
+    } finally {
+      isRefreshing.value = false;
+    }
   }
 
-  // ========================================
-  // ПОЛНАЯ СИНХРОНИЗАЦИЯ
-  // ========================================
+  /// Принудительное обновление из 1С (кнопка в AppBar)
+  Future<void> forceRefreshFromServer() async {
+    if (isForceRefreshing.value) return;
 
-  Future<void> startFullSync() async {
-    if (!canStartSync.value) {
-      return;
-    }
-
-    isFullSyncStarting.value = true;
-    canStartSync.value = false;
+    isForceRefreshing.value = true;
 
     try {
-      print('[HOME] Starting full sync...');
-      final response = await _apiProvider.startFullSync();
+      print('[HOME] Starting force refresh from 1C...');
 
-      if (response.status == 'INITIATED') {
-        Get.snackbar(
-          'Синхронизация запущена',
-          'Полная синхронизация данных начата',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Constants.primary.withOpacity(0.1),
-          colorText: Constants.primary,
-          duration: const Duration(seconds: 3),
-        );
+      // Обновляем абонентов из 1С (forceRefresh=true)
+      await _subscriberRepository.getAllSubscribers(forceRefresh: true);
 
-        // Ждем немного и обновляем dashboard
-        await Future.delayed(const Duration(milliseconds: 500));
-        await loadDashboard(showLoading: false);
+      // Обновляем статистику
+      await _statisticsRepository.getDashboardStatistics();
+      final dashboardData = await _statisticsRepository.getDashboardStatistics();
+      dashboard.value = dashboardData;
 
-        // Запускаем мониторинг статуса синхронизации
-        _startSyncStatusMonitoring();
+      print('[HOME] Force refresh completed successfully');
 
-      } else if (response.status == 'ALREADY_RUNNING') {
-        Get.snackbar(
-          'Внимание',
-          response.message ?? 'Синхронизация уже выполняется',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Constants.warning.withOpacity(0.1),
-          colorText: Constants.warning,
-          duration: const Duration(seconds: 3),
-        );
-
-        // Обновляем данные и запускаем мониторинг
-        await loadDashboard(showLoading: false);
-        if (isFullSyncInProgress.value) {
-          _startSyncStatusMonitoring();
-        }
-
-      } else {
-        throw Exception(response.message ?? 'Неизвестная ошибка');
-      }
+      Get.snackbar(
+        'Успешно',
+        'Данные обновлены из 1С',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: AppColors.success.withValues(alpha: 0.1),
+        colorText: AppColors.success,
+        duration: const Duration(seconds: 2),
+      );
     } catch (e) {
+      print('[HOME] Error force refreshing: $e');
+
       Get.snackbar(
         'Ошибка',
-        'Не удалось запустить синхронизацию: ${e.toString()}',
+        'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Constants.error.withOpacity(0.1),
-        colorText: Constants.error,
-        duration: const Duration(seconds: 5),
+        backgroundColor: AppColors.error.withValues(alpha: 0.1),
+        colorText: AppColors.error,
+        duration: const Duration(seconds: 3),
       );
     } finally {
-      isFullSyncStarting.value = false;
-      _updateSyncAvailability();
+      isForceRefreshing.value = false;
     }
   }
 
@@ -267,8 +156,6 @@ class HomeController extends GetxController {
       }
     }
   }
-
-// Замените метод logout() в lib/app/modules/home/controllers/home_controller.dart
 
   Future<void> logout() async {
     final confirmed = await Get.dialog<bool>(

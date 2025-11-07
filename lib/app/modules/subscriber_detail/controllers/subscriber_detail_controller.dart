@@ -27,6 +27,10 @@ class SubscriberDetailController extends GetxController {
 
   final _canSubmitReading = false.obs;
 
+  // История показаний
+  final _readingHistory = <Map<String, dynamic>>[].obs;
+  final _isLoadingHistory = false.obs;
+
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
@@ -35,6 +39,8 @@ class SubscriberDetailController extends GetxController {
   String get syncMessage => _syncMessage.value;
   String get submissionMessage => _submissionMessage.value;
   bool get canSubmitReading => _canSubmitReading.value;
+  List<Map<String, dynamic>> get readingHistory => _readingHistory;
+  bool get isLoadingHistory => _isLoadingHistory.value;
 
   @override
   void onInit() {
@@ -64,6 +70,11 @@ class SubscriberDetailController extends GetxController {
     _subscriber.listen((_) => _updateCanSubmitReading());
 
     _updateCanSubmitReading();
+
+    // Загружаем историю показаний
+    if (_subscriber.value != null) {
+      loadReadingHistory();
+    }
   }
 
   void _updateCanSubmitReading() {
@@ -124,80 +135,87 @@ class SubscriberDetailController extends GetxController {
     }
   }
 
-  // ИСПРАВЛЕНО: Refresh subscriber details
+  // Refresh subscriber details
   Future<void> refreshSubscriberDetails() async {
-    // ✅ ЗАЩИТА: Проверяем флаги
     if (_subscriber.value == null || _isSyncing.value) {
-      print('[SUBSCRIBER DETAIL] ⚠️ Sync already in progress or no subscriber data');
+      print('[SUBSCRIBER DETAIL] ⚠️ Already refreshing or no subscriber data');
       return;
     }
 
     final accountNumber = _subscriber.value!.accountNumber;
 
-    // ✅ СРАЗУ блокируем повторные нажатия
     _isSyncing.value = true;
-    _syncMessage.value = 'Инициализация...';
+    _syncMessage.value = 'Обновление данных...';
 
-    print('[SUBSCRIBER DETAIL] Starting sync for: $accountNumber');
+    print('[SUBSCRIBER DETAIL] Refreshing data for: $accountNumber');
 
     try {
-      await _subscriberRepository.syncSingleSubscriber(
+      final updatedSubscriber = await _subscriberRepository.getSubscriberByAccountNumber(
         accountNumber,
-        onSyncStarted: () {
-          // Флаг уже установлен выше
-          _syncMessage.value = 'Синхронизация...';
-          print('[SUBSCRIBER DETAIL] Sync confirmed by server');
-        },
-        onProgress: (message) {
-          _syncMessage.value = message.toLowerCase();
-        },
-        onSuccess: (updatedSubscriber) async {
-          _subscriber.value = null;
-          await Future.delayed(const Duration(milliseconds: 10));
-          _subscriber.value = updatedSubscriber;
-          _updateCanSubmitReading();
-          update();
+        forceRefresh: true,
+      );
 
-          _isSyncing.value = false;
-          _syncMessage.value = '';
+      _subscriber.value = null;
+      await Future.delayed(const Duration(milliseconds: 10));
+      _subscriber.value = updatedSubscriber;
+      _updateCanSubmitReading();
+      update();
 
-          Get.snackbar(
-            'Успешно',
-            'Данные абонента обновлены',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.green.withOpacity(0.1),
-            colorText: Colors.green,
-            duration: const Duration(seconds: 2),
-          );
-        },
-        onError: (error) {
-          _isSyncing.value = false;
-          _syncMessage.value = '';
+      _isSyncing.value = false;
+      _syncMessage.value = '';
 
-          Get.snackbar(
-            'Ошибка синхронизации',
-            error,
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.1),
-            colorText: Colors.red,
-            duration: const Duration(seconds: 3),
-          );
-        },
+      Get.snackbar(
+        'Успешно',
+        'Данные абонента обновлены',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      // ✅ Если ошибка ДО вызова колбэков - сбрасываем флаг
-      print('[SUBSCRIBER DETAIL] ❌ Error before sync started: $e');
+      print('[SUBSCRIBER DETAIL] Error refreshing: $e');
       _isSyncing.value = false;
       _syncMessage.value = '';
 
       Get.snackbar(
         'Ошибка',
-        'Не удалось запустить синхронизацию: ${e.toString()}',
+        'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         duration: const Duration(seconds: 3),
       );
+    }
+  }
+
+  // ========================================
+  // ИСТОРИЯ ПОКАЗАНИЙ
+  // ========================================
+
+  /// Загрузить историю показаний
+  Future<void> loadReadingHistory() async {
+    if (_subscriber.value == null) {
+      print('[SUBSCRIBER DETAIL] Cannot load reading history: no subscriber data');
+      return;
+    }
+
+    final accountNumber = _subscriber.value!.accountNumber;
+
+    _isLoadingHistory.value = true;
+
+    try {
+      print('[SUBSCRIBER DETAIL] Loading reading history for: $accountNumber');
+
+      final history = await _subscriberRepository.getReadingHistory(accountNumber);
+
+      _readingHistory.value = history;
+      print('[SUBSCRIBER DETAIL] Reading history loaded: ${history.length} items');
+    } catch (e) {
+      print('[SUBSCRIBER DETAIL] Error loading reading history: $e');
+      // Не показываем ошибку пользователю, просто оставляем историю пустой
+      _readingHistory.value = [];
+    } finally {
+      _isLoadingHistory.value = false;
     }
   }
 
@@ -212,17 +230,18 @@ class SubscriberDetailController extends GetxController {
       return 'Введите корректное число';
     }
 
-    // ИСПРАВЛЕНО: Добавим проверку минимального и максимального значения
+    // Проверка минимального и максимального значения
     final minValue = 0;
     final maxValue = 999999;
 
     if (reading < minValue || reading > maxValue) {
       return 'Показание должно быть от $minValue до $maxValue';
     }
+
+    // Бэкенд сам проверит логику показаний (перемотка счетчика и т.д.)
     return null;
   }
 
-  // Submit meter reading
   // Submit meter reading
   Future<void> submitReading() async {
     if (!formKey.currentState!.validate() || _subscriber.value == null) return;
@@ -232,28 +251,51 @@ class SubscriberDetailController extends GetxController {
     final meterSerialNumber = _subscriber.value!.meterSerialNumber;
 
     _isSubmitting.value = true;
+    _submissionMessage.value = 'Отправка показания...';
 
-    await _subscriberRepository.submitMeterReading(
-      accountNumber: accountNumber,
-      meterSerialNumber: meterSerialNumber,
-      currentReading: reading,
-      onSubmitStarted: () {
-        _submissionMessage.value = 'Отправка показания...';
-        if (_subscriber.value != null) {
-          _subscriber.value = _subscriber.value!.copyWith(canTakeReading: false);
-          _updateCanSubmitReading();
-        }
-      },
-      onProgress: (message) {
-        _submissionMessage.value = message;
-      },
-      onSuccess: () async {
-        _isSubmitting.value = false;
-        _submissionMessage.value = '';
+    try {
+      // 1. Отправляем показание
+      print('[SUBSCRIBER DETAIL] Submitting reading: $reading for $accountNumber');
+      final response = await _subscriberRepository.submitMeterReading(
+        accountNumber: accountNumber,
+        currentReading: reading,
+        meterSerialNumber: meterSerialNumber,
+      );
 
+      final readingId = response['readingId'];
+      final status = response['status'];
+      print('[SUBSCRIBER DETAIL] Reading submitted: readingId=$readingId, status=$status');
+
+      // 2. Сразу получаем историю показаний
+      _submissionMessage.value = 'Проверка статуса...';
+      await Future.delayed(const Duration(milliseconds: 500)); // Небольшая задержка для обработки
+
+      final history = await _subscriberRepository.getReadingHistory(accountNumber);
+      print('[SUBSCRIBER DETAIL] Reading history loaded: ${history.length} items');
+
+      // 3. Находим наше показание по readingId
+      final ourReading = history.firstWhere(
+        (item) => item['readingId'] == readingId,
+        orElse: () => {'status': 'PROCESSING'},
+      );
+
+      final finalStatus = ourReading['status'] as String;
+      final message = ourReading['message'] as String? ?? '';
+      final documentNumber = ourReading['documentNumber'] as String?;
+
+      print('[SUBSCRIBER DETAIL] Final status: $finalStatus, message: $message');
+
+      _isSubmitting.value = false;
+      _submissionMessage.value = '';
+
+      // 4. Обрабатываем результат
+      if (finalStatus == 'COMPLETED') {
+        // Успех!
         Get.snackbar(
           'Успешно',
-          'Показание принято и обработано',
+          documentNumber != null
+            ? 'Показание зарегистрировано\nДокумент: $documentNumber'
+            : message.isNotEmpty ? message : 'Показание успешно отправлено',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.green,
@@ -263,29 +305,57 @@ class SubscriberDetailController extends GetxController {
         // Очищаем форму
         readingController.clear();
 
-        // Автоматически синхронизируем данные абонента
-        await refreshSubscriberDetails();
-      },
-      onError: (error) {
-        _isSubmitting.value = false;
-        _submissionMessage.value = '';
-
-        // ИСПРАВЛЕНО: Правильное обновление Rxn при ошибке
-        if (_subscriber.value != null) {
-          _subscriber.value = _subscriber.value!.copyWith(canTakeReading: true);
-          _updateCanSubmitReading();
-        }
-
+        // Автоматически обновляем данные абонента и историю показаний
+        await Future.wait([
+          refreshSubscriberDetails(),
+          loadReadingHistory(),
+        ]);
+      } else if (finalStatus == 'ERROR') {
+        // Ошибка обработки
         Get.snackbar(
-          'Ошибка отправки',
-          error,
+          'Ошибка обработки',
+          message.isNotEmpty ? message : 'Произошла ошибка при обработке показания',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 5),
+          maxWidth: 500,
         );
-      },
-    );
+      } else {
+        // PROCESSING - еще обрабатывается
+        Get.snackbar(
+          'В обработке',
+          'Показание принято и обрабатывается',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.withOpacity(0.1),
+          colorText: Colors.orange,
+          duration: const Duration(seconds: 3),
+        );
+
+        // Очищаем форму
+        readingController.clear();
+
+        // Обновляем данные абонента и историю показаний
+        await Future.wait([
+          refreshSubscriberDetails(),
+          loadReadingHistory(),
+        ]);
+      }
+    } catch (e) {
+      _isSubmitting.value = false;
+      _submissionMessage.value = '';
+
+      print('[SUBSCRIBER DETAIL] Error submitting reading: $e');
+
+      Get.snackbar(
+        'Ошибка отправки',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 4),
+      );
+    }
   }
 
   // НОВОЕ: Получение информации для UI
@@ -300,8 +370,8 @@ class SubscriberDetailController extends GetxController {
   final _isPhoneUpdating = false.obs;
   bool get isPhoneUpdating => _isPhoneUpdating.value;
 
-  /// Добавить или обновить телефон абонента
-  Future<void> addOrUpdatePhone(String phoneNumber) async {
+  /// Обновить телефон абонента
+  Future<void> updatePhone(String phoneNumber) async {
     if (_subscriber.value == null || _isPhoneUpdating.value) {
       return;
     }
@@ -311,15 +381,14 @@ class SubscriberDetailController extends GetxController {
     _isPhoneUpdating.value = true;
 
     try {
-      print('[SUBSCRIBER DETAIL] Updating phone for: $accountNumber');
+      print('[SUBSCRIBER DETAIL] Updating phone for: $accountNumber to: $phoneNumber');
 
-      await _subscriberRepository.addOrUpdatePhone(
+      await _subscriberRepository.updatePhone(
         accountNumber: accountNumber,
         phoneNumber: phoneNumber,
       );
 
       // Обновляем локальные данные абонента
-      // ВАЖНО: Сначала обнуляем, потом устанавливаем новое значение для правильной реактивности
       final updatedSubscriber = _subscriber.value!.copyWith(phone: phoneNumber);
       _subscriber.value = null;
       await Future.delayed(const Duration(milliseconds: 10));
@@ -350,54 +419,6 @@ class SubscriberDetailController extends GetxController {
       );
 
       rethrow; // Пробрасываем для обработки в диалоге
-    }
-  }
-
-  /// Удалить телефон абонента
-  Future<void> deletePhone() async {
-    if (_subscriber.value == null || _isPhoneUpdating.value) {
-      return;
-    }
-
-    final accountNumber = _subscriber.value!.accountNumber;
-
-    _isPhoneUpdating.value = true;
-
-    try {
-      print('[SUBSCRIBER DETAIL] Deleting phone for: $accountNumber');
-
-      await _subscriberRepository.deletePhone(accountNumber);
-
-      // Обновляем локальные данные абонента (удаляем телефон)
-      // ВАЖНО: Сначала обнуляем, потом устанавливаем новое значение для правильной реактивности
-      final updatedSubscriber = _subscriber.value!.copyWith(phone: null);
-      _subscriber.value = null;
-      await Future.delayed(const Duration(milliseconds: 10));
-      _subscriber.value = updatedSubscriber;
-
-      _isPhoneUpdating.value = false;
-
-      Get.snackbar(
-        'Успешно',
-        'Номер телефона удален',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green,
-        duration: const Duration(seconds: 2),
-      );
-    } catch (e) {
-      _isPhoneUpdating.value = false;
-
-      print('[SUBSCRIBER DETAIL] Error deleting phone: $e');
-
-      Get.snackbar(
-        'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        duration: const Duration(seconds: 3),
-      );
     }
   }
 }

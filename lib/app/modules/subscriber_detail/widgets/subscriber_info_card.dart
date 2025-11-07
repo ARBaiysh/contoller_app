@@ -64,15 +64,6 @@ class SubscriberInfoCard extends StatelessWidget {
               hasValidPhone: _hasValidPhone(subscriber),
             ),
 
-            _InfoRow(label: 'Тариф', value: subscriber.tariffName),
-
-            // Последняя синхронизация
-            if (subscriber.lastSync != null)
-              _InfoRow(
-                label: 'Последняя синхронизация',
-                value: subscriber.formattedLastSync,
-              ),
-
             // КНОПКИ ДЕЙСТВИЙ (ТОЛЬКО если есть валидный телефон)
             if (_hasValidPhone(subscriber)) ...[
               const SizedBox(height: Constants.paddingM),
@@ -182,13 +173,8 @@ class _PhoneRow extends StatelessWidget {
         currentPhone: subscriber.phone,
         accountNumber: subscriber.accountNumber,
         onSave: (phoneNumber) async {
-          await controller.addOrUpdatePhone(phoneNumber);
+          await controller.updatePhone(phoneNumber);
         },
-        onDelete: hasValidPhone
-            ? () async {
-                await controller.deletePhone();
-              }
-            : null,
       ),
     );
   }

@@ -9,14 +9,12 @@ class PhoneEditDialog extends StatefulWidget {
   final String? currentPhone;
   final String accountNumber;
   final Function(String phoneNumber) onSave;
-  final VoidCallback? onDelete;
 
   const PhoneEditDialog({
     super.key,
     required this.currentPhone,
     required this.accountNumber,
     required this.onSave,
-    this.onDelete,
   });
 
   @override
@@ -114,31 +112,6 @@ class _PhoneEditDialogState extends State<PhoneEditDialog> {
     }
   }
 
-  void _confirmDelete() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Удалить телефон?'),
-        content: const Text(
-          'После удаления будет использоваться номер из базы 1С (если есть).',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back(); // Закрываем диалог подтверждения
-              widget.onDelete?.call();
-              Get.back(); // Закрываем диалог редактирования
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Удалить'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -407,65 +380,26 @@ class _PhoneEditDialogState extends State<PhoneEditDialog> {
 
                   const SizedBox(height: 10),
 
-                  // Вторая строка кнопок
-                  Row(
-                    children: [
-                      // Кнопка отмены
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: TextButton(
-                            onPressed: _isSaving ? null : () => Get.back(),
-                            style: TextButton.styleFrom(
-                              foregroundColor: colorScheme.onSurface.withOpacity(0.6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Отмена',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
+                  // Кнопка отмены
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: TextButton(
+                      onPressed: _isSaving ? null : () => Get.back(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurface.withOpacity(0.6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-
-                      // Кнопка удаления (если есть текущий телефон)
-                      if (hasCurrentPhone && widget.onDelete != null) ...[
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: TextButton(
-                              onPressed: _isSaving ? null : _confirmDelete,
-                              style: TextButton.styleFrom(
-                                foregroundColor: colorScheme.error,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.delete_outline_rounded, size: 18),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Удалить',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                      child: const Text(
+                        'Отмена',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
                         ),
-                      ],
-                    ],
+                      ),
+                    ),
                   ),
                 ],
               ),

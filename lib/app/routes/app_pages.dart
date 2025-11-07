@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../data/providers/news_api_provider.dart';
 import '../data/repositories/news_repository.dart';
 import '../data/repositories/notification_repository.dart';
+import '../modules/abonent_list/bindings/abonent_list_binding.dart';
+import '../modules/abonent_list/views/abonent_list_view.dart';
 import '../modules/about/views/about_view.dart';
 import '../modules/auth/views/auth_view.dart';
 import '../modules/help_support/views/help_support_view.dart';
@@ -128,6 +130,13 @@ class AppPages {
       name: _Paths.UPDATE_REQUIRED,
       page: () => const UpdateRequiredView(),
       transition: Transition.fadeIn,
+    ),
+
+    GetPage(
+      name: Routes.ABONENT_LIST,
+      page: () => const AbonentListView(),
+      binding: AbonentListBinding(),
+      transition: Transition.cupertino,
     ),
   ];
 }

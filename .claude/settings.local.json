@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(flutter analyze:*)",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(dir /B /S *.dart 2)",
+      "Bash(nul)",
+      "Bash(findstr:*)",
+      "Bash(del /Q \"lib\\app\\data\\models\\sync_status_model.dart\" \"lib\\app\\data\\models\\tp_sync_response_model.dart\" \"lib\\app\\data\\models\\abonent_sync_response_model.dart\" \"lib\\app\\data\\models\\full_sync_response_model.dart\" \"lib\\app\\core\\services\\sync_service.dart\")",
+      "Bash(flutter build:*)",
+      "Bash(dir:*)",
+      "Bash(del /Q \"lib\\app\\modules\\home\\widgets\\sync_status_card.dart\")"
     ],
     "deny": [],
     "ask": []

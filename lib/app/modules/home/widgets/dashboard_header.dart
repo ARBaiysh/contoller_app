@@ -109,7 +109,6 @@ class DashboardHeader extends StatelessWidget {
             Expanded(
               child: _buildCompactStat(
                 context: context,
-                icon: Icons.business,
                 value: dashboard.totalTransformerPoints.toString(),
                 label: 'ТП',
                 onTap: () {
@@ -122,7 +121,6 @@ class DashboardHeader extends StatelessWidget {
             Expanded(
               child: _buildCompactStat(
                 context: context,
-                icon: Icons.people,
                 value: dashboard.totalAbonents.toString(),
                 label: 'Абонентов',
                 onTap: () {
@@ -130,17 +128,42 @@ class DashboardHeader extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(width: Constants.paddingS),
-            // Должников - открывает поиск
+          ],
+        ),
+
+        const SizedBox(height: Constants.paddingS),
+
+        // Вторая строка: Показания и Оплаты
+        Row(
+          children: [
+            // Показания за месяц - открывает список с показаниями
             Expanded(
               child: _buildCompactStat(
                 context: context,
-                icon: Icons.warning_amber,
-                value: dashboard.debtorsCount.toString(),
-                label: 'Должников',
-                isWarning: true,
+                value: dashboard.readingsThisMonth.toString(),
+                label: 'Показания',
+                color: AppColors.info,
                 onTap: () {
-                  Get.toNamed(Routes.SEARCH);
+                  Get.toNamed(
+                    Routes.ABONENT_LIST,
+                    arguments: {'type': 'consumption'},
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: Constants.paddingS),
+            // Оплатившие за месяц - открывает список оплативших
+            Expanded(
+              child: _buildCompactStat(
+                context: context,
+                value: dashboard.paidThisMonth.toString(),
+                label: 'Оплатившие',
+                color: AppColors.success,
+                onTap: () {
+                  Get.toNamed(
+                    Routes.ABONENT_LIST,
+                    arguments: {'type': 'payments'},
+                  );
                 },
               ),
             ),
@@ -152,14 +175,15 @@ class DashboardHeader extends StatelessWidget {
 
   Widget _buildCompactStat({
     required BuildContext context,
-    required IconData icon,
     required String value,
     required String label,
     required VoidCallback onTap,
     bool isWarning = false,
+    Color? color,
   }) {
     final theme = Theme.of(context);
-    final color = isWarning ? AppColors.error : theme.textTheme.bodyMedium?.color;
+    final cardColor = color ??
+        (isWarning ? AppColors.error : theme.textTheme.bodyMedium?.color);
 
     return Material(
       color: Colors.transparent,
@@ -174,49 +198,40 @@ class DashboardHeader extends StatelessWidget {
               color: theme.dividerColor.withOpacity(0.1),
               width: 1,
             ),
-            // ✅ ДОБАВЛЕНА ТЕНЬ для кликабельного вида
             boxShadow: [
               BoxShadow(
                 color: theme.brightness == Brightness.dark
                     ? Colors.black.withOpacity(0.3)
                     : Colors.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
           child: Container(
-            padding: const EdgeInsets.all(Constants.paddingM),
+            padding: const EdgeInsets.symmetric(
+              horizontal: Constants.paddingM,
+              vertical: Constants.paddingM,
+            ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Иконка
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: (color ?? theme.primaryColor).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: color?.withOpacity(0.8),
-                  ),
-                ),
-                const SizedBox(height: Constants.paddingXS),
                 // Значение
                 Text(
                   value,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: color,
+                    color: cardColor,
+                    fontSize: 22,
                   ),
                 ),
+                const SizedBox(height: 4),
                 // Метка
                 Text(
                   label,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                    fontSize: 13,
+                    color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                   ),
                 ),
               ],

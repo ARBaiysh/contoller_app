@@ -1,32 +1,53 @@
-
-import 'dart:async';
-
 import 'package:get/get.dart';
-
-import '../../core/services/sync_service.dart';
-import '../../core/values/constants.dart';
 import '../models/subscriber_model.dart';
 import '../providers/api_provider.dart';
 
 class SubscriberRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
-  final SyncService _syncService = Get.find<SyncService>();
 
   // ========================================
   // ОСНОВНЫЕ МЕТОДЫ ЗАГРУЗКИ
   // ========================================
 
-  /// Получение списка абонентов по ТП (онлайн, без кеширования)
-  /// Возвращает актуальные данные с сервера
-  Future<List<SubscriberModel>> getSubscribersByTp(String tpCode, {bool forceRefresh = false}) async {
+  /// Получение всех абонентов инспектора
+  /// forceRefresh - принудительное обновление из 1С
+  Future<List<SubscriberModel>> getAllSubscribers({bool forceRefresh = false}) async {
     try {
-      print('[SUBSCRIBER REPO] Getting subscribers for TP: $tpCode');
+      print('[SUBSCRIBER REPO] Getting all subscribers (forceRefresh: $forceRefresh)');
 
-      // Получаем данные с сервера
-      final responseData = await _apiProvider.getAbonentsByTp(tpCode);
+      final responseData = await _apiProvider.getAllAbonents(
+        forceRefresh: forceRefresh,
+      );
 
-      // Преобразуем в модели
-      final subscribers = responseData.map((json) => SubscriberModel.fromJson(json)).toList();
+      final subscribers = responseData
+          .map((json) => SubscriberModel.fromJson(json))
+          .toList();
+
+      print('[SUBSCRIBER REPO] Loaded ${subscribers.length} subscribers');
+      return subscribers;
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error fetching all subscribers: $e');
+      throw Exception('Не удалось загрузить список абонентов');
+    }
+  }
+
+  /// Получение списка абонентов по ТП
+  /// forceRefresh - принудительное обновление из 1С
+  Future<List<SubscriberModel>> getSubscribersByTp(
+    String tpCode, {
+    bool forceRefresh = false,
+  }) async {
+    try {
+      print('[SUBSCRIBER REPO] Getting subscribers for TP: $tpCode (forceRefresh: $forceRefresh)');
+
+      final responseData = await _apiProvider.getAbonentsByTp(
+        tpCode,
+        forceRefresh: forceRefresh,
+      );
+
+      final subscribers = responseData
+          .map((json) => SubscriberModel.fromJson(json))
+          .toList();
 
       print('[SUBSCRIBER REPO] Loaded ${subscribers.length} subscribers for TP: $tpCode');
       return subscribers;
@@ -36,101 +57,46 @@ class SubscriberRepository {
     }
   }
 
-  /// Получение абонента по номеру лицевого счета
-  Future<SubscriberModel?> getSubscriberByAccountNumber(String accountNumber) async {
-    try {
-      print('[SUBSCRIBER REPO] Getting subscriber by account: $accountNumber');
-
-      // Поиск по всем ТП
-      final searchResults = await searchSubscribers(accountNumber);
-      return searchResults.firstWhereOrNull(
-        (s) => s.accountNumber == accountNumber,
-      );
-    } catch (e) {
-      print('[SUBSCRIBER REPO] Error getting subscriber by account: $e');
-      return null;
-    }
-  }
-
-  // ========================================
-  // СИНХРОНИЗАЦИЯ С КОЛБЭКАМИ
-  // ========================================
-
-  /// Синхронизация абонентов по ТП с колбэками для UI
-  /// Использует SyncService для мониторинга прогресса
-  Future<void> syncAbonentsList(
-    String tpCode, {
-    required Function() onSyncStarted,
-    required Function(String message, Duration elapsed) onProgress,
-    required Function() onSuccess,
-    required Function(String error) onError,
+  /// Получение детальной информации об абоненте
+  /// forceRefresh - принудительное обновление из 1С
+  Future<SubscriberModel> getSubscriberByAccountNumber(
+    String accountNumber, {
+    bool forceRefresh = false,
   }) async {
     try {
-      print('[SUBSCRIBER REPO] Starting abonents sync for TP: $tpCode');
+      print('[SUBSCRIBER REPO] Getting subscriber: $accountNumber (forceRefresh: $forceRefresh)');
 
-      // Запускаем синхронизацию - используем правильный метод
-      final syncResponse = await _apiProvider.syncAbonentsByTp(tpCode);
+      final responseData = await _apiProvider.getAbonentByAccount(
+        accountNumber,
+        forceRefresh: forceRefresh,
+      );
 
-      if (syncResponse.isAlreadyRunning) {
-        print('[SUBSCRIBER REPO] Sync already running');
-        onError(syncResponse.displayMessage);
-        return;
-      }
+      final subscriber = SubscriberModel.fromJson(responseData);
 
-      if (syncResponse.isError) {
-        print('[SUBSCRIBER REPO] Sync initiation failed: ${syncResponse.displayMessage}');
-        onError(syncResponse.displayMessage);
-        return;
-      }
-
-      if (syncResponse.isInitiated && syncResponse.syncMessageId != null) {
-        print('[SUBSCRIBER REPO] Sync initiated with messageId: ${syncResponse.syncMessageId}');
-        onSyncStarted();
-
-        await _syncService.monitorSync(
-          messageId: syncResponse.syncMessageId!,
-          timeout: Constants.abonentsSyncTimeout,
-          checkInterval: Constants.abonentsSyncCheckInterval,
-          onSuccess: (syncStatus) {
-            print('[SUBSCRIBER REPO] Sync completed successfully');
-            onSuccess();
-          },
-          onError: (error) {
-            print('[SUBSCRIBER REPO] Sync failed: $error');
-            onError(error);
-          },
-          onProgress: (message, elapsed) {
-            print('[SUBSCRIBER REPO] Sync progress: $message (${elapsed.inSeconds}s)');
-            onProgress(message, elapsed);
-          },
-        );
-      } else {
-        print('[SUBSCRIBER REPO] Unexpected abonents sync response: ${syncResponse.status}');
-        onError('Неожиданный ответ сервера при запуске синхронизации абонентов');
-      }
+      print('[SUBSCRIBER REPO] Successfully fetched subscriber: ${subscriber.fullName}');
+      return subscriber;
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error starting abonents sync: $e');
-      onError('Не удалось запустить синхронизацию абонентов');
+      print('[SUBSCRIBER REPO] Error getting subscriber by account: $e');
+      throw Exception('Не удалось получить данные абонента');
     }
   }
 
   // ========================================
-  // ПОИСК И ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
+  // ПОИСК
   // ========================================
 
-  /// Поиск абонентов через новый API endpoint
+  /// Живой поиск абонентов (на сервере)
+  /// Возвращает максимум 30 результатов
   Future<List<SubscriberModel>> searchSubscribers(String query) async {
-    if (query.isEmpty || query.length < 3) {
+    if (query.isEmpty) {
       return [];
     }
 
     try {
       print('[SUBSCRIBER REPO] Searching subscribers with query: $query');
 
-      // Используем новый endpoint
       final results = await _apiProvider.searchAbonents(query);
 
-      // Преобразуем в модели
       final subscribers = results
           .map((json) => SubscriberModel.fromJson(json))
           .toList();
@@ -143,204 +109,164 @@ class SubscriberRepository {
     }
   }
 
-  /// Отправка показаний счетчика с мониторингом через SyncService
-  Future<void> submitMeterReading({
+  // ========================================
+  // ПОКАЗАНИЯ СЧЕТЧИКОВ
+  // ========================================
+
+  /// Отправка показания счетчика
+  /// Возвращает readingId для отслеживания статуса
+  Future<Map<String, dynamic>> submitMeterReading({
     required String accountNumber,
-    required String meterSerialNumber,
     required int currentReading,
-    required Function() onSubmitStarted,
-    required Function(String message) onProgress,
-    required Function() onSuccess,
-    required Function(String error) onError,
+    String? meterSerialNumber,
   }) async {
     try {
       print('[SUBSCRIBER REPO] Submitting meter reading for: $accountNumber');
 
-      // Отправляем показание
       final response = await _apiProvider.submitMeterReading(
         accountNumber: accountNumber,
-        meterSerialNumber: meterSerialNumber,
         currentReading: currentReading,
+        meterSerialNumber: meterSerialNumber,
       );
 
-      final status = response['status'] ?? 'ERROR';
-      final syncMessageId = response['syncMessageId'];
-
-      if (status == 'INITIATED' && syncMessageId != null) {
-        print('[SUBSCRIBER REPO] Reading submission initiated with messageId: $syncMessageId');
-        onSubmitStarted();
-
-        // Мониторим обработку показания
-        await _syncService.monitorSync(
-          messageId: syncMessageId,
-          timeout: const Duration(minutes: 3),
-          checkInterval: const Duration(seconds: 3),
-          onSuccess: (syncStatus) {
-            print('[SUBSCRIBER REPO] Reading processed successfully');
-            onSuccess();
-          },
-          onError: (error) {
-            print('[SUBSCRIBER REPO] Reading processing failed: $error');
-            onError(error);
-          },
-          onProgress: (message, elapsed) {
-            onProgress('Обработка показания...');
-          },
-        );
-      } else {
-        onError(response['message'] ?? 'Ошибка отправки показания');
-      }
+      print('[SUBSCRIBER REPO] Reading submitted successfully');
+      return response;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error submitting reading: $e');
-      onError('Не удалось отправить показание');
+      throw Exception('Не удалось отправить показание');
     }
   }
 
-  /// Принудительное обновление списка абонентов (для совместимости)
-  Future<List<SubscriberModel>> refreshSubscribers(String tpCode) async {
-    return getSubscribersByTp(tpCode, forceRefresh: true);
-  }
-
-  /// Получение статистики абонентов для ТП (локальный расчет для UI)
-  Map<String, int> getSubscriberStatistics(List<SubscriberModel> subscribers) {
-    return {
-      'total': subscribers.length,
-      'available': subscribers.where((s) => s.canTakeReading).length,
-      'completed': subscribers.where((s) => !s.canTakeReading).length,
-      'debtors': subscribers.where((s) => s.isDebtor).length,
-    };
-  }
-  /// Синхронизация одного абонента с колбэками для UI
-  Future<void> syncSingleSubscriber(
-      String accountNumber, {
-        required Function() onSyncStarted,
-        required Function(String message) onProgress,
-        required Function(SubscriberModel subscriber) onSuccess,
-        required Function(String error) onError,
-      }) async {
+  /// Проверить статус показания
+  Future<Map<String, dynamic>> checkReadingStatus(int readingId) async {
     try {
-      print('[SUBSCRIBER REPO] Starting single subscriber sync: $accountNumber');
+      print('[SUBSCRIBER REPO] Checking reading status: $readingId');
 
-      // Запускаем синхронизацию
-      final syncResponse = await _apiProvider.syncSingleAbonent(accountNumber);
+      final response = await _apiProvider.checkReadingStatus(readingId);
 
-      // Проверяем статус
-      final status = syncResponse['status'] ?? 'ERROR';
-
-      if (status == 'ALREADY_RUNNING') {
-        print('[SUBSCRIBER REPO] Single sync already running');
-        onError('Синхронизация уже выполняется');
-        return;
-      }
-
-      if (status == 'ERROR') {
-        print('[SUBSCRIBER REPO] Single sync initiation failed');
-        onError(syncResponse['message'] ?? 'Ошибка запуска синхронизации');
-        return;
-      }
-
-      if (status == 'INITIATED' && syncResponse['syncMessageId'] != null) {
-        final messageId = syncResponse['syncMessageId'];
-        print('[SUBSCRIBER REPO] Single sync initiated with messageId: $messageId');
-        onSyncStarted();
-
-        // Мониторим синхронизацию
-        await _syncService.monitorSync(
-          messageId: messageId,
-          timeout: const Duration(minutes: 2),
-          checkInterval: const Duration(seconds: 3),
-          onSuccess: (syncStatus) async {
-            // После успешной синхронизации получаем обновленные данные
-            print('[SUBSCRIBER REPO] Single sync completed, fetching updated data...');
-            try {
-              final updatedSubscriber = await fetchSubscriberByAccount(accountNumber);
-              if (updatedSubscriber != null) {
-                onSuccess(updatedSubscriber);
-              } else {
-                onError('Не удалось получить обновленные данные');
-              }
-            } catch (e) {
-              onError('Ошибка получения обновленных данных');
-            }
-          },
-          onError: (error) {
-            print('[SUBSCRIBER REPO] Single sync failed: $error');
-            onError(error);
-          },
-          onProgress: (message, elapsed) {
-            onProgress('Синхронизация абонента...');
-          },
-        );
-      } else {
-        onError('Неожиданный ответ сервера');
-      }
-
+      return response;
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error in single subscriber sync: $e');
-      onError('Не удалось запустить синхронизацию');
+      print('[SUBSCRIBER REPO] Error checking reading status: $e');
+      throw Exception('Не удалось проверить статус показания');
     }
   }
 
-  /// Получение обновленных данных абонента
-  Future<SubscriberModel?> fetchSubscriberByAccount(String accountNumber) async {
+  /// Получить историю показаний по лицевому счету
+  Future<List<Map<String, dynamic>>> getReadingHistory(String accountNumber) async {
     try {
-      print('[SUBSCRIBER REPO] Fetching subscriber data: $accountNumber');
+      print('[SUBSCRIBER REPO] Getting reading history for: $accountNumber');
 
-      // Добавляем небольшую задержку, чтобы бэкенд успел обновить данные
-      await Future.delayed(const Duration(seconds: 1));
+      final response = await _apiProvider.getReadingHistory(accountNumber);
 
-      final responseData = await _apiProvider.getAbonentByAccount(accountNumber);
+      // Преобразуем в список Map
+      final history = response.map((item) => Map<String, dynamic>.from(item)).toList();
 
-      // ВАЖНО: Создаем НОВЫЙ объект из JSON
-      final subscriber = SubscriberModel.fromJson(Map<String, dynamic>.from(responseData));
-
-      print('[SUBSCRIBER REPO] Successfully fetched subscriber: ${subscriber.fullName}');
-      print('[SUBSCRIBER REPO] New data - Balance: ${subscriber.balance}, LastReading: ${subscriber.lastReading}');
-      return subscriber;
-
+      print('[SUBSCRIBER REPO] Reading history loaded: ${history.length} items');
+      return history;
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error fetching subscriber by account: $e');
-      throw Exception('Не удалось получить данные абонента');
+      print('[SUBSCRIBER REPO] Error getting reading history: $e');
+      throw Exception('Не удалось получить историю показаний');
     }
   }
 
   // ========================================
-  // PHONE MANAGEMENT METHODS
+  // УПРАВЛЕНИЕ ТЕЛЕФОНАМИ
   // ========================================
 
-  /// Добавить или обновить номер телефона абонента
-  /// Телефон будет управляться приложением (приоритет над данными из 1С)
-  Future<void> addOrUpdatePhone({
+  /// Обновить номер телефона абонента
+  Future<void> updatePhone({
     required String accountNumber,
     required String phoneNumber,
   }) async {
     try {
-      print('[SUBSCRIBER REPO] Adding/updating phone for account: $accountNumber');
+      print('[SUBSCRIBER REPO] Updating phone for account: $accountNumber');
 
-      await _apiProvider.addOrUpdatePhone(
+      await _apiProvider.updatePhone(
         accountNumber: accountNumber,
         phoneNumber: phoneNumber,
       );
 
-      print('[SUBSCRIBER REPO] Phone added/updated successfully');
+      print('[SUBSCRIBER REPO] Phone updated successfully');
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error adding/updating phone: $e');
-      rethrow; // Пробрасываем исключение для обработки в контроллере
+      print('[SUBSCRIBER REPO] Error updating phone: $e');
+      rethrow;
     }
   }
 
-  /// Удалить номер телефона абонента
-  /// После удаления будет использоваться номер из 1С (если есть)
-  Future<void> deletePhone(String accountNumber) async {
+  // ========================================
+  // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+  // ========================================
+
+  /// Принудительное обновление списка абонентов для ТП
+  Future<List<SubscriberModel>> refreshSubscribers(String tpCode) async {
+    return getSubscribersByTp(tpCode, forceRefresh: true);
+  }
+
+  /// Получение статистики абонентов (локальный расчет)
+  Map<String, int> getSubscriberStatistics(List<SubscriberModel> subscribers) {
+    return {
+      'total': subscribers.length,
+      'debtors': subscribers.where((s) => s.isDebtor).length,
+    };
+  }
+
+  // Для обратной совместимости - заглушка для синхронизации одного абонента
+  Future<void> syncSingleSubscriber(
+    String accountNumber, {
+    required Function() onSyncStarted,
+    required Function(String message) onProgress,
+    required Function(SubscriberModel subscriber) onSuccess,
+    required Function(String error) onError,
+  }) async {
     try {
-      print('[SUBSCRIBER REPO] Deleting phone for account: $accountNumber');
+      // В новом API просто обновляем данные через forceRefresh
+      onSyncStarted();
+      onProgress('Обновление данных...');
 
-      await _apiProvider.deletePhone(accountNumber);
+      final subscriber = await getSubscriberByAccountNumber(
+        accountNumber,
+        forceRefresh: true,
+      );
 
-      print('[SUBSCRIBER REPO] Phone deleted successfully');
+      onSuccess(subscriber);
     } catch (e) {
-      print('[SUBSCRIBER REPO] Error deleting phone: $e');
-      rethrow; // Пробрасываем исключение для обработки в контроллере
+      onError(e.toString());
+    }
+  }
+
+  // ========================================
+  // СПЕЦИАЛЬНЫЕ СПИСКИ
+  // ========================================
+
+  /// Получить список абонентов с показаниями за текущий месяц
+  Future<List<SubscriberModel>> getAbonentsWithConsumption() async {
+    try {
+      print('[SUBSCRIBER REPO] Fetching abonents with consumption');
+
+      final data = await _apiProvider.getAbonentsWithConsumption();
+      final subscribers = data.map((json) => SubscriberModel.fromJson(json)).toList();
+
+      print('[SUBSCRIBER REPO] Loaded ${subscribers.length} abonents with consumption');
+      return subscribers;
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error fetching consumption list: $e');
+      throw Exception('Не удалось загрузить список абонентов с показаниями');
+    }
+  }
+
+  /// Получить список абонентов которые оплатили в текущем месяце
+  Future<List<SubscriberModel>> getAbonentsWithPayments() async {
+    try {
+      print('[SUBSCRIBER REPO] Fetching abonents with payments');
+
+      final data = await _apiProvider.getAbonentsWithPayments();
+      final subscribers = data.map((json) => SubscriberModel.fromJson(json)).toList();
+
+      print('[SUBSCRIBER REPO] Loaded ${subscribers.length} abonents with payments');
+      return subscribers;
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error fetching payments list: $e');
+      throw Exception('Не удалось загрузить список оплативших абонентов');
     }
   }
 }

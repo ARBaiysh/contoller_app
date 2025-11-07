@@ -42,11 +42,9 @@ class MeterInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: Constants.paddingM),
 
-            _InfoRow(label: 'Тип', value: subscriber.meterType),
+            _InfoRow(label: 'Тип ПУ', value: subscriber.meterType ?? 'Не указан'),
             _InfoRow(label: 'Серийный номер', value: subscriber.meterSerialNumber),
-            if (subscriber.sealNumber.isNotEmpty)
-              _InfoRow(label: 'Номер пломбы', value: subscriber.sealNumber),
-            _InfoRow(label: 'Тариф', value: subscriber.tariffName),
+            _InfoRow(label: 'Тариф', value: subscriber.tariffName ?? '${subscriber.tariff.toStringAsFixed(2)} сом/кВт⋅ч'),
           ],
         ),
       );

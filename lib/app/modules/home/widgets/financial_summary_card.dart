@@ -120,7 +120,6 @@ class FinancialSummaryCard extends StatelessWidget {
                         icon: Icons.warning_amber_outlined,
                         label: 'Задолженность',
                         value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalDebtAmount)} сом',
-                        subtitle: '${dashboard.debtorsCount} должников',
                         iconColor: Colors.red,
                         iconBgColor: Colors.red.withOpacity(0.15),
                       ),
@@ -132,28 +131,8 @@ class FinancialSummaryCard extends StatelessWidget {
                         icon: Icons.trending_up_outlined,
                         label: 'Переплата',
                         value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalOverpaymentAmount)} сом',
-                        subtitle: '',
                         iconColor: Colors.blue,
                         iconBgColor: Colors.blue.withOpacity(0.15),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: Constants.paddingS),
-
-                // Сегодня
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMetricCard(
-                        context: context,
-                        icon: Icons.today_outlined,
-                        label: 'Оплачено (сегодня)',
-                        value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalPaymentsToday)} сом',
-                        subtitle: '${dashboard.paidToday} абонентов',
-                        iconColor: Colors.teal,
-                        iconBgColor: Colors.teal.withOpacity(0.15),
                       ),
                     ),
                   ],

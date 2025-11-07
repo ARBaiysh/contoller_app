@@ -10,70 +10,39 @@ class TpListController extends GetxController {
 
   // Observable states
   final _isLoading = false.obs;
-  final _isSyncing = false.obs;
-  final _syncProgress = ''.obs;
-  final _syncElapsed = Duration.zero.obs;
+  final _isRefreshing = false.obs;
   final _tpList = <TpModel>[].obs;
   final _filteredTpList = <TpModel>[].obs;
   final _searchQuery = ''.obs;
   final _sortBy = 'default'.obs;
 
-  // ДОБАВЛЕНО: Новые реактивные переменные для замены геттеров с логикой
-  final _isEmpty = true.obs;
-  final _hasData = false.obs;
-  final _syncElapsedFormatted = '00:00'.obs;
-
-  // Getters - просто возвращают значения
+  // Getters
   bool get isLoading => _isLoading.value;
-  bool get isSyncing => _isSyncing.value;
-  String get syncProgress => _syncProgress.value;
-  Duration get syncElapsed => _syncElapsed.value;
+  bool get isRefreshing => _isRefreshing.value;
   List<TpModel> get tpList => _filteredTpList;
-  bool get isEmpty => _isEmpty.value;  // ИЗМЕНЕНО
-  bool get hasData => _hasData.value;  // ИЗМЕНЕНО
+  bool get isEmpty => _filteredTpList.isEmpty;
+  bool get hasData => _filteredTpList.isNotEmpty;
   String get searchQuery => _searchQuery.value;
   String get sortBy => _sortBy.value;
-  String get syncElapsedFormatted => _syncElapsedFormatted.value;  // ИЗМЕНЕНО
 
   @override
   void onInit() {
     super.onInit();
-
-    // ДОБАВЛЕНО: Слушатели для обновления зависимых состояний
-    _tpList.listen((_) => _updateListState());
-    _syncElapsed.listen((_) => _updateSyncElapsedFormatted());
-
     loadTpList();
   }
 
-  // ДОБАВЛЕНО: Метод для обновления состояния списка
-  void _updateListState() {
-    _isEmpty.value = _tpList.isEmpty;
-    _hasData.value = _tpList.isNotEmpty;
-  }
-
-  // ДОБАВЛЕНО: Метод для форматирования времени синхронизации
-  void _updateSyncElapsedFormatted() {
-    final minutes = _syncElapsed.value.inMinutes;
-    final seconds = _syncElapsed.value.inSeconds % 60;
-    _syncElapsedFormatted.value = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
   // ========================================
-  // ОСНОВНЫЕ МЕТОДЫ
+  // ЗАГРУЗКА ДАННЫХ
   // ========================================
 
   /// Загрузка списка ТП
   Future<void> loadTpList({bool forceRefresh = false}) async {
-    if (_isSyncing.value) return; // Не загружаем во время синхронизации
-
     try {
       _isLoading.value = true;
-      print('[TP CONTROLLER] Loading TP list...');
+      print('[TP CONTROLLER] Loading TP list (forceRefresh: $forceRefresh)...');
 
       final tpList = await _tpRepository.getTpList(forceRefresh: forceRefresh);
       _tpList.value = tpList;
-      _updateListState(); // ДОБАВЛЕНО: обновляем состояние
 
       print('[TP CONTROLLER] Loaded ${tpList.length} TPs');
       applyFiltersAndSort();
@@ -89,123 +58,14 @@ class TpListController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+      _isRefreshing.value = false;
     }
   }
 
-  /// Pull-to-refresh
+  /// Pull-to-refresh - принудительное обновление из 1С
   Future<void> refreshTpList() async {
+    _isRefreshing.value = true;
     await loadTpList(forceRefresh: true);
-  }
-
-  // ========================================
-  // СИНХРОНИЗАЦИЯ
-  // ========================================
-
-// ========================================
-  // СИНХРОНИЗАЦИЯ
-  // ========================================
-
-  Future<void> syncTpList() async {
-    // ✅ ЗАЩИТА: Проверяем, не идет ли уже синхронизация
-    if (_isSyncing.value || _isLoading.value) {
-      print('[TP CONTROLLER] ⚠️ Sync already in progress, ignoring click');
-      return;
-    }
-
-    // ✅ СРАЗУ устанавливаем флаг, чтобы заблокировать повторные нажатия
-    _isSyncing.value = true;
-    _syncProgress.value = 'Инициализация синхронизации...';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[TP CONTROLLER] Starting TP sync...');
-
-    try {
-      await _tpRepository.syncTpList(
-        onSyncStarted: _onSyncStarted,
-        onProgress: _onSyncProgress,
-        onSuccess: _onSyncSuccess,
-        onError: _onSyncError,
-      );
-    } catch (e) {
-      // ✅ Если произошла ошибка ДО вызова колбэков, сбрасываем флаг
-      print('[TP CONTROLLER] ❌ Error before sync started: $e');
-      _isSyncing.value = false;
-      _syncProgress.value = '';
-
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось запустить синхронизацию: ${e.toString()}',
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
-    }
-  }
-
-  /// Колбэк: синхронизация запущена
-  void _onSyncStarted() {
-    // Флаг уже установлен в syncTpList()
-    _syncProgress.value = 'Запуск синхронизации...';
-    print('[TP CONTROLLER] Sync confirmed by server');
-
-    Get.snackbar(
-      'Синхронизация',
-      'Запущена синхронизация списка ТП',
-      backgroundColor: Constants.info.withValues(alpha: 0.1),
-      colorText: Constants.info,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 2),
-    );
-  }
-
-  /// Колбэк: прогресс синхронизации
-  void _onSyncProgress(String message, Duration elapsed) {
-    _syncProgress.value = message;
-    _syncElapsed.value = elapsed;
-    print('[TP CONTROLLER] Sync progress: $message (${elapsed.inSeconds}s)');
-  }
-
-  /// Колбэк: синхронизация завершена успешно
-  void _onSyncSuccess() async {
-    _isSyncing.value = false;
-    _syncProgress.value = '';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[TP CONTROLLER] Sync completed successfully');
-
-    Get.snackbar(
-      'Успешно',
-      'Синхронизация завершена',
-      backgroundColor: Constants.success.withValues(alpha: 0.1),
-      colorText: Constants.success,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 2),
-    );
-
-    // Автоматически обновляем список после успешной синхронизации
-    await loadTpList(forceRefresh: true);
-  }
-
-  /// Колбэк: ошибка синхронизации
-  void _onSyncError(String error) {
-    _isSyncing.value = false;
-    _syncProgress.value = '';
-    _syncElapsed.value = Duration.zero;
-    _updateSyncElapsedFormatted();
-
-    print('[TP CONTROLLER] Sync failed: $error');
-
-    Get.snackbar(
-      'Ошибка синхронизации',
-      error,
-      backgroundColor: Constants.error.withValues(alpha: 0.1),
-      colorText: Constants.error,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 5),
-    );
   }
 
   // ========================================
@@ -226,37 +86,31 @@ class TpListController extends GetxController {
 
   /// Применение фильтров и сортировки
   void applyFiltersAndSort() {
-    var filtered = List<TpModel>.from(_tpList);
+    var filtered = _tpRepository.searchTp(_tpList, _searchQuery.value);
 
-    // Поиск
-    if (_searchQuery.value.isNotEmpty) {
-      final query = _searchQuery.value.toLowerCase();
-      filtered = filtered.where((tp) {
-        return tp.number.toLowerCase().contains(query) ||
-            tp.name.toLowerCase().contains(query) ||
-            tp.fider.toLowerCase().contains(query);
-      }).toList();
-    }
+    // Фильтрация ТП с 0 абонентов
+    filtered = filtered.where((tp) => tp.totalSubscribers > 0).toList();
 
     // Сортировка
     switch (_sortBy.value) {
       case 'name':
         filtered.sort((a, b) => a.name.compareTo(b.name));
         break;
-      case 'number':
-        filtered.sort((a, b) => a.number.compareTo(b.number));
+      case 'code':
+        filtered.sort((a, b) => a.code.compareTo(b.code));
         break;
-      case 'fider':
-        filtered.sort((a, b) => a.fider.compareTo(b.fider));
+      case 'abonent_count':
+        filtered.sort((a, b) => b.abonentCount.compareTo(a.abonentCount));
         break;
       case 'default':
       default:
-        filtered.sort((a, b) => a.number.compareTo(b.number));
+        filtered.sort((a, b) => a.code.compareTo(b.code));
         break;
     }
 
     _filteredTpList.value = filtered;
   }
+
   // ========================================
   // НАВИГАЦИЯ
   // ========================================
@@ -266,8 +120,7 @@ class TpListController extends GetxController {
     Get.toNamed(
       Routes.SUBSCRIBERS,
       arguments: {
-        'tpId': tp.id,
-        'tpCode': tp.id,
+        'tpCode': tp.code,
         'tpName': tp.name,
       },
     );
@@ -281,8 +134,8 @@ class TpListController extends GetxController {
   List<SortOption> get sortOptions => [
     SortOption(value: 'default', label: 'По умолчанию'),
     SortOption(value: 'name', label: 'По названию'),
-    SortOption(value: 'number', label: 'По номеру'),
-    SortOption(value: 'fider', label: 'По фидеру'),
+    SortOption(value: 'code', label: 'По коду'),
+    SortOption(value: 'abonent_count', label: 'По количеству абонентов'),
   ];
 
   /// Показать диалог сортировки

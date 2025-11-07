@@ -1,29 +1,64 @@
 // lib/app/data/repositories/tp_repository.dart
 
-import 'dart:async';
 import 'package:get/get.dart';
 import '../models/tp_model.dart';
 import '../providers/api_provider.dart';
-import '../../core/services/sync_service.dart';
-import '../../core/values/constants.dart';
 
 class TpRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
-  final SyncService _syncService = Get.find<SyncService>();
 
-  // ========================================
-  // ОСНОВНЫЕ МЕТОДЫ
-  // ========================================
+  // Кеш для предотвращения дублирующихся запросов
+  List<TpModel>? _cachedTpList;
+  DateTime? _cacheTime;
+  Future<List<TpModel>>? _ongoingRequest;
+  static const _cacheDuration = Duration(seconds: 2);
 
   /// Получение списка ТП с сервера
+  /// forceRefresh - принудительное обновление из 1С (игнорирует кеш)
   Future<List<TpModel>> getTpList({bool forceRefresh = false}) async {
+    // forceRefresh игнорирует весь кеш
+    if (forceRefresh) {
+      print('[TP REPO] Force refresh - clearing cache');
+      _cachedTpList = null;
+      _cacheTime = null;
+      _ongoingRequest = null;
+    }
+
+    // Если есть активный запрос - возвращаем его
+    if (_ongoingRequest != null) {
+      print('[TP REPO] Returning ongoing TP list request...');
+      return _ongoingRequest!;
+    }
+
+    // Если данные в кеше и они свежие - возвращаем из кеша
+    if (_cachedTpList != null && _cacheTime != null) {
+      final age = DateTime.now().difference(_cacheTime!);
+      if (age < _cacheDuration) {
+        print('[TP REPO] Returning cached TP list (age: ${age.inMilliseconds}ms)');
+        return _cachedTpList!;
+      }
+    }
+
+    // Создаем новый запрос
+    print('[TP REPO] Fetching TP list (forceRefresh: $forceRefresh)');
+    _ongoingRequest = _fetchTpList(forceRefresh);
+
     try {
-      print('[TP REPO] Fetching TP list...');
+      final result = await _ongoingRequest!;
+      _cachedTpList = result;
+      _cacheTime = DateTime.now();
+      return result;
+    } finally {
+      _ongoingRequest = null;
+    }
+  }
 
-      // Получаем данные с сервера
-      final responseData = await _apiProvider.getTransformerPoints();
+  Future<List<TpModel>> _fetchTpList(bool forceRefresh) async {
+    try {
+      final responseData = await _apiProvider.getTransformerPoints(
+        forceRefresh: forceRefresh,
+      );
 
-      // Преобразуем в модели
       final tpList = responseData.map((json) => TpModel.fromJson(json)).toList();
 
       print('[TP REPO] Loaded ${tpList.length} TPs');
@@ -34,98 +69,29 @@ class TpRepository {
     }
   }
 
-  // ========================================
-  // СИНХРОНИЗАЦИЯ
-  // ========================================
-
-  /// Синхронизация списка ТП с колбэками для UI
-  Future<void> syncTpList({
-    required Function() onSyncStarted,
-    required Function(String message, Duration elapsed) onProgress,
-    required Function() onSuccess,
-    required Function(String error) onError,
-  }) async {
-    try {
-      print('[TP REPO] Starting TP sync...');
-
-      // Запускаем синхронизацию через API
-      final syncResponse = await _apiProvider.syncTransformerPoints();
-
-      if (syncResponse.isAlreadyRunning) {
-        print('[TP REPO] Sync already running');
-        onError(syncResponse.displayMessage);
-        return;
-      }
-
-      if (syncResponse.isError) {
-        print('[TP REPO] Sync initiation failed: ${syncResponse.displayMessage}');
-        onError(syncResponse.displayMessage);
-        return;
-      }
-
-      if (syncResponse.isInitiated && syncResponse.syncMessageId != null) {
-        print('[TP REPO] Sync initiated with messageId: ${syncResponse.syncMessageId}');
-        onSyncStarted();
-
-        // Используем SyncService для мониторинга
-        await _syncService.monitorSync(
-          messageId: syncResponse.syncMessageId!,
-          timeout: Constants.tpSyncTimeout,          // 5 минут
-          checkInterval: Constants.tpSyncCheckInterval, // 5 секунд
-          onSuccess: (syncStatus) {
-            print('[TP REPO] Sync completed successfully');
-            onSuccess();
-          },
-          onError: (error) {
-            print('[TP REPO] Sync failed: $error');
-            onError(error);
-          },
-          onProgress: (message, elapsed) {
-            onProgress(message, elapsed);
-          },
-        );
-      } else {
-        print('[TP REPO] Unexpected sync response: ${syncResponse.status}');
-        onError('Неожиданный ответ сервера при запуске синхронизации');
-      }
-
-    } catch (e) {
-      print('[TP REPO] Error starting TP sync: $e');
-      onError('Не удалось запустить синхронизацию: ${e.toString()}');
-    }
-  }
-
-  /// Принудительное обновление списка ТП
+  /// Принудительное обновление списка ТП из 1С
   Future<List<TpModel>> refreshTpList() async {
     return getTpList(forceRefresh: true);
   }
 
-  /// Поиск ТП по запросу
-  Future<List<TpModel>> searchTp(String query) async {
-    if (query.isEmpty) return [];
+  /// Поиск ТП по запросу (локально)
+  List<TpModel> searchTp(List<TpModel> tpList, String query) {
+    if (query.isEmpty) return tpList;
 
-    try {
-      final tpList = await getTpList();
-      final lowerQuery = query.toLowerCase();
+    final lowerQuery = query.toLowerCase();
 
-      return tpList.where((tp) {
-        return tp.number.toLowerCase().contains(lowerQuery) ||
-            tp.name.toLowerCase().contains(lowerQuery) ||
-            tp.fider.toLowerCase().contains(lowerQuery);
-      }).toList();
-    } catch (e) {
-      print('[TP REPO] Error searching TP: $e');
-      return [];
-    }
+    return tpList.where((tp) {
+      return tp.code.toLowerCase().contains(lowerQuery) ||
+          tp.name.toLowerCase().contains(lowerQuery);
+    }).toList();
   }
 
-  /// Получить ТП по ID
-  Future<TpModel?> getTpById(String id) async {
+  /// Получить ТП по коду
+  TpModel? getTpByCode(List<TpModel> tpList, String code) {
     try {
-      final tpList = await getTpList();
-      return tpList.firstWhereOrNull((tp) => tp.id == id);
+      return tpList.firstWhereOrNull((tp) => tp.code == code);
     } catch (e) {
-      print('[TP REPO] Error getting TP by ID: $e');
+      print('[TP REPO] Error getting TP by code: $e');
       return null;
     }
   }

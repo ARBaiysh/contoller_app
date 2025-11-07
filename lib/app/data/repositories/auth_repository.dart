@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/services/biometric_service.dart';
-import '../models/sync_status_model.dart';
 import '../providers/api_provider.dart';
 import '../models/region_model.dart';
 import '../models/auth_response_model.dart';
@@ -53,36 +52,14 @@ class AuthRepository {
         regionCode: regionCode,
       );
 
-      // Handle successful login
-      if (response.status == 'SUCCESS' && response.token != null) {
-        // Преобразуем данные из ответа в InspectorData
-        final inspectorData = response.toInspectorData();
-
-        if (inspectorData != null) {
-          await _saveAuthData(
-            token: response.token!,
-            username: username,
-            password: password,
-            regionCode: regionCode,
-            inspectorData: inspectorData,
-          );
-        } else {
-          // Если нет полных данных инспектора, создаем минимальный объект
-          await _saveAuthData(
-            token: response.token!,
-            username: username,
-            password: password,
-            regionCode: regionCode,
-            inspectorData: InspectorData(
-              inspectorId: response.inspectorId ?? 0,
-              fullName: response.fullName ?? username,
-              regionName: response.regionName ?? '',
-              regionCode: regionCode,
-              username: username,
-            ),
-          );
-        }
-      }
+      // Handle successful login - новая структура API
+      await _saveAuthData(
+        token: response.token,
+        username: username,
+        password: password,
+        regionCode: regionCode,
+        inspectorData: response.inspector,
+      );
 
       return response;
     } catch (e) {
@@ -91,13 +68,15 @@ class AuthRepository {
     }
   }
 
-  // Check sync status
-  Future<SyncStatusModel> checkSyncStatus(int messageId) async {
+  /// Получить профиль текущего инспектора
+  Future<InspectorData> getProfile() async {
     try {
-      print('[AUTH REPO] Checking sync status for messageId: $messageId');
-      return await _apiProvider.checkSyncStatus(messageId);
+      final profile = await _apiProvider.getProfile();
+      _currentUser = profile;
+      await _storage.write(Constants.userKey, profile.toJson());
+      return profile;
     } catch (e) {
-      print('[AUTH REPO] Check sync status error: $e');
+      print('Get profile error: $e');
       throw e;
     }
   }

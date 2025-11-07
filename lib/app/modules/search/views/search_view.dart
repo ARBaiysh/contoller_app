@@ -169,85 +169,8 @@ class SearchView extends GetView<GlobalSearchController> {
             )),
           ),
 
-          const SizedBox(height: Constants.paddingXS),
-
-          // НОВЫЙ ФИЛЬТР ПО ТАРИФУ
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Obx(() => Row(
-              children: [
-                _buildTariffFilterChip(
-                  context: context,
-                  label: 'Все',
-                  value: 'all',
-                  isSelected: controller.filterByTariff == 'all',
-                ),
-                const SizedBox(width: Constants.paddingS),
-                _buildTariffFilterChip(
-                  context: context,
-                  label: 'Быт',
-                  value: 'household',
-                  isSelected: controller.filterByTariff == 'household',
-                  color: Colors.green,
-                  icon: Icons.home_outlined,
-                ),
-                const SizedBox(width: Constants.paddingS),
-                _buildTariffFilterChip(
-                  context: context,
-                  label: 'НеБыт',
-                  value: 'non_household',
-                  isSelected: controller.filterByTariff == 'non_household',
-                  color: Colors.orange,
-                  icon: Icons.business_outlined,
-                ),
-              ],
-            )),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTariffFilterChip({
-    required BuildContext context,
-    required String label,
-    required String value,
-    required bool isSelected,
-    Color? color,
-    IconData? icon,
-  }) {
-    final chipColor = color ?? AppColors.primary;
-
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? Colors.white : chipColor,
-            ),
-            const SizedBox(width: 4),
-          ],
-          Text(label),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (_) => controller.setTariffFilter(value),
-      selectedColor: chipColor,
-      backgroundColor: chipColor.withValues(alpha: 0.1),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : chipColor,
-        fontSize: 13,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-      ),
-      side: BorderSide(
-        color: chipColor.withValues(alpha: 0.3),
-        width: 1,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      visualDensity: VisualDensity.compact, // Компактность
     );
   }
 

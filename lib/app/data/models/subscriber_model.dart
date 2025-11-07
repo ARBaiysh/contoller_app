@@ -3,121 +3,90 @@
 import 'package:intl/intl.dart';
 
 class SubscriberModel {
-  final int id;
   final String accountNumber;
   final String fullName;
   final String address;
   final String? phone;
   final double balance;
-  final int? lastReading;
-  final DateTime? lastReadingDate;
-
-  // ✅ НОВЫЕ ПОЛЯ
-  final int currentMonthConsumption;
-  final double currentMonthCharge;
-
-  final bool canTakeReading;
-
-  // Информация о счетчике
-  final String meterType;
   final String meterSerialNumber;
-  final String sealNumber;
-  final String tariffName;
-
-  // Информация о платежах
-  final double lastPaymentAmount;
+  final String? meterType;
+  final int currentReading;
+  final int previousReading;
+  final DateTime? lastReadingDate;
+  final double currentMonthConsumption;
+  final double currentMonthCharge;
   final DateTime? lastPaymentDate;
-
-  // Информация о ТП
+  final double lastPaymentAmount;
+  final double tariff;
+  final String? tariffName;
   final String transformerPointCode;
   final String transformerPointName;
-
-  // Информация о синхронизации
-  final DateTime? lastSync;
+  final String? contractDate;
+  final String? notes;
 
   SubscriberModel({
-    required this.id,
     required this.accountNumber,
     required this.fullName,
     required this.address,
     this.phone,
     this.balance = 0.0,
-    this.lastReading,
-    this.lastReadingDate,
-    // ✅ НОВЫЕ ПАРАМЕТРЫ
-    this.currentMonthConsumption = 0,
-    this.currentMonthCharge = 0.0,
-    this.canTakeReading = true,
-    required this.meterType,
     required this.meterSerialNumber,
-    this.sealNumber = '',
-    required this.tariffName,
-    this.lastPaymentAmount = 0.0,
+    this.meterType,
+    this.currentReading = 0,
+    this.previousReading = 0,
+    this.lastReadingDate,
+    this.currentMonthConsumption = 0.0,
+    this.currentMonthCharge = 0.0,
     this.lastPaymentDate,
+    this.lastPaymentAmount = 0.0,
+    this.tariff = 0.0,
+    this.tariffName,
     required this.transformerPointCode,
     required this.transformerPointName,
-    this.lastSync,
+    this.contractDate,
+    this.notes,
   });
 
   // ========================================
   // COMPUTED PROPERTIES
   // ========================================
 
-  /// Проверка, является ли абонент должником
+  /// Проверка, является ли абонент должником (положительный баланс = долг)
   bool get isDebtor => balance > 0;
 
   /// Сумма долга (положительное значение)
-  double get debtAmount => balance < 0 ? balance.abs() : 0;
-
-  /// Можно ли снимать показания
-  bool get canTakeReadings => canTakeReading;
+  double get debtAmount => balance > 0 ? balance : 0;
 
   /// Краткая информация о счетчике
-  String get meterInfo => '$meterType №$meterSerialNumber';
+  String get meterInfo => 'Счетчик №$meterSerialNumber';
 
   /// Форматированный баланс с валютой
   String get formattedBalance {
     final absBalance = balance.abs();
     final formatted = absBalance.toStringAsFixed(2);
-    return balance > 0 ? '$formatted сом.' : '$formatted сом.';
+    if (balance > 0) {
+      return 'Долг: $formatted сом';
+    } else if (balance < 0) {
+      return 'Предоплата: $formatted сом';
+    } else {
+      return '0.00 сом';
+    }
   }
 
-  /// ✅ НОВОЕ: Форматированное потребление
+  /// Форматированное потребление
   String get formattedConsumption {
-    return '${NumberFormat('#,###', 'ru').format(currentMonthConsumption)} кВт·ч';
+    return '${NumberFormat('#,###.#', 'ru').format(currentMonthConsumption)} кВт·ч';
   }
 
-  /// ✅ НОВОЕ: Форматированное начисление
+  /// Форматированное начисление
   String get formattedCharge {
     return '${NumberFormat('#,###.##', 'ru').format(currentMonthCharge)} сом';
   }
 
   /// Статус для цветовой индикации
   SubscriberStatus get status {
-    if (!canTakeReading) return SubscriberStatus.disabled;
     if (isDebtor) return SubscriberStatus.debtor;
     return SubscriberStatus.normal;
-  }
-
-  /// Форматированная дата последней синхронизации
-  String get formattedLastSync {
-    if (lastSync == null) return 'Не синхронизировано';
-
-    final now = DateTime.now();
-    final difference = now.difference(lastSync!);
-
-    if (difference.inMinutes < 1) {
-      return 'Только что';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} мин. назад';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} ч. назад';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} дн. назад';
-    } else {
-      final formatter = DateFormat('dd.MM.yyyy HH:mm');
-      return formatter.format(lastSync!);
-    }
   }
 
   /// Проверка наличия валидного телефона
@@ -140,6 +109,24 @@ class SubscriberModel {
     if (!hasValidPhone) return null;
     return phone;
   }
+
+  // ========================================
+  // BACKWARD COMPATIBILITY GETTERS
+  // ========================================
+
+  /// Для обратной совместимости: можно ли снять показания
+  bool get canTakeReading {
+    // Можно снять показания, если еще не снимали в этом месяце
+    if (lastReadingDate == null) return true;
+    final now = DateTime.now();
+    return !(lastReadingDate!.year == now.year && lastReadingDate!.month == now.month);
+  }
+
+  /// Для обратной совместимости: последнее показание
+  int? get lastReading => currentReading;
+
+  /// Для обратной совместимости: ID абонента (используем accountNumber)
+  String get id => accountNumber;
 
   // ========================================
   // JSON SERIALIZATION
@@ -184,59 +171,55 @@ class SubscriberModel {
     }
 
     return SubscriberModel(
-      id: json['id'] ?? 0,
       accountNumber: json['accountNumber'] ?? '',
       fullName: json['fullName'] ?? '',
       address: json['address'] ?? '',
       phone: processPhone(json['phone']),
       balance: (json['balance'] ?? 0).toDouble(),
-      lastReading: json['lastReading'],
+      meterSerialNumber: json['meterSerialNumber'] ?? '',
+      meterType: json['meterType'],
+      currentReading: json['lastReading'] ?? json['currentReading'] ?? 0,
+      previousReading: json['previousReading'] ?? 0,
       lastReadingDate: json['lastReadingDate'] != null
           ? DateTime.tryParse(json['lastReadingDate'])
           : null,
-      // ✅ НОВЫЕ ПОЛЯ
-      currentMonthConsumption: json['currentMonthConsumption'] ?? 0,
+      currentMonthConsumption: (json['currentMonthConsumption'] ?? 0).toDouble(),
       currentMonthCharge: (json['currentMonthCharge'] ?? 0).toDouble(),
-      canTakeReading: json['canTakeReading'] ?? true,
-      meterType: json['meterType'] ?? 'СОЭ',
-      meterSerialNumber: json['meterSerialNumber'] ?? '',
-      sealNumber: json['sealNumber'] ?? '',
-      tariffName: json['tariffName'] ?? 'Обычный',
       lastPaymentAmount: (json['lastPaymentAmount'] ?? 0).toDouble(),
       lastPaymentDate: json['lastPaymentDate'] != null
           ? DateTime.tryParse(json['lastPaymentDate'])
           : null,
+      tariff: (json['tariff'] ?? 0).toDouble(),
+      tariffName: json['tariffName'],
       transformerPointCode: json['transformerPointCode'] ?? '',
       transformerPointName: json['transformerPointName'] ?? '',
-      lastSync: json['lastSync'] != null
-          ? DateTime.tryParse(json['lastSync'])
-          : null,
+      contractDate: json['contractDate'],
+      notes: json['notes'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'accountNumber': accountNumber,
       'fullName': fullName,
       'address': address,
       'phone': phone,
       'balance': balance,
-      'lastReading': lastReading,
+      'meterSerialNumber': meterSerialNumber,
+      'meterType': meterType,
+      'currentReading': currentReading,
+      'previousReading': previousReading,
       'lastReadingDate': lastReadingDate?.toIso8601String(),
-      // ✅ НОВЫЕ ПОЛЯ
       'currentMonthConsumption': currentMonthConsumption,
       'currentMonthCharge': currentMonthCharge,
-      'canTakeReading': canTakeReading,
-      'meterType': meterType,
-      'meterSerialNumber': meterSerialNumber,
-      'sealNumber': sealNumber,
-      'tariffName': tariffName,
       'lastPaymentAmount': lastPaymentAmount,
       'lastPaymentDate': lastPaymentDate?.toIso8601String(),
+      'tariff': tariff,
+      'tariffName': tariffName,
       'transformerPointCode': transformerPointCode,
       'transformerPointName': transformerPointName,
-      'lastSync': lastSync?.toIso8601String(),
+      'contractDate': contractDate,
+      'notes': notes,
     };
   }
 
@@ -245,91 +228,87 @@ class SubscriberModel {
   // ========================================
 
   SubscriberModel copyWith({
-    int? id,
     String? accountNumber,
     String? fullName,
     String? address,
     String? phone,
     double? balance,
-    int? lastReading,
-    DateTime? lastReadingDate,
-    // ✅ НОВЫЕ ПАРАМЕТРЫ
-    int? currentMonthConsumption,
-    double? currentMonthCharge,
-    bool? canTakeReading,
-    String? meterType,
     String? meterSerialNumber,
-    String? sealNumber,
-    String? tariffName,
-    double? lastPaymentAmount,
+    String? meterType,
+    int? currentReading,
+    int? previousReading,
+    DateTime? lastReadingDate,
+    double? currentMonthConsumption,
+    double? currentMonthCharge,
     DateTime? lastPaymentDate,
+    double? lastPaymentAmount,
+    double? tariff,
+    String? tariffName,
     String? transformerPointCode,
     String? transformerPointName,
-    DateTime? lastSync,
+    String? contractDate,
+    String? notes,
   }) {
     return SubscriberModel(
-      id: id ?? this.id,
       accountNumber: accountNumber ?? this.accountNumber,
       fullName: fullName ?? this.fullName,
       address: address ?? this.address,
       phone: phone ?? this.phone,
       balance: balance ?? this.balance,
-      lastReading: lastReading ?? this.lastReading,
+      meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
+      meterType: meterType ?? this.meterType,
+      currentReading: currentReading ?? this.currentReading,
+      previousReading: previousReading ?? this.previousReading,
       lastReadingDate: lastReadingDate ?? this.lastReadingDate,
-      // ✅ НОВЫЕ ПОЛЯ
       currentMonthConsumption: currentMonthConsumption ?? this.currentMonthConsumption,
       currentMonthCharge: currentMonthCharge ?? this.currentMonthCharge,
-      canTakeReading: canTakeReading ?? this.canTakeReading,
-      meterType: meterType ?? this.meterType,
-      meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
-      sealNumber: sealNumber ?? this.sealNumber,
-      tariffName: tariffName ?? this.tariffName,
       lastPaymentAmount: lastPaymentAmount ?? this.lastPaymentAmount,
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
+      tariff: tariff ?? this.tariff,
+      tariffName: tariffName ?? this.tariffName,
       transformerPointCode: transformerPointCode ?? this.transformerPointCode,
       transformerPointName: transformerPointName ?? this.transformerPointName,
-      lastSync: lastSync ?? this.lastSync,
+      contractDate: contractDate ?? this.contractDate,
+      notes: notes ?? this.notes,
     );
   }
 
   static SubscriberModel empty() {
     return SubscriberModel(
-      id: 0,
       accountNumber: '',
       fullName: '',
       address: '',
       phone: null,
       balance: 0.0,
-      lastReading: null,
-      lastReadingDate: null,
-      currentMonthConsumption: 0,
-      currentMonthCharge: 0.0,
-      canTakeReading: false,
-      meterType: '',
       meterSerialNumber: '',
-      sealNumber: '',
-      tariffName: '',
+      currentReading: 0,
+      previousReading: 0,
+      lastReadingDate: null,
+      currentMonthConsumption: 0.0,
+      currentMonthCharge: 0.0,
       lastPaymentAmount: 0.0,
       lastPaymentDate: null,
+      tariff: 0.0,
       transformerPointCode: '',
       transformerPointName: '',
-      lastSync: null,
+      contractDate: null,
+      notes: null,
     );
   }
 
   @override
   String toString() {
-    return 'SubscriberModel(id: $id, accountNumber: $accountNumber, fullName: $fullName, balance: $balance)';
+    return 'SubscriberModel(accountNumber: $accountNumber, fullName: $fullName, balance: $balance)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SubscriberModel && other.id == id;
+    return other is SubscriberModel && other.accountNumber == accountNumber;
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => accountNumber.hashCode;
 }
 
 // ========================================
@@ -340,7 +319,6 @@ class SubscriberModel {
 enum SubscriberStatus {
   normal,    // Обычный (зеленый/нейтральный)
   debtor,    // Должник (красный)
-  disabled,  // Нельзя снимать показания (серый)
 }
 
 extension SubscriberStatusExtension on SubscriberStatus {
@@ -351,8 +329,6 @@ extension SubscriberStatusExtension on SubscriberStatus {
         return 'Обычный';
       case SubscriberStatus.debtor:
         return 'Должник';
-      case SubscriberStatus.disabled:
-        return 'Заблокирован';
     }
   }
 
@@ -360,11 +336,9 @@ extension SubscriberStatusExtension on SubscriberStatus {
   String get description {
     switch (this) {
       case SubscriberStatus.normal:
-        return 'Можно снимать показания';
+        return 'Баланс в норме';
       case SubscriberStatus.debtor:
-        return 'Отрицательный баланс';
-      case SubscriberStatus.disabled:
-        return 'Показания заблокированы';
+        return 'Есть задолженность';
     }
   }
 }

@@ -126,28 +126,6 @@ class SubscriberListItem extends StatelessWidget {
                             ],
                           ),
                         ],
-
-                        // ОБНОВЛЕНО: Синхронизация с СИНИМ цветом
-                        if (subscriber.lastSync != null) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.timelapse,
-                                size: 14,
-                                color: AppColors.info, // ИЗМЕНЕНО: синий цвет
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Синхронизация: ${subscriber.formattedLastSync}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  color: AppColors.info, // ИЗМЕНЕНО: синий цвет
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -186,13 +164,13 @@ class SubscriberListItem extends StatelessWidget {
                     value: _formatBalance(subscriber.balance),
                     valueColor: subscriber.balance <= 0 ? AppColors.success : AppColors.error,
                   ),
-                  // Last reading
-                  if (subscriber.lastReading != null)
+                  // Last reading - показываем только если есть дата последнего показания
+                  if (subscriber.lastReadingDate != null)
                     _buildInfoItem(
                       context: context,
                       icon: Icons.electric_meter,
                       label: 'Последнее',
-                      value: '${subscriber.lastReading}',
+                      value: '${subscriber.currentReading}',
                     ),
                   // Status
                   _buildReadingStatus(context),
@@ -245,7 +223,42 @@ class SubscriberListItem extends StatelessWidget {
   }
 
   Widget _buildReadingStatus(BuildContext context) {
-    // Сначала проверяем, заблокирован ли абонент
+    // ИСПРАВЛЕНО: Сначала проверяем, есть ли показание в текущем месяце
+    // Если показание передано, то всегда "Пройдено" (независимо от canTakeReading)
+    final hasCurrentMonthReading = _hasReadingInCurrentMonth();
+    if (hasCurrentMonthReading) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Constants.paddingS,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 12,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Пройдено',
+              style: TextStyle(
+                color: AppColors.success,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Если показания нет, проверяем заблокирован ли абонент
     if (!subscriber.canTakeReading) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -278,42 +291,7 @@ class SubscriberListItem extends StatelessWidget {
       );
     }
 
-    // Если не заблокирован, проверяем есть ли показание в текущем месяце
-    final hasCurrentMonthReading = _hasReadingInCurrentMonth();
-    if (hasCurrentMonthReading) {
-      // Показание есть в текущем месяце = Пройден
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Constants.paddingS,
-          vertical: 4,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.success.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 12,
-              color: AppColors.success,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Пройден',
-              style: TextStyle(
-                color: AppColors.success,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Нет показания в текущем месяце = Нужен обход
+    // Нет показания в текущем месяце и не заблокирован = Нужен обход
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: Constants.paddingS,

@@ -74,27 +74,7 @@ class AuthView extends GetView<AuthController> {
 
                   // Login button
                   _buildLoginButton(context),
-                  _buildSyncStatus(context),
                   const SizedBox(height: Constants.paddingM),
-
-                  const SizedBox(height: Constants.paddingM),
-
-// Sync status
-                  Obx(() => controller.isSyncing
-                      ? Column(
-                    children: [
-                      const LinearProgressIndicator(),
-                      const SizedBox(height: Constants.paddingM),
-                      Text(
-                        controller.syncMessage,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  )
-                      : const SizedBox.shrink()),
 
                   // Company info
                   _buildCompanyInfo(context),
@@ -261,7 +241,7 @@ class AuthView extends GetView<AuthController> {
 
   Widget _buildLoginButton(BuildContext context) {
     return Obx(() {
-      final isButtonEnabled = controller.isFormValid && !controller.isSyncing;
+      final isButtonEnabled = controller.isFormValid;
 
       return ElevatedButton(
         onPressed: isButtonEnabled ? controller.login : null,
@@ -277,7 +257,7 @@ class AuthView extends GetView<AuthController> {
         ),
         child: SizedBox(
           height: 24,
-          child: controller.isLoading || controller.isSyncing
+          child: controller.isLoading
               ? const SizedBox(
             height: 20,
             width: 20,
@@ -286,41 +266,13 @@ class AuthView extends GetView<AuthController> {
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           )
-              : Text(
-            controller.isSyncing ? 'Синхронизация...' : 'Войти',
-            style: const TextStyle(
+              : const Text(
+            'Войти',
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      );
-    });
-  }
-
-  Widget _buildSyncStatus(BuildContext context) {
-    return Obx(() {
-      if (!controller.isSyncing) return const SizedBox.shrink();
-
-      return Padding(
-        padding: const EdgeInsets.only(top: Constants.paddingM),
-        child: Column(
-          children: [
-            Text(
-              controller.syncMessage,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: Constants.paddingXS),
-            Text(
-              'Пожалуйста, подождите...',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
         ),
       );
     });
@@ -371,7 +323,7 @@ class AuthView extends GetView<AuthController> {
         child: Text(region.name),
       ))
           .toList(),
-      onChanged: controller.isLoading || controller.isSyncing
+      onChanged: controller.isLoading
           ? null
           : (value) {
         final region = controller.regions

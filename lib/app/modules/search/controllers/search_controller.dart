@@ -30,12 +30,9 @@ class GlobalSearchController extends GetxController {
   // Filter states
   final _filterByDebtor = false.obs;
   final _filterByStatus = 'all'.obs;
-  final _filterByTariff = 'all'.obs;
 
   final _totalResults = 0.obs;
   final _debtorResults = 0.obs;
-  final _householdResults = 0.obs;
-  final _nonHouseholdResults = 0.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -45,14 +42,10 @@ class GlobalSearchController extends GetxController {
   List<String> get recentSearches => _recentSearches;
   bool get filterByDebtor => _filterByDebtor.value;
   String get filterByStatus => _filterByStatus.value;
-  String get filterByTariff => _filterByTariff.value;
-
 
   // Statistics
   int get totalResults => _totalResults.value;
   int get debtorResults => _debtorResults.value;
-  int get householdResults => _householdResults.value;
-  int get nonHouseholdResults => _nonHouseholdResults.value;
 
   @override
   void onInit() {
@@ -68,11 +61,6 @@ class GlobalSearchController extends GetxController {
   void _updateStatistics() {
     _totalResults.value = _searchResults.length;
     _debtorResults.value = _searchResults.where((s) => s.isDebtor).length;
-
-    _householdResults.value = _searchResults.where((s) =>
-        s.tariffName.toLowerCase().contains('населен')).length;
-    _nonHouseholdResults.value = _searchResults.where((s) =>
-    !s.tariffName.toLowerCase().contains('населен')).length;
   }
 
   @override
@@ -161,21 +149,6 @@ class GlobalSearchController extends GetxController {
         }
       }
 
-      if (_filterByTariff.value != 'all') {
-        switch (_filterByTariff.value) {
-          case 'household':
-          // Быт - содержит "населен"
-            filtered = filtered.where((s) =>
-                s.tariffName.toLowerCase().contains('населен')).toList();
-            break;
-          case 'non_household':
-          // НеБыт - НЕ содержит "населен"
-            filtered = filtered.where((s) =>
-            !s.tariffName.toLowerCase().contains('населен')).toList();
-            break;
-        }
-      }
-
       _searchResults.value = filtered;
       _updateStatistics();
 
@@ -194,13 +167,6 @@ class GlobalSearchController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
-    }
-  }
-
-  void setTariffFilter(String tariff) {
-    _filterByTariff.value = tariff;
-    if (_searchQuery.value.isNotEmpty && _searchQuery.value.length >= 3) {
-      performSearch(_searchQuery.value);
     }
   }
 
@@ -301,26 +267,6 @@ class GlobalSearchController extends GetxController {
         'value': 'completed',
         'label': 'Обойдены',
         'count': _searchResults.where((s) => !s.canTakeReading).length,
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> get tariffFilterOptions {
-    return [
-      {
-        'value': 'all',
-        'label': 'Все тарифы',
-        'count': _searchResults.length,
-      },
-      {
-        'value': 'household',
-        'label': 'Быт',
-        'count': _householdResults.value,
-      },
-      {
-        'value': 'non_household',
-        'label': 'НеБыт',
-        'count': _nonHouseholdResults.value,
       },
     ];
   }

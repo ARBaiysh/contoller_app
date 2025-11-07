@@ -7,7 +7,6 @@ import '../../../widgets/app_drawer.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/financial_summary_card.dart';
-import '../widgets/sync_status_card.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -54,9 +53,6 @@ class HomeView extends StatelessWidget {
                 // Финансовые показатели (свернутая карточка)
                 FinancialSummaryCard(dashboard: dashboard),
 
-                // Статус синхронизации
-                const SyncStatusCard(),
-
                 // Отступ снизу
                 const SizedBox(height: Constants.paddingXL),
               ],
@@ -68,11 +64,34 @@ class HomeView extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final HomeController controller = Get.find<HomeController>();
+
     return AppBar(
       title: const Text('Панель управления'),
       centerTitle: true,
       elevation: 0,
       scrolledUnderElevation: 1,
+      actions: [
+        // Кнопка принудительного обновления из 1С
+        Obx(() => IconButton(
+          icon: controller.isForceRefreshing.value
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                )
+              : const Icon(Icons.sync),
+          onPressed: controller.isForceRefreshing.value
+              ? null
+              : () => controller.forceRefreshFromServer(),
+          tooltip: 'Обновить из 1С',
+        )),
+      ],
     );
   }
 
