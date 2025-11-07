@@ -438,7 +438,21 @@ class ApiProvider extends GetxService {
     required Function(int received, int total) onProgress,
   }) async {
     try {
-      await _dio.download(
+      // Создаем отдельный экземпляр Dio с увеличенными таймаутами для скачивания большого файла
+      final downloadDio = Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(minutes: 10), // 10 минут для скачивания
+        sendTimeout: const Duration(minutes: 10),
+      ));
+
+      // Добавляем токен для авторизации
+      final token = _storage.read(Constants.tokenKey);
+      if (token != null) {
+        downloadDio.options.headers['Authorization'] = 'Bearer $token';
+      }
+
+      await downloadDio.download(
         '/auth/download-apk',
         savePath,
         onReceiveProgress: (received, total) {
