@@ -22,6 +22,7 @@ abstract class Routes {
   static const ABOUT = _Paths.ABOUT;
   static const UPDATE_REQUIRED = _Paths.UPDATE_REQUIRED;
   static const ABONENT_LIST = _Paths.ABONENT_LIST;
+  static const METER_DETAIL = _Paths.METER_DETAIL;
 }
 
 abstract class _Paths {
@@ -46,4 +47,5 @@ abstract class _Paths {
   static const ABOUT = '/about';
   static const UPDATE_REQUIRED = '/update-required';
   static const ABONENT_LIST = '/abonent-list';
+  static const METER_DETAIL = '/meter-detail';
 }

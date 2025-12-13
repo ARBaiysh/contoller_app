@@ -5,10 +5,12 @@ import 'package:get_storage/get_storage.dart';
 import '../../core/values/constants.dart';
 import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
+import '../models/meter_detail_model.dart';
 import '../models/region_model.dart';
 
 class ApiProvider extends GetxService {
-  static const String baseUrl = 'https://ca.asdf.kg/api';
+  static const String baseUrl = 'http://192.168.120.10:8269/api';
+  //static const String baseUrl = 'https://ca.asdf.kg/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
@@ -582,6 +584,39 @@ class ApiProvider extends GetxService {
       throw _handleError(e);
     } catch (e) {
       print('[API] Unexpected error generating report: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
+  // METER DATA ENDPOINTS
+  // ========================================
+
+  /// Получить детальные данные счётчика
+  /// GET /api/mobile/abonents/{accountNumber}/meter-data/{meterNumber}
+  Future<MeterDetailModel> getMeterData({
+    required String accountNumber,
+    required String meterNumber,
+  }) async {
+    try {
+      print('[API] Getting meter data for account: $accountNumber, meter: $meterNumber');
+      final response = await _dio.get(
+        '/mobile/abonents/$accountNumber/meter-data/$meterNumber',
+      );
+      print('[API] Meter data response: ${response.data}');
+      return MeterDetailModel.fromJson(response.data);
+    } on DioException catch (e) {
+      print('[API] Error getting meter data: $e');
+
+      if (e.response?.statusCode == 404) {
+        throw Exception('Данные счётчика не найдены');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Нет доступа к данному абоненту');
+      }
+
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error getting meter data: $e');
       throw _handleError(e);
     }
   }

@@ -5,6 +5,8 @@ import '../data/repositories/news_repository.dart';
 import '../data/repositories/notification_repository.dart';
 import '../modules/abonent_list/bindings/abonent_list_binding.dart';
 import '../modules/abonent_list/views/abonent_list_view.dart';
+import '../modules/meter_detail/controllers/meter_detail_controller.dart';
+import '../modules/meter_detail/views/meter_detail_view.dart';
 import '../modules/about/views/about_view.dart';
 import '../modules/auth/views/auth_view.dart';
 import '../modules/help_support/views/help_support_view.dart';
@@ -137,6 +139,15 @@ class AppPages {
       page: () => const AbonentListView(),
       binding: AbonentListBinding(),
       transition: Transition.cupertino,
+    ),
+
+    GetPage(
+      name: Routes.METER_DETAIL,
+      page: () => const MeterDetailView(),
+      binding: BindingsBuilder(() {
+        Get.put(MeterDetailController());
+      }),
+      transition: Transition.rightToLeft,
     ),
   ];
 }
