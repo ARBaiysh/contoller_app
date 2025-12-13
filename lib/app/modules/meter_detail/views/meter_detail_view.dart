@@ -247,10 +247,21 @@ class MeterDetailView extends GetView<MeterDetailController> {
                   textAlign: TextAlign.center,
                 )),
             const SizedBox(height: Constants.paddingL),
-            ElevatedButton.icon(
-              onPressed: controller.refresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Повторить'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => Get.back(),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Назад'),
+                ),
+                const SizedBox(width: Constants.paddingM),
+                ElevatedButton.icon(
+                  onPressed: controller.refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Повторить'),
+                ),
+              ],
             ),
           ],
         ),
