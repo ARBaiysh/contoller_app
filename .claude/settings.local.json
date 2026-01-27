@@ -9,7 +9,17 @@
       "Bash(del /Q \"lib\\app\\data\\models\\sync_status_model.dart\" \"lib\\app\\data\\models\\tp_sync_response_model.dart\" \"lib\\app\\data\\models\\abonent_sync_response_model.dart\" \"lib\\app\\data\\models\\full_sync_response_model.dart\" \"lib\\app\\core\\services\\sync_service.dart\")",
       "Bash(flutter build:*)",
       "Bash(dir:*)",
-      "Bash(del /Q \"lib\\app\\modules\\home\\widgets\\sync_status_card.dart\")"
+      "Bash(del /Q \"lib\\app\\modules\\home\\widgets\\sync_status_card.dart\")",
+      "Bash(tree:*)",
+      "Bash(flutter clean:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:oshpes.nesk.kg)"
     ],
     "deny": [],
     "ask": []

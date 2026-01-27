@@ -9,6 +9,8 @@ import '../../core/services/app_update_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/values/constants.dart';
 
+// ignore_for_file: deprecated_member_use
+
 class UpdateRequiredView extends StatelessWidget {
   const UpdateRequiredView({super.key});
 
@@ -118,91 +120,57 @@ class UpdateRequiredView extends StatelessWidget {
 
                 const Spacer(),
 
-                // Прогресс скачивания
-                Obx(() {
-                  if (updateService.isDownloading) {
-                    return Column(
-                      children: [
-                        // Прогресс бар
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: updateService.downloadProgress,
-                            minHeight: 8,
-                            backgroundColor: AppColors.primary.withOpacity(0.2),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: Constants.paddingS),
+                const SizedBox(height: Constants.paddingL),
 
-                        // Процент и размер
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Кнопки
+                Column(
+                  children: [
+                    // Кнопка "Обновить в Play Store"
+                    SizedBox(
+                      width: double.infinity,
+                      height: Constants.buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: () => updateService.openPlayStore(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            Icon(Icons.shop),
+                            SizedBox(width: Constants.paddingS),
                             Text(
-                              '${updateService.progressPercentage}%',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              'Обновить в Play Store',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Text(
-                              updateService.formattedProgress,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.color
-                                    ?.withOpacity(0.7),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: Constants.paddingL),
+                      ),
+                    ),
 
-                        // Сообщение о скачивании
-                        Text(
-                          'Скачивание обновления...',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox.shrink();
-                }),
-
-                const SizedBox(height: Constants.paddingL),
-
-                // Кнопки
-                Obx(() {
-                  if (updateService.isDownloading) {
-                    // Во время скачивания кнопки не показываем
-                    return const SizedBox.shrink();
-                  }
-
-                  return Column(
-                    children: [
-                      // Кнопка "Обновить"
+                    // Кнопка "Назад" (если необязательное обновление)
+                    if (!isForceUpdate) ...[
+                      const SizedBox(height: Constants.paddingM),
                       SizedBox(
                         width: double.infinity,
                         height: Constants.buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () => _downloadAndInstall(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.download),
+                              Icon(Icons.arrow_back),
                               SizedBox(width: Constants.paddingS),
                               Text(
-                                'Обновить приложение',
+                                'Вернуться назад',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -212,69 +180,39 @@ class UpdateRequiredView extends StatelessWidget {
                           ),
                         ),
                       ),
-
-                      // Кнопка "Назад" (если необязательное обновление)
-                      if (!isForceUpdate) ...[
-                        const SizedBox(height: Constants.paddingM),
-                        SizedBox(
-                          width: double.infinity,
-                          height: Constants.buttonHeight,
-                          child: OutlinedButton(
-                            onPressed: () => Get.back(),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.primary),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.arrow_back),
-                                SizedBox(width: Constants.paddingS),
-                                Text(
-                                  'Вернуться назад',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // Кнопка "Выйти" (только для обязательного обновления)
-                      if (isForceUpdate) ...[
-                        const SizedBox(height: Constants.paddingM),
-                        SizedBox(
-                          width: double.infinity,
-                          height: Constants.buttonHeight,
-                          child: OutlinedButton(
-                            onPressed: () => _exitApp(context),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.exit_to_app),
-                                SizedBox(width: Constants.paddingS),
-                                Text(
-                                  'Выйти из приложения',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
-                  );
-                }),
+
+                    // Кнопка "Выйти" (только для обязательного обновления)
+                    if (isForceUpdate) ...[
+                      const SizedBox(height: Constants.paddingM),
+                      SizedBox(
+                        width: double.infinity,
+                        height: Constants.buttonHeight,
+                        child: OutlinedButton(
+                          onPressed: () => _exitApp(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.exit_to_app),
+                              SizedBox(width: Constants.paddingS),
+                              Text(
+                                'Выйти из приложения',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
 
                 SizedBox(height: isForceUpdate ? Constants.paddingL : Constants.paddingM),
               ],
@@ -313,54 +251,6 @@ class UpdateRequiredView extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  // Скачивание и установка
-  Future<void> _downloadAndInstall(BuildContext context) async {
-    final updateService = Get.find<AppUpdateService>();
-
-    try {
-      // Скачиваем APK
-      final apkPath = await updateService.downloadUpdate();
-
-      if (apkPath == null) {
-        throw Exception('Не удалось скачать файл обновления');
-      }
-
-      // Небольшая задержка для UX
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Запускаем установку
-      await updateService.installApk(apkPath);
-
-      // Показываем сообщение
-      if (context.mounted) {
-        Get.snackbar(
-          'Обновление скачано',
-          'Следуйте инструкциям для установки',
-          backgroundColor: AppColors.success.withOpacity(0.1),
-          colorText: AppColors.success,
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 5),
-        );
-      }
-    } catch (e) {
-      print('[UPDATE SCREEN] Error: $e');
-
-      if (context.mounted) {
-        Get.snackbar(
-          'Ошибка',
-          'Не удалось скачать обновление: ${e.toString()}',
-          backgroundColor: AppColors.error.withOpacity(0.1),
-          colorText: AppColors.error,
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 5),
-        );
-      }
-
-      // Сбрасываем состояние
-      updateService.resetDownloadState();
-    }
   }
 
   // Выход из приложения (только для forceUpdate)

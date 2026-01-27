@@ -16,6 +16,15 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+// ✅ Читаем key.properties для подписи release сборки
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { stream ->
+        keystoreProperties.load(stream)
+    }
+}
+
 // ✅ Получаем версию из Flutter (из pubspec.yaml через local.properties)
 fun getFlutterVersionCode(): Int {
     val versionCode = localProperties.getProperty("flutter.versionCode")
@@ -45,13 +54,23 @@ android {
         applicationId = "kg.asdf.contoller_app"
 
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
+        targetSdk = 35
 
         // ✅ ПРАВИЛЬНО: Берём версию из pubspec.yaml через Flutter
         versionCode = getFlutterVersionCode()
         versionName = getFlutterVersionName()
 
         multiDexEnabled = true
+    }
+
+    // ✅ Конфигурация подписи для release
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
     }
 
     buildTypes {
@@ -61,8 +80,8 @@ android {
         }
 
         getByName("release") {
-            // Используем debug ключ для подписи
-            signingConfig = signingConfigs.getByName("debug")
+            // ✅ Используем production ключ для подписи
+            signingConfig = signingConfigs.getByName("release")
 
             isMinifyEnabled = false
             isShrinkResources = false

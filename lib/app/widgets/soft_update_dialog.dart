@@ -5,8 +5,6 @@ import 'package:get/get.dart';
 
 import '../core/services/app_update_service.dart';
 import '../core/theme/app_colors.dart';
-import '../core/values/constants.dart';
-import '../routes/app_pages.dart';
 
 class SoftUpdateDialog {
   static void show() {
@@ -127,8 +125,8 @@ class SoftUpdateDialog {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              // Переходим на экран обновления
-              Get.toNamed(Routes.UPDATE_REQUIRED);
+              // Открываем Play Store
+              updateService.openPlayStore();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -138,12 +136,19 @@ class SoftUpdateDialog {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              'Обновить',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shop, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Обновить',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -433,46 +433,6 @@ class ApiProvider extends GetxService {
     }
   }
 
-  /// Скачивание APK файла с прогрессом
-  /// GET /api/auth/download-apk
-  Future<void> downloadApk({
-    required String savePath,
-    required Function(int received, int total) onProgress,
-  }) async {
-    try {
-      // Создаем отдельный экземпляр Dio с увеличенными таймаутами для скачивания большого файла
-      final downloadDio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 60),
-        receiveTimeout: const Duration(minutes: 10), // 10 минут для скачивания
-        sendTimeout: const Duration(minutes: 10),
-      ));
-
-      // Добавляем токен для авторизации
-      final token = _storage.read(Constants.tokenKey);
-      if (token != null) {
-        downloadDio.options.headers['Authorization'] = 'Bearer $token';
-      }
-
-      await downloadDio.download(
-        '/auth/download-apk',
-        savePath,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = (received / total * 100).toStringAsFixed(0);
-            print('[API] Download progress: $progress% ($received/$total bytes)');
-            onProgress(received, total);
-          }
-        },
-      );
-
-      print('[API] APK download completed: $savePath');
-    } catch (e) {
-      print('[API] Error downloading APK: $e');
-      throw _handleError(e);
-    }
-  }
-
   // ========================================
   // PHONE MANAGEMENT ENDPOINTS
   // ========================================
