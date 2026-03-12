@@ -95,8 +95,7 @@ class AppUpdateService extends GetxService {
 
   /// Открывает страницу приложения в Google Play
   Future<void> openPlayStore() async {
-    // URL для закрытого тестирования
-    const playStoreUrl = 'https://play.google.com/apps/testing/kg.asdf.contoller_app';
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=kg.asdf.contoller_app&hl=ru';
     final uri = Uri.parse(playStoreUrl);
 
     print('[APP UPDATE] Opening Play Store: $playStoreUrl');
@@ -107,12 +106,6 @@ class AppUpdateService extends GetxService {
         print('[APP UPDATE] ✅ Play Store opened successfully');
       } else {
         print('[APP UPDATE] ❌ Cannot launch Play Store URL');
-        // Пробуем открыть обычную ссылку на Play Store
-        const fallbackUrl = 'https://play.google.com/store/apps/details?id=kg.asdf.contoller_app';
-        final fallbackUri = Uri.parse(fallbackUrl);
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-        }
       }
     } catch (e) {
       print('[APP UPDATE] ❌ Error opening Play Store: $e');
