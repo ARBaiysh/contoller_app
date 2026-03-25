@@ -61,7 +61,7 @@ class SplashView extends GetView<SplashController> {
       child: Padding(
         padding: const EdgeInsets.all(16.0), // чтобы логотип не прилипал к краям
         child: Image.asset(
-          'assets/icons/logo.png',
+          'assets/icons/logo1.png',
           fit: BoxFit.contain,
         ),
       ),

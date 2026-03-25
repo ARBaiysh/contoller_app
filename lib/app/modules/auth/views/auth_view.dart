@@ -24,7 +24,7 @@ class AuthView extends GetView<AuthController> {
                 children: [
                   // Logo
                   _buildLogo(context),
-                  const SizedBox(height: Constants.paddingXL * 2),
+                  const SizedBox(height: Constants.paddingL),
 
                   // Title
                   Text(
@@ -88,26 +88,11 @@ class AuthView extends GetView<AuthController> {
   }
 
   Widget _buildLogo(BuildContext context) {
-    return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.electric_bolt,
-          size: 60,
-          color: Colors.white,
-        ),
+    return Center(
+      child: Image.asset(
+        'assets/icons/logo1.png',
+        width: 160,
+        height: 160,
       ),
     );
   }
