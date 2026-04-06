@@ -1,7 +1,7 @@
 name: contoller_app
 description: Mobile application for OshElectro controllers
 publish_to: 'none'
-version: 1.0.11+11
+version: 1.0.12+12
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -40,6 +40,13 @@ dependencies:
 
   # Geolocation
   geolocator: ^14.0.2
+
+  # QR Code generation
+  qr_flutter: ^4.1.0
+
+  # Share & file system
+  share_plus: ^10.1.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
