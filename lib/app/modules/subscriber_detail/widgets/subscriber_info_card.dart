@@ -7,7 +7,6 @@ import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../widgets/phone_edit_dialog.dart';
 import '../controllers/subscriber_detail_controller.dart';
-import 'qr_payment_dialog.dart'; // содержит QrPaymentPage
 
 class SubscriberInfoCard extends StatelessWidget {
   const SubscriberInfoCard({Key? key}) : super(key: key);
@@ -79,8 +78,6 @@ class SubscriberInfoCard extends StatelessWidget {
             // Кнопка GPS координат — на всю ширину
             const SizedBox(height: Constants.paddingM),
             _GpsButton(subscriber: subscriber),
-            const SizedBox(height: Constants.paddingS),
-            _QrPaymentButton(subscriber: subscriber),
           ],
         ),
       );
@@ -447,39 +444,6 @@ class _GpsButton extends StatelessWidget {
         label: Text(
           hasCoords ? 'Данные координат' : 'Записать координаты',
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-}
-
-// Кнопка QR для оплаты на всю ширину
-class _QrPaymentButton extends StatelessWidget {
-  final SubscriberModel subscriber;
-
-  const _QrPaymentButton({required this.subscriber});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Get.to(() => QrPaymentPage(subscriber: subscriber));
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Constants.borderRadius),
-          ),
-          elevation: 0,
-        ),
-        icon: const Icon(Icons.qr_code_2, size: 20),
-        label: const Text(
-          'QR для оплаты',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
     );

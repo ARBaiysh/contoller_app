@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 import '../controllers/subscriber_detail_controller.dart';
+import 'qr_payment_dialog.dart';
 
 class BalanceInfoCard extends StatelessWidget {
   const BalanceInfoCard({Key? key}) : super(key: key);
@@ -78,6 +79,31 @@ class BalanceInfoCard extends StatelessWidget {
                 value: DateFormat(Constants.dateFormat).format(subscriber.lastPaymentDate!),
               ),
             ],
+
+            // Кнопка QR для оплаты
+            const SizedBox(height: Constants.paddingM),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Get.to(() => QrPaymentPage(subscriber: subscriber));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Constants.borderRadius),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.qr_code_2, size: 20),
+                label: const Text(
+                  'QR для оплаты',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
           ],
         ),
       );

@@ -153,45 +153,54 @@ class _QrPaymentPageState extends State<QrPaymentPage> {
 
                     const SizedBox(height: 16),
 
-                    // QR-код
+                    // QR-код с лого ОшПЭС в центре
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: QrImageView(
-                        data: QrPaymentPage.qrData,
-                        version: QrVersions.auto,
-                        size: 280,
-                        gapless: true,
-                        errorStateBuilder: (ctx, err) {
-                          return const SizedBox(
-                            width: 280,
-                            height: 280,
-                            child: Center(child: Text('Ошибка генерации QR')),
-                          );
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Лейбл
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'ОшПЭС',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          QrImageView(
+                            data: QrPaymentPage.qrData,
+                            version: QrVersions.auto,
+                            size: 280,
+                            gapless: true,
+                            errorCorrectionLevel: QrErrorCorrectLevel.H,
+                            errorStateBuilder: (ctx, err) {
+                              return const SizedBox(
+                                width: 280,
+                                height: 280,
+                                child: Center(child: Text('Ошибка генерации QR')),
+                              );
+                            },
+                          ),
+                          // Лого в центре QR
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'ОшПЭС',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
