@@ -9,8 +9,8 @@ import '../models/meter_detail_model.dart';
 import '../models/region_model.dart';
 
 class ApiProvider extends GetxService {
-  static const String baseUrl = 'http://192.168.120.10:8269/api';
-  //static const String baseUrl = 'https://ca.asdf.kg/api';
+  //static const String baseUrl = 'http://192.168.120.10:8269/api';
+  static const String baseUrl = 'https://ca.asdf.kg/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
