@@ -58,6 +58,9 @@ class SubscriberInfoCard extends StatelessWidget {
             _InfoRow(label: 'Лицевой счет', value: subscriber.accountNumber),
             _InfoRow(label: 'Адрес', value: subscriber.address),
 
+            // Координаты
+            _CoordinatesRow(subscriber: subscriber),
+
             // Телефон с кнопкой редактирования
             _PhoneRow(
               subscriber: subscriber,
@@ -71,6 +74,10 @@ class SubscriberInfoCard extends StatelessWidget {
               const SizedBox(height: Constants.paddingM),
               _PhoneActions(subscriber: subscriber),
             ],
+
+            // Кнопка GPS координат — на всю ширину
+            const SizedBox(height: Constants.paddingM),
+            _GpsButton(subscriber: subscriber),
           ],
         ),
       );
@@ -147,6 +154,53 @@ class _InfoRow extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Строка с координатами — простой статус
+class _CoordinatesRow extends StatelessWidget {
+  final SubscriberModel subscriber;
+
+  const _CoordinatesRow({required this.subscriber});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Constants.paddingS),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              'Координаты',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Icon(
+                  subscriber.hasCoordinates ? Icons.check_circle : Icons.cancel_outlined,
+                  size: 16,
+                  color: subscriber.hasCoordinates ? AppColors.success : Colors.grey,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  subscriber.hasCoordinates ? 'Записаны' : 'Не записаны',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: subscriber.hasCoordinates ? AppColors.success : Colors.grey,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -357,6 +411,41 @@ ${subscriber.balance > 0 ? 'Просим своевременно погасит
           onTap: _sendDebtMessage,
         ),
       ],
+    );
+  }
+}
+
+// Кнопка GPS координат на всю ширину
+class _GpsButton extends StatelessWidget {
+  final SubscriberModel subscriber;
+
+  const _GpsButton({required this.subscriber});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<SubscriberDetailController>();
+    final hasCoords = subscriber.hasCoordinates;
+    final color = hasCoords ? AppColors.success : AppColors.primary;
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => controller.showGpsDialog(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Constants.borderRadius),
+          ),
+          elevation: 0,
+        ),
+        icon: Icon(hasCoords ? Icons.location_on : Icons.add_location_alt, size: 20),
+        label: Text(
+          hasCoords ? 'Данные координат' : 'Записать координаты',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
+import '../widgets/gps_current_dialog.dart';
+import '../widgets/gps_scanning_dialog.dart';
+import '../widgets/gps_confirmation_dialog.dart';
+import '../widgets/gps_success_dialog.dart';
 
 class SubscriberDetailController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
@@ -419,6 +425,236 @@ class SubscriberDetailController extends GetxController {
       );
 
       rethrow; // Пробрасываем для обработки в диалоге
+    }
+  }
+
+  // ========================================
+  // GPS COORDINATES METHODS
+  // ========================================
+
+  /// Запустить GPS-процесс: scanning → confirmation → save → success
+  Future<void> captureCoordinates() async {
+    if (_subscriber.value == null) return;
+
+    final isUpdate = _subscriber.value!.hasCoordinates;
+
+    try {
+      // Проверяем что GPS включен
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        final opened = await Get.dialog<bool>(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.location_off, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('GPS отключен', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            content: const Text('Для записи координат необходимо включить службу геолокации (GPS).'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Get.back(result: true);
+                  await Geolocator.openLocationSettings();
+                },
+                child: const Text('Открыть настройки'),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+        return; // Пользователь включит GPS и попробует снова
+      }
+
+      // Проверяем разрешения
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Доступ к геолокации запрещён');
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        await Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.location_disabled, color: Colors.red),
+                SizedBox(width: 10),
+                Text('Нет доступа', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            content: const Text('Доступ к геолокации запрещён. Разрешите в настройках приложения.'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Get.back();
+                  await Geolocator.openAppSettings();
+                },
+                child: const Text('Открыть настройки'),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+        return;
+      }
+
+      // Показываем scanning dialog и делаем замеры
+      final result = await _performGpsScan();
+      if (result == null) return; // Отмена
+
+      final lat = result[0];
+      final lng = result[1];
+      final accuracy = result[2];
+
+      // Показываем confirmation dialog
+      final confirmed = await Get.dialog<bool>(
+        GpsConfirmationDialog(
+          latitude: lat,
+          longitude: lng,
+          accuracy: accuracy,
+          isUpdate: isUpdate,
+          onRetry: () => captureCoordinates(), // Рекурсия для повтора
+        ),
+        barrierDismissible: false,
+      );
+
+      if (confirmed != true) return;
+
+      // Сохраняем
+      await _subscriberRepository.updateCoordinates(
+        accountNumber: _subscriber.value!.accountNumber,
+        latitude: lat,
+        longitude: lng,
+        accuracy: accuracy,
+      );
+
+      // Обновляем локальную модель через copyWith чтобы не потерять данные
+      final updated = _subscriber.value!.copyWith(
+        latitude: lat,
+        longitude: lng,
+        accuracy: accuracy,
+      );
+      _subscriber.value = null;
+      await Future.delayed(const Duration(milliseconds: 10));
+      _subscriber.value = updated;
+
+      // Показываем success dialog
+      await Get.dialog(
+        GpsSuccessDialog(
+          latitude: lat,
+          longitude: lng,
+          accuracy: accuracy,
+          onShowOnMap: openInMaps,
+        ),
+      );
+    } catch (e) {
+      print('[SUBSCRIBER DETAIL] GPS error: $e');
+      Get.snackbar(
+        'Ошибка GPS',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
+
+  /// Выполнить 3 замера GPS с диалогом прогресса. Возвращает [lat, lng, accuracy] или null.
+  Future<List<double>?> _performGpsScan() async {
+    double? bestAccuracy;
+    final positions = <Position>[];
+
+    // Показываем scanning dialog (реактивный через Obx не нужен — пересоздаём)
+    for (int i = 0; i < 3; i++) {
+      // Обновляем диалог
+      if (i == 0) {
+        Get.dialog(
+          GpsScanningDialog(currentAttempt: 1, maxAttempts: 3, bestAccuracy: null),
+          barrierDismissible: false,
+        );
+      } else {
+        Get.back(); // Закрыть предыдущий
+        Get.dialog(
+          GpsScanningDialog(currentAttempt: i + 1, maxAttempts: 3, bestAccuracy: bestAccuracy),
+          barrierDismissible: false,
+        );
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      positions.add(position);
+
+      if (bestAccuracy == null || position.accuracy < bestAccuracy) {
+        bestAccuracy = position.accuracy;
+      }
+
+      if (i < 2) await Future.delayed(const Duration(seconds: 2));
+    }
+
+    // Закрыть scanning dialog
+    Get.back();
+
+    // Медиана
+    positions.sort((a, b) => a.latitude.compareTo(b.latitude));
+    final medianLat = positions[1].latitude;
+    positions.sort((a, b) => a.longitude.compareTo(b.longitude));
+    final medianLng = positions[1].longitude;
+    final avgAccuracy = positions.map((p) => p.accuracy).reduce((a, b) => a + b) / 3;
+
+    return [medianLat, medianLng, avgAccuracy];
+  }
+
+  /// Показать GPS диалог (вызывается из UI)
+  void showGpsDialog() {
+    if (_subscriber.value == null) return;
+
+    if (_subscriber.value!.hasCoordinates) {
+      // Есть координаты — показываем текущие данные
+      Get.dialog(
+        GpsCurrentDialog(
+          latitude: _subscriber.value!.latitude!,
+          longitude: _subscriber.value!.longitude!,
+          accuracy: _subscriber.value!.accuracy,
+          onShowOnMap: openInMaps,
+          onUpdate: captureCoordinates,
+        ),
+      );
+    } else {
+      // Нет координат — сразу сканируем
+      captureCoordinates();
+    }
+  }
+
+  /// Открыть координаты на карте — системный выбор приложения
+  Future<void> openInMaps() async {
+    if (_subscriber.value == null || !_subscriber.value!.hasCoordinates) return;
+
+    final lat = _subscriber.value!.latitude!;
+    final lng = _subscriber.value!.longitude!;
+    final url = Uri.parse('geo:$lat,$lng?q=$lat,$lng');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      // Фоллбэк на браузер
+      final webUrl = Uri.parse('https://www.google.com/maps?q=$lat,$lng');
+      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
     }
   }
 }

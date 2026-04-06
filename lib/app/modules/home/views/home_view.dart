@@ -5,6 +5,7 @@ import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../../core/values/constants.dart';
 import '../../../widgets/app_drawer.dart';
 import '../controllers/home_controller.dart';
+import '../widgets/coordinates_stats_card.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/financial_summary_card.dart';
 
@@ -52,6 +53,9 @@ class HomeView extends StatelessWidget {
 
                 // Финансовые показатели (свернутая карточка)
                 FinancialSummaryCard(dashboard: dashboard),
+
+                // Статистика геокоординат
+                CoordinatesStatsCard(dashboard: dashboard),
 
                 // Отступ снизу
                 const SizedBox(height: Constants.paddingXL),

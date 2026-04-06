@@ -194,6 +194,35 @@ class SubscriberRepository {
   }
 
   // ========================================
+  // УПРАВЛЕНИЕ КООРДИНАТАМИ
+  // ========================================
+
+  /// Обновить координаты абонента
+  Future<Map<String, dynamic>> updateCoordinates({
+    required String accountNumber,
+    required double latitude,
+    required double longitude,
+    required double accuracy,
+  }) async {
+    try {
+      print('[SUBSCRIBER REPO] Updating coordinates for account: $accountNumber');
+
+      final result = await _apiProvider.updateCoordinates(
+        accountNumber: accountNumber,
+        latitude: latitude,
+        longitude: longitude,
+        accuracy: accuracy,
+      );
+
+      print('[SUBSCRIBER REPO] Coordinates updated successfully');
+      return result;
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Error updating coordinates: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================
   // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
   // ========================================
 

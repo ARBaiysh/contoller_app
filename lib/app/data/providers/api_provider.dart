@@ -9,8 +9,8 @@ import '../models/meter_detail_model.dart';
 import '../models/region_model.dart';
 
 class ApiProvider extends GetxService {
-  //static const String baseUrl = 'http://192.168.120.10:8269/api';
-  static const String baseUrl = 'https://ca.asdf.kg/api';
+  static const String baseUrl = 'http://192.168.120.10:8269/api';
+  //static const String baseUrl = 'https://ca.asdf.kg/api';
   late Dio _dio;
   final GetStorage _storage = GetStorage();
 
@@ -470,6 +470,49 @@ class ApiProvider extends GetxService {
       throw _handleError(e);
     } catch (e) {
       print('[API] Unexpected error updating phone: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
+  // COORDINATES MANAGEMENT ENDPOINTS
+  // ========================================
+
+  /// Обновить координаты абонента
+  /// POST /api/mobile/abonents/coordinates
+  Future<Map<String, dynamic>> updateCoordinates({
+    required String accountNumber,
+    required double latitude,
+    required double longitude,
+    required double accuracy,
+  }) async {
+    try {
+      print('[API] Updating coordinates for account: $accountNumber, lat: $latitude, lng: $longitude, accuracy: $accuracy');
+      final response = await _dio.post(
+        '/mobile/abonents/coordinates',
+        data: {
+          'accountNumber': accountNumber,
+          'latitude': latitude,
+          'longitude': longitude,
+          'accuracy': accuracy,
+        },
+      );
+      print('[API] Update coordinates response (${response.statusCode}): ${response.data}');
+      return response.data;
+    } on DioException catch (e) {
+      print('[API] Error updating coordinates: $e');
+
+      if (e.response?.statusCode == 400) {
+        throw Exception('Неверные данные координат');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Нет доступа к данному абоненту');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Абонент не найден');
+      }
+
+      throw _handleError(e);
+    } catch (e) {
+      print('[API] Unexpected error updating coordinates: $e');
       throw _handleError(e);
     }
   }

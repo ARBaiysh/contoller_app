@@ -23,6 +23,9 @@ class SubscriberModel {
   final String transformerPointName;
   final String? contractDate;
   final String? notes;
+  final double? latitude;
+  final double? longitude;
+  final double? accuracy;
 
   SubscriberModel({
     required this.accountNumber,
@@ -45,6 +48,9 @@ class SubscriberModel {
     required this.transformerPointName,
     this.contractDate,
     this.notes,
+    this.latitude,
+    this.longitude,
+    this.accuracy,
   });
 
   // ========================================
@@ -88,6 +94,9 @@ class SubscriberModel {
     if (isDebtor) return SubscriberStatus.debtor;
     return SubscriberStatus.normal;
   }
+
+  /// Проверка наличия координат
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   /// Проверка наличия валидного телефона
   bool get hasValidPhone {
@@ -195,6 +204,9 @@ class SubscriberModel {
       transformerPointName: json['transformerPointName'] ?? '',
       contractDate: json['contractDate'],
       notes: json['notes'],
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
+      accuracy: json['accuracy']?.toDouble(),
     );
   }
 
@@ -220,6 +232,9 @@ class SubscriberModel {
       'transformerPointName': transformerPointName,
       'contractDate': contractDate,
       'notes': notes,
+      'latitude': latitude,
+      'longitude': longitude,
+      'accuracy': accuracy,
     };
   }
 
@@ -248,6 +263,9 @@ class SubscriberModel {
     String? transformerPointName,
     String? contractDate,
     String? notes,
+    double? latitude,
+    double? longitude,
+    double? accuracy,
   }) {
     return SubscriberModel(
       accountNumber: accountNumber ?? this.accountNumber,
@@ -270,6 +288,9 @@ class SubscriberModel {
       transformerPointName: transformerPointName ?? this.transformerPointName,
       contractDate: contractDate ?? this.contractDate,
       notes: notes ?? this.notes,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      accuracy: accuracy ?? this.accuracy,
     );
   }
 

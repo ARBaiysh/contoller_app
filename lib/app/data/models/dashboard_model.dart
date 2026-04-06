@@ -8,6 +8,9 @@ class DashboardModel {
   final double totalConsumption;
   final int paymentCountThisMonth;
   final double totalPaymentAmount;
+  final int coordinatesTotal;
+  final int coordinatesThisMonth;
+  final int coordinatesToday;
 
   DashboardModel({
     required this.totalAbonents,
@@ -19,6 +22,9 @@ class DashboardModel {
     required this.totalConsumption,
     required this.paymentCountThisMonth,
     required this.totalPaymentAmount,
+    this.coordinatesTotal = 0,
+    this.coordinatesThisMonth = 0,
+    this.coordinatesToday = 0,
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +38,9 @@ class DashboardModel {
       totalConsumption: (json['totalConsumption'] ?? 0).toDouble(),
       paymentCountThisMonth: json['paymentCountThisMonth'] ?? 0,
       totalPaymentAmount: (json['totalPaymentAmount'] ?? 0).toDouble(),
+      coordinatesTotal: json['coordinatesTotal'] ?? 0,
+      coordinatesThisMonth: json['coordinatesThisMonth'] ?? 0,
+      coordinatesToday: json['coordinatesToday'] ?? 0,
     );
   }
 
@@ -46,6 +55,9 @@ class DashboardModel {
       'totalConsumption': totalConsumption,
       'paymentCountThisMonth': paymentCountThisMonth,
       'totalPaymentAmount': totalPaymentAmount,
+      'coordinatesTotal': coordinatesTotal,
+      'coordinatesThisMonth': coordinatesThisMonth,
+      'coordinatesToday': coordinatesToday,
     };
   }
 

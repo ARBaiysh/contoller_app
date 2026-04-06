@@ -78,5 +78,9 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Используется для быстрого входа в приложение</string>
 
+	<!-- Описание для доступа к геолокации -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Приложение использует геолокацию для записи координат объектов абонентов</string>
+
 </dict>
 </plist>
