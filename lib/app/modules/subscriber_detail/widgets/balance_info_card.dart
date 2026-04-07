@@ -80,30 +80,31 @@ class BalanceInfoCard extends StatelessWidget {
               ),
             ],
 
-            // Кнопка QR для оплаты
-            const SizedBox(height: Constants.paddingM),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Get.to(() => QrPaymentPage(subscriber: subscriber));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(Constants.borderRadius),
-                  ),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.qr_code_2, size: 20),
-                label: const Text(
-                  'QR для оплаты',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
+            // Кнопка QR для оплаты (временно отключена)
+            // Кнопка QR для оплаты (временно отключена)
+            // const SizedBox(height: Constants.paddingM),
+            // SizedBox(
+            //   width: double.infinity,
+            //   child: ElevatedButton.icon(
+            //     onPressed: () {
+            //       Get.to(() => QrPaymentPage(subscriber: subscriber));
+            //     },
+            //     style: ElevatedButton.styleFrom(
+            //       backgroundColor: Colors.deepPurple,
+            //       foregroundColor: Colors.white,
+            //       padding: const EdgeInsets.symmetric(vertical: 14),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(Constants.borderRadius),
+            //       ),
+            //       elevation: 0,
+            //     ),
+            //     icon: const Icon(Icons.qr_code_2, size: 20),
+            //     label: const Text(
+            //       'QR для оплаты',
+            //       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       );
