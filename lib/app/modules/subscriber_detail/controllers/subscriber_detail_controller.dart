@@ -575,47 +575,78 @@ class SubscriberDetailController extends GetxController {
 
   /// Выполнить 3 замера GPS с диалогом прогресса. Возвращает [lat, lng, accuracy] или null.
   Future<List<double>?> _performGpsScan() async {
-    double? bestAccuracy;
+    final currentAttempt = 1.obs;
+    final bestAccuracyRx = Rxn<double>();
     final positions = <Position>[];
 
-    // Показываем scanning dialog (реактивный через Obx не нужен — пересоздаём)
-    for (int i = 0; i < 3; i++) {
-      // Обновляем диалог
-      if (i == 0) {
-        Get.dialog(
-          GpsScanningDialog(currentAttempt: 1, maxAttempts: 3, bestAccuracy: null),
-          barrierDismissible: false,
-        );
-      } else {
-        Get.back(); // Закрыть предыдущий
-        Get.dialog(
-          GpsScanningDialog(currentAttempt: i + 1, maxAttempts: 3, bestAccuracy: bestAccuracy),
-          barrierDismissible: false,
-        );
+    final overlayContext = Get.overlayContext ?? Get.context;
+    if (overlayContext == null) {
+      throw Exception('Нет контекста навигатора');
+    }
+    final navigator = Navigator.of(overlayContext, rootNavigator: true);
+
+    final scanRoute = DialogRoute<void>(
+      context: overlayContext,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (_) => Obx(() => GpsScanningDialog(
+            currentAttempt: currentAttempt.value,
+            maxAttempts: 3,
+            bestAccuracy: bestAccuracyRx.value,
+          )),
+    );
+
+    bool routeClosed = false;
+    void closeScanRoute() {
+      if (routeClosed) return;
+      routeClosed = true;
+      try {
+        if (scanRoute.isActive) {
+          navigator.removeRoute(scanRoute);
+        }
+      } catch (e) {
+        print('[SUBSCRIBER DETAIL] closeScanRoute error: $e');
       }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
-      positions.add(position);
-
-      if (bestAccuracy == null || position.accuracy < bestAccuracy) {
-        bestAccuracy = position.accuracy;
-      }
-
-      if (i < 2) await Future.delayed(const Duration(seconds: 2));
     }
 
-    // Закрыть scanning dialog
-    Get.back();
+    try {
+      navigator.push(scanRoute);
 
-    // Медиана
-    positions.sort((a, b) => a.latitude.compareTo(b.latitude));
-    final medianLat = positions[1].latitude;
-    positions.sort((a, b) => a.longitude.compareTo(b.longitude));
-    final medianLng = positions[1].longitude;
-    final avgAccuracy = positions.map((p) => p.accuracy).reduce((a, b) => a + b) / 3;
+      for (int i = 0; i < 3; i++) {
+        currentAttempt.value = i + 1;
+
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 25),
+          );
+          positions.add(position);
+
+          if (bestAccuracyRx.value == null || position.accuracy < bestAccuracyRx.value!) {
+            bestAccuracyRx.value = position.accuracy;
+          }
+        } catch (e) {
+          print('[SUBSCRIBER DETAIL] GPS attempt ${i + 1} failed: $e');
+        }
+
+        if (i < 2) await Future.delayed(const Duration(seconds: 2));
+      }
+    } finally {
+      closeScanRoute();
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
+    if (positions.isEmpty) {
+      throw Exception('Не удалось получить координаты. Проверьте сигнал GPS и попробуйте на открытом месте.');
+    }
+
+    final byLat = [...positions]..sort((a, b) => a.latitude.compareTo(b.latitude));
+    final medianLat = byLat[byLat.length ~/ 2].latitude;
+
+    final byLng = [...positions]..sort((a, b) => a.longitude.compareTo(b.longitude));
+    final medianLng = byLng[byLng.length ~/ 2].longitude;
+
+    final avgAccuracy = positions.map((p) => p.accuracy).reduce((a, b) => a + b) / positions.length;
 
     return [medianLat, medianLng, avgAccuracy];
   }
