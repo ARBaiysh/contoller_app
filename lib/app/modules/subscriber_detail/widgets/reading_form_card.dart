@@ -134,22 +134,45 @@ class ReadingFormCard extends StatelessWidget {
             }),
             const SizedBox(height: Constants.paddingM),
 
-            // Reading input
-            TextFormField(
-              controller: controller.readingController,
-              validator: controller.validateReading,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(6),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Новое показание счетчика',
-                hintText: 'Введите текущее показание',
-                prefixIcon: Icon(Icons.speed),
-                helperText: 'Введите текущее показание счетчика',
-              ),
-            ),
+            // Reading input (АСКУЭ-aware): при свежем показании из АСКУЭ
+            // поле предзаполнено и заблокировано для правки.
+            Obx(() {
+              // Идёт проверка наличия показания в АСКУЭ
+              if (controller.isAskueChecking) {
+                return _buildAskueChecking(context);
+              }
+              final locked = controller.isAskueLocked;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: controller.readingController,
+                    validator: controller.validateReading,
+                    readOnly: locked,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: locked
+                          ? 'Показание из АСКУЭ'
+                          : 'Новое показание счетчика',
+                      hintText: locked ? null : 'Введите текущее показание',
+                      prefixIcon:
+                          Icon(locked ? Icons.cloud_done : Icons.speed),
+                      suffixIcon:
+                          locked ? const Icon(Icons.lock_outline) : null,
+                      helperText: locked
+                          ? (controller.askueLatestDate != null
+                              ? 'Источник: система АСКУЭ (от ${controller.askueLatestDate})'
+                              : 'Источник: система АСКУЭ')
+                          : 'Введите текущее показание счетчика',
+                    ),
+                  ),
+                ],
+              );
+            }),
             const SizedBox(height: Constants.paddingM),
 
             Obx(() => SizedBox(
@@ -197,6 +220,40 @@ class ReadingFormCard extends StatelessWidget {
             )),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Индикатор проверки показания в системе АСКУЭ (пока грузится статус).
+  Widget _buildAskueChecking(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(Constants.paddingM),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadius),
+        border: Border.all(
+          color: theme.dividerColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: Constants.paddingM),
+          Expanded(
+            child: Text(
+              'Проверяем показание в системе АСКУЭ…',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

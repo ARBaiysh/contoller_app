@@ -6,6 +6,7 @@ import 'package:get_storage/get_storage.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
+import 'app/widgets/connection_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,13 @@ class MyApp extends StatelessWidget {
       transitionDuration: const Duration(milliseconds: 300),
       locale: const Locale('ru', 'RU'),
       fallbackLocale: const Locale('ru', 'RU'),
+      // Глобальный оверлей «нет связи / технические работы» поверх всех экранов
+      builder: (context, child) => Stack(
+        children: [
+          child ?? const SizedBox.shrink(),
+          const ConnectionOverlay(),
+        ],
+      ),
     );
   }
 }

@@ -18,16 +18,16 @@ class TpItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: Constants.paddingM),
+      margin: const EdgeInsets.only(bottom: Constants.paddingS),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius),
-        border: Theme.of(context).brightness == Brightness.dark
-            ? Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        )
-            : null,
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.grey.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -83,7 +83,7 @@ class TpItemCard extends StatelessWidget {
                     _buildStatusBadge(context),
                   ],
                 ),
-                const SizedBox(height: Constants.paddingM),
+                const SizedBox(height: Constants.paddingS),
 
                 // Statistics
                 Row(
@@ -108,7 +108,7 @@ class TpItemCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: Constants.paddingM),
+                const SizedBox(height: Constants.paddingS),
 
                 // Progress Bar
                 _buildProgressBar(context),

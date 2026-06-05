@@ -52,7 +52,7 @@ class HomeController extends GetxController {
       dashboard.value = dashboardData;
 
     } catch (e) {
-      lastError.value = e.toString();
+      lastError.value = e.toString().replaceAll('Exception: ', '');
       hasError.value = true;
 
       if (!_authRepository.isAuthenticated) {
@@ -136,7 +136,6 @@ class HomeController extends GetxController {
 
   void navigateToTpList() => _switchMainTab(1);
   void navigateToSearch() => _switchMainTab(2);
-  void navigateToReports() => _switchMainTab(3);
 
   void _switchMainTab(int index) {
     try {
@@ -149,9 +148,6 @@ class HomeController extends GetxController {
           break;
         case 2:
           Get.toNamed(Routes.SEARCH);
-          break;
-        case 3:
-          Get.toNamed(Routes.REPORTS);
           break;
       }
     }

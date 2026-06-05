@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../models/askue_model.dart';
 import '../models/subscriber_model.dart';
 import '../providers/api_provider.dart';
 
@@ -296,6 +297,43 @@ class SubscriberRepository {
     } catch (e) {
       print('[SUBSCRIBER REPO] Error fetching payments list: $e');
       throw Exception('Не удалось загрузить список оплативших абонентов');
+    }
+  }
+
+  // ========================================
+  // АСКУЭ
+  // ========================================
+
+  /// Статус АСКУЭ абонента. При ошибке возвращает "нет АСКУЭ" —
+  /// чтобы недоступность не блокировала ручной ввод показания.
+  Future<AskueStatus> getAskueStatus(String accountNumber) async {
+    try {
+      final data = await _apiProvider.getAskueStatus(accountNumber);
+      return AskueStatus.fromJson(data);
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Askue status error: $e');
+      return AskueStatus.none();
+    }
+  }
+
+  /// История показаний АСКУЭ за период (для экрана истории/расхода).
+  Future<List<AskueReading>> getAskueReadings(
+    String accountNumber, {
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      final data = await _apiProvider.getAskueReadings(
+        accountNumber,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
+      return data
+          .map((j) => AskueReading.fromJson(Map<String, dynamic>.from(j)))
+          .toList();
+    } catch (e) {
+      print('[SUBSCRIBER REPO] Askue readings error: $e');
+      throw Exception('Не удалось загрузить историю АСКУЭ');
     }
   }
 }

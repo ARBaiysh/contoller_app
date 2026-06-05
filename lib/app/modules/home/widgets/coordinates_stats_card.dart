@@ -21,8 +21,8 @@ class CoordinatesStatsCard extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: theme.dividerColor.withOpacity(0.1),
-          width: 1,
+          color: theme.dividerColor.withOpacity(0.35),
+          width: 1.2,
         ),
       ),
       child: Column(
@@ -126,8 +126,8 @@ class CoordinatesStatsCard extends StatelessWidget {
             : theme.cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius - 2),
         border: Border.all(
-          color: theme.dividerColor.withOpacity(0.1),
-          width: 1,
+          color: theme.dividerColor.withOpacity(0.35),
+          width: 1.2,
         ),
       ),
       child: Column(

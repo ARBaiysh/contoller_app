@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../data/models/askue_model.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
+import '../../../routes/app_pages.dart';
 import '../widgets/gps_current_dialog.dart';
 import '../widgets/gps_scanning_dialog.dart';
 import '../widgets/gps_confirmation_dialog.dart';
@@ -36,6 +38,29 @@ class SubscriberDetailController extends GetxController {
   // История показаний
   final _readingHistory = <Map<String, dynamic>>[].obs;
   final _isLoadingHistory = false.obs;
+
+  // АСКУЭ
+  final Rxn<AskueStatus> _askueStatus = Rxn<AskueStatus>();
+  AskueStatus? get askueStatus => _askueStatus.value;
+
+  /// Идёт проверка показания в АСКУЭ (показываем индикатор вместо поля ввода)
+  final _isAskueChecking = false.obs;
+  bool get isAskueChecking => _isAskueChecking.value;
+
+  /// Свежее показание из АСКУЭ есть → поле ввода залочено и предзаполнено
+  bool get isAskueLocked => _askueStatus.value?.fresh == true;
+
+  /// У абонента привязан АСКУЭ-ПУ (для кнопки «История АСКУЭ»)
+  bool get hasAskue => _subscriber.value?.hasAskue == true;
+
+  AskueReading? get askueLatest => _askueStatus.value?.latest;
+
+  /// Дата последнего АСКУЭ-показания в формате dd.MM.yyyy
+  String? get askueLatestDate {
+    final d = _askueStatus.value?.latest?.date;
+    if (d == null) return null;
+    return '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+  }
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -80,7 +105,37 @@ class SubscriberDetailController extends GetxController {
     // Загружаем историю показаний
     if (_subscriber.value != null) {
       loadReadingHistory();
+      _loadAskueStatus();
     }
+  }
+
+  /// Загрузить статус АСКУЭ и, если показание свежее, предзаполнить поле
+  /// ввода целой частью (1С принимает целое показание).
+  Future<void> _loadAskueStatus() async {
+    final sub = _subscriber.value;
+    if (sub == null || !sub.hasAskue) return;
+
+    _isAskueChecking.value = true;
+    try {
+      final status = await _subscriberRepository.getAskueStatus(sub.accountNumber);
+      _askueStatus.value = status;
+
+      if (status.fresh && status.latest != null) {
+        readingController.text = status.latest!.reading.toInt().toString();
+      }
+    } finally {
+      _isAskueChecking.value = false;
+    }
+  }
+
+  /// Открыть экран истории АСКУЭ-показаний
+  void openAskueHistory() {
+    final sub = _subscriber.value;
+    if (sub == null || !sub.hasAskue) return;
+    Get.toNamed(Routes.ASKUE_HISTORY, arguments: {
+      'accountNumber': sub.accountNumber,
+      'fullName': sub.fullName,
+    });
   }
 
   void _updateCanSubmitReading() {

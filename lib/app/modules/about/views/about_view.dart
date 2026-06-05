@@ -32,58 +32,20 @@ class AboutView extends StatelessWidget {
             const _InfoTile(
               icon: Icons.developer_mode,
               title: 'Разработчик',
-              subtitle: 'Ваша компания / имя',
+              subtitle: 'АСУ ОшПЭС',
             ),
-        
+
             const SizedBox(height: 16),
-        
+
             // ===== DESCRIPTION =====
             const _SectionTitle(title: 'Описание'),
             const _DescriptionCard(
               text:
-              'Мобильное приложение для работы с трансформаторными подстанциями, '
-                  'поиска абонентов и формирования отчетов. '
-                  'Обеспечивает быстрый доступ к данным и инструментам управления.',
+              'Мобильное приложение для контролёров: работа с трансформаторными '
+                  'подстанциями, абонентами и снятие показаний счётчиков. '
+                  'Обеспечивает быстрый доступ к данным и инструментам обхода.',
             ),
-        
-            const SizedBox(height: 16),
-        
-            // ===== LINKS =====
-            _SectionTitle(title: 'Документы'),
-            _ActionTile(
-              icon: Icons.privacy_tip_outlined,
-              title: 'Политика конфиденциальности',
-              subtitle: 'Ознакомьтесь с нашей политикой конфиденциальности',
-              onTap: () {
-                // TODO: открыть ссылку на документ
-              },
-            ),
-            _ActionTile(
-              icon: Icons.description_outlined,
-              title: 'Пользовательское соглашение',
-              subtitle: 'Условия использования приложения',
-              onTap: () {
-                // TODO: открыть ссылку на EULA
-              },
-            ),
-        
-            const SizedBox(height: 16),
-        
-            // ===== LICENSES =====
-            const _SectionTitle(title: 'Открытые лицензии'),
-            _ActionTile(
-              icon: Icons.code,
-              title: 'Показать лицензии',
-              subtitle: 'Лицензии Flutter, Dart и подключенных библиотек',
-              onTap: () {
-                showLicensePage(
-                  context: context,
-                  applicationName: Constants.appName,
-                  applicationVersion: Constants.appVersion,
-                );
-              },
-            ),
-        
+
             const SizedBox(height: 24),
           ],
         ),
@@ -155,29 +117,3 @@ class _DescriptionCard extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        onTap: onTap,
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-}

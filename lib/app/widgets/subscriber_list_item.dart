@@ -74,11 +74,15 @@ class SubscriberListItem extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
 
-                        // Account number
+                        // Account number (вторичная информация)
                         Text(
-                          subscriber.accountNumber,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          'Л/с: ${subscriber.accountNumber}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
+                                ?.withValues(alpha: 0.8),
                           ),
                         ),
                         const SizedBox(height: 2),

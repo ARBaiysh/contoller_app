@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../core/services/connectivity_service.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../core/values/constants.dart';
 import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
@@ -43,7 +45,15 @@ class ApiProvider extends GetxService {
         }
         handler.next(options);
       },
+      onResponse: (response, handler) {
+        // Любой успешный ответ снимает глобальный оверлей «нет связи»
+        _reportConnectivitySuccess();
+        handler.next(response);
+      },
       onError: (error, handler) async {
+        // Классифицируем сетевые ошибки для глобального оверлея
+        _reportConnectivityError(error);
+
         // Handle 403 - token expired
         if (error.response?.statusCode == 403 && !error.requestOptions.path.contains('/auth/')) {
           print('[API] Got 403 - attempting to refresh token...');
@@ -79,10 +89,37 @@ class ApiProvider extends GetxService {
     ));
   }
 
+  // ========================================
+  // ОТЧЁТЫ В ГЛОБАЛЬНЫЙ МОНИТОР СВЯЗИ
+  // ========================================
+
+  void _reportConnectivitySuccess() {
+    if (Get.isRegistered<ConnectivityService>()) {
+      Get.find<ConnectivityService>().reportSuccess();
+    }
+  }
+
+  /// Сообщаем монитору только о сетевых сбоях (нет связи / сервер не отвечает /
+  /// 5xx). Обычные 4xx (валидация, 403, 404 и т.п.) оверлей не показывают.
+  void _reportConnectivityError(DioException error) {
+    final statusCode = error.response?.statusCode;
+    final isConnectionLevel = error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout;
+    final isServerError =
+        statusCode != null && statusCode >= 500 && statusCode <= 599;
+
+    if ((isConnectionLevel || isServerError) &&
+        Get.isRegistered<ConnectivityService>()) {
+      Get.find<ConnectivityService>().reportConnectionFailure();
+    }
+  }
+
   Future<bool> _refreshToken() async {
     try {
       final username = _storage.read(Constants.usernameKey);
-      final password = _storage.read(Constants.passwordKey);
+      final password = await Get.find<SecureStorageService>().readPassword();
       final regionCode = _storage.read(Constants.regionCodeKey);
 
       if (username == null || password == null || regionCode == null) {
@@ -116,14 +153,15 @@ class ApiProvider extends GetxService {
     // Очищаем все сохраненные данные
     _storage.remove(Constants.tokenKey);
     _storage.remove(Constants.usernameKey);
-    _storage.remove(Constants.passwordKey);
     _storage.remove(Constants.regionCodeKey);
     _storage.remove(Constants.userKey);
     _storage.remove(Constants.biometricKey);
     _storage.remove('saved_username');
-    _storage.remove('saved_password');
     _storage.remove('saved_region_code');
     _storage.remove('remember_me');
+
+    // Чувствительные данные (пароль + биометрические креды)
+    Get.find<SecureStorageService>().clearAll();
 
     // Редирект на авторизацию
     Get.offAllNamed('/auth');
@@ -524,73 +562,6 @@ class ApiProvider extends GetxService {
   // УДАЛЕНО: getReportsStatistics() - в новом API нет этого эндпоинта
   // Теперь используется getDashboardStatistics() в StatisticsRepository
 
-  /// Сформировать отчет
-  /// POST /api/mobile/reports/generate
-  /// Body: { "reportType": "disconnections", "tpId": "ТП-001" }
-  /// Returns: Данные отчета с массивом абонентов
-  Future<Map<String, dynamic>> generateReport({
-    required String reportType,
-    String? tpId,
-  }) async {
-    try {
-      print('[API] Generating report - type: $reportType, tpId: $tpId');
-
-      final requestData = <String, dynamic>{
-        'reportType': reportType,
-      };
-
-      if (tpId != null && tpId.isNotEmpty) {
-        requestData['tpId'] = tpId;
-      }
-
-      final response = await _dio.post(
-        '/mobile/reports/generate',
-        data: requestData,
-      );
-
-      print('[API] Generate report response (${response.statusCode})');
-      print('[API] Response data keys: ${response.data?.keys}');
-
-      // Ожидаем структуру: { "success": true, "data": { ... } }
-      if (response.data['success'] == true && response.data['data'] != null) {
-        final reportData = response.data['data'];
-        print('[API] Report data keys: ${reportData.keys}');
-        print('[API] Subscribers count: ${reportData['subscribers']?.length ?? 0}');
-        print('[API] Total count: ${reportData['count']}');
-        return reportData;
-      }
-
-      throw Exception('Неверный формат ответа сервера');
-    } on DioException catch (e) {
-      print('[API] Error generating report: $e');
-
-      // Специальная обработка различных статусов
-      if (e.response?.statusCode == 400) {
-        final errorCode = e.response?.data['error']?['code'];
-        final errorMessage = e.response?.data['error']?['message'] ?? 'Неверный запрос';
-
-        if (errorCode == 'INVALID_REPORT_TYPE') {
-          throw Exception('Неверный тип отчета');
-        } else if (errorCode == 'INVALID_TP_ID') {
-          throw Exception('Указанная ТП не существует или не доступна');
-        }
-
-        throw Exception(errorMessage);
-      } else if (e.response?.statusCode == 403) {
-        throw Exception('Нет доступа к данной трансформаторной подстанции');
-      } else if (e.response?.statusCode == 404) {
-        final errorMessage = e.response?.data['error']?['message'] ??
-                            'По указанным критериям не найдено ни одного абонента';
-        throw Exception(errorMessage);
-      }
-
-      throw _handleError(e);
-    } catch (e) {
-      print('[API] Unexpected error generating report: $e');
-      throw _handleError(e);
-    }
-  }
-
   // ========================================
   // METER DATA ENDPOINTS
   // ========================================
@@ -620,6 +591,45 @@ class ApiProvider extends GetxService {
       throw _handleError(e);
     } catch (e) {
       print('[API] Unexpected error getting meter data: $e');
+      throw _handleError(e);
+    }
+  }
+
+  // ========================================
+  // АСКУЭ ENDPOINTS (прокси к minimdm)
+  // ========================================
+
+  /// Статус АСКУЭ абонента (есть ли свежее показание)
+  /// GET /api/mobile/abonents/{accountNumber}/askue
+  Future<Map<String, dynamic>> getAskueStatus(String accountNumber) async {
+    try {
+      final response = await _dio.get('/mobile/abonents/$accountNumber/askue');
+      return Map<String, dynamic>.from(response.data);
+    } catch (e) {
+      print('[API] Error getting askue status: $e');
+      throw _handleError(e);
+    }
+  }
+
+  /// История показаний АСКУЭ за период
+  /// GET /api/mobile/abonents/{accountNumber}/askue/readings?dateFrom=&dateTo=
+  Future<List<dynamic>> getAskueReadings(
+    String accountNumber, {
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      final qp = <String, dynamic>{};
+      if (dateFrom != null) qp['dateFrom'] = dateFrom;
+      if (dateTo != null) qp['dateTo'] = dateTo;
+
+      final response = await _dio.get(
+        '/mobile/abonents/$accountNumber/askue/readings',
+        queryParameters: qp.isEmpty ? null : qp,
+      );
+      return response.data as List<dynamic>;
+    } catch (e) {
+      print('[API] Error getting askue readings: $e');
       throw _handleError(e);
     }
   }

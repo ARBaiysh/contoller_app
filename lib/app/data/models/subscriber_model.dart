@@ -10,6 +10,7 @@ class SubscriberModel {
   final double balance;
   final String meterSerialNumber;
   final String? meterType;
+  final String? askueUuid; // UUID АСКУЭ-системы (если ПУ привязан к АСКУЭ)
   final int currentReading;
   final int previousReading;
   final DateTime? lastReadingDate;
@@ -35,6 +36,7 @@ class SubscriberModel {
     this.balance = 0.0,
     required this.meterSerialNumber,
     this.meterType,
+    this.askueUuid,
     this.currentReading = 0,
     this.previousReading = 0,
     this.lastReadingDate,
@@ -97,6 +99,9 @@ class SubscriberModel {
 
   /// Проверка наличия координат
   bool get hasCoordinates => latitude != null && longitude != null;
+
+  /// Привязан ли ПУ к системе АСКУЭ
+  bool get hasAskue => askueUuid != null && askueUuid!.isNotEmpty;
 
   /// Проверка наличия валидного телефона
   bool get hasValidPhone {
@@ -187,6 +192,7 @@ class SubscriberModel {
       balance: (json['balance'] ?? 0).toDouble(),
       meterSerialNumber: json['meterSerialNumber'] ?? '',
       meterType: json['meterType'],
+      askueUuid: json['askueUuid'],
       currentReading: json['lastReading'] ?? json['currentReading'] ?? 0,
       previousReading: json['previousReading'] ?? 0,
       lastReadingDate: json['lastReadingDate'] != null
@@ -219,6 +225,7 @@ class SubscriberModel {
       'balance': balance,
       'meterSerialNumber': meterSerialNumber,
       'meterType': meterType,
+      'askueUuid': askueUuid,
       'currentReading': currentReading,
       'previousReading': previousReading,
       'lastReadingDate': lastReadingDate?.toIso8601String(),
@@ -250,6 +257,7 @@ class SubscriberModel {
     double? balance,
     String? meterSerialNumber,
     String? meterType,
+    String? askueUuid,
     int? currentReading,
     int? previousReading,
     DateTime? lastReadingDate,
@@ -275,6 +283,7 @@ class SubscriberModel {
       balance: balance ?? this.balance,
       meterSerialNumber: meterSerialNumber ?? this.meterSerialNumber,
       meterType: meterType ?? this.meterType,
+      askueUuid: askueUuid ?? this.askueUuid,
       currentReading: currentReading ?? this.currentReading,
       previousReading: previousReading ?? this.previousReading,
       lastReadingDate: lastReadingDate ?? this.lastReadingDate,

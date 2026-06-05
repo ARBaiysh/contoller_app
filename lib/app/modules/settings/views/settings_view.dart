@@ -5,7 +5,6 @@ import '../controllers/settings_controller.dart';
 import '../widgets/user_profile_card.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_item.dart';
-import '../widgets/app_info_card.dart';
 import '../../../widgets/custom_app_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
@@ -33,39 +32,11 @@ class SettingsView extends GetView<SettingsController> {
               // User profile card
               UserProfileCard(controller: controller),
               const SizedBox(height: Constants.paddingL),
-        
-              // Security settings section
-              const SettingsSection(
-                title: 'Безопасность',
-                children: [
-                ],
-              ),
-              const SizedBox(height: Constants.paddingL),
-        
+
               // App settings section
               SettingsSection(
                 title: 'Настройки приложения',
                 children: [
-                  Obx(() => SettingsItem(
-                    icon: Icons.notifications_outlined,
-                    title: 'Уведомления',
-                    subtitle: 'Получать уведомления о новых данных',
-                    trailing: Switch(
-                      value: controller.notificationsEnabled,
-                      onChanged: controller.toggleNotifications,
-                      activeColor: AppColors.primary,
-                    ),
-                  )),
-                  Obx(() => SettingsItem(
-                    icon: Icons.sync_outlined,
-                    title: 'Автосинхронизация',
-                    subtitle: 'Автоматическое обновление данных',
-                    trailing: Switch(
-                      value: controller.autoSyncEnabled,
-                      onChanged: controller.toggleAutoSync,
-                      activeColor: AppColors.primary,
-                    ),
-                  )),
                   Obx(() => SettingsItem(
                     icon: Get.find<ThemeController>().isDarkMode
                         ? Icons.dark_mode_outlined
@@ -83,39 +54,7 @@ class SettingsView extends GetView<SettingsController> {
                 ],
               ),
               const SizedBox(height: Constants.paddingL),
-        
-              // Data and storage section
-              SettingsSection(
-                title: 'Данные и хранилище',
-                children: [
-                  Obx(() => SettingsItem(
-                    icon: Icons.storage_outlined,
-                    title: 'Размер кэша',
-                    subtitle: controller.cacheFormattedSize,
-                    trailing: SizedBox(
-                      width: 80, // Fixed width for the button
-                      child: TextButton(
-                        onPressed: controller.isLoading ? null : controller.clearCache,
-                        child: controller.isLoading
-                            ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                            : const Text('Очистить'),
-                      ),
-                    ),
-                  )),
-                  SettingsItem(
-                    icon: Icons.refresh_outlined,
-                    title: 'Обновить данные',
-                    subtitle: 'Принудительное обновление с сервера',
-                    onTap: () => _refreshData(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Constants.paddingL),
-        
+
               // About section
               SettingsSection(
                 title: 'О приложении',
@@ -126,20 +65,10 @@ class SettingsView extends GetView<SettingsController> {
                     subtitle: 'Информация о версии и разработчике',
                     onTap: () => Get.toNamed(Routes.ABOUT),
                   ),
-                  SettingsItem(
-                    icon: Icons.help_outline,
-                    title: 'Помощь и поддержка',
-                    subtitle: 'Инструкции по использованию',
-                    onTap: () => Get.toNamed(Routes.HELP_SUPPORT),
-                  ),
                 ],
               ),
               const SizedBox(height: Constants.paddingL),
-        
-              // App info card
-              AppInfoCard(controller: controller),
-              const SizedBox(height: Constants.paddingL),
-        
+
               // Logout button
               _buildLogoutButton(context),
               const SizedBox(height: Constants.paddingXL),
@@ -175,16 +104,6 @@ class SettingsView extends GetView<SettingsController> {
           ],
         ),
       ),
-    );
-  }
-
-  void _refreshData() {
-    Get.snackbar(
-      'Обновление',
-      'Данные обновляются...',
-      backgroundColor: Constants.info.withValues(alpha: 0.1),
-      colorText: Constants.info,
-      snackPosition: SnackPosition.TOP,
     );
   }
 }

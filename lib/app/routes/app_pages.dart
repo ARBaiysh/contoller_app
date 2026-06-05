@@ -1,25 +1,15 @@
 import 'package:get/get.dart';
 
-import '../data/providers/news_api_provider.dart';
-import '../data/repositories/news_repository.dart';
-import '../data/repositories/notification_repository.dart';
 import '../modules/abonent_list/bindings/abonent_list_binding.dart';
 import '../modules/abonent_list/views/abonent_list_view.dart';
+import '../modules/askue_history/controllers/askue_history_controller.dart';
+import '../modules/askue_history/views/askue_history_view.dart';
 import '../modules/meter_detail/controllers/meter_detail_controller.dart';
 import '../modules/meter_detail/views/meter_detail_view.dart';
 import '../modules/about/views/about_view.dart';
 import '../modules/auth/views/auth_view.dart';
-import '../modules/help_support/views/help_support_view.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/navbar/main_nav_view.dart';
-import '../modules/news/controllers/news_controller.dart';
-import '../modules/news/views/news_view.dart';
-import '../modules/news/widgets/news_detail_view.dart';
-import '../modules/notifications/controllers/notifications_controller.dart';
-import '../modules/notifications/views/notification_detail_view.dart';
-import '../modules/notifications/views/notifications_view.dart';
-import '../modules/report_viewer/views/report_viewer_view.dart';
-import '../modules/reports/views/reports_view.dart';
 import '../modules/search/views/search_view.dart';
 import '../modules/settings/views/settings_view.dart';
 import '../modules/splash/controllers/splash_controller.dart';
@@ -81,51 +71,11 @@ class AppPages {
       fullscreenDialog: true,
     ),
     GetPage(
-      name: _Paths.REPORTS,
-      page: () => const ReportsView(),
-      transition: Transition.rightToLeft,
-    ),
-    GetPage(
-      name: _Paths.REPORT_VIEWER,
-      page: () => const ReportViewerView(),
-      transition: Transition.rightToLeft,
-    ),
-    GetPage(
       name: _Paths.SETTINGS,
       page: () => const SettingsView(),
       transition: Transition.rightToLeft,
     ),
-    GetPage(
-      name: Routes.NEWS,
-      page: () => const NewsView(),
-      binding: BindingsBuilder(() {
-        Get.put(NewsApiProvider());
-        Get.put(NewsRepository());
-        Get.put(NewsController());
-      }),
-      transition: Transition.cupertino,
-    ),
-    GetPage(
-      name: Routes.NEWS_DETAIL,
-      page: () => const NewsDetailView(),
-      transition: Transition.rightToLeftWithFade,
-    ),
-    GetPage(
-      name: Routes.NOTIFICATIONS,
-      page: () => const NotificationsView(),
-      binding: BindingsBuilder(() {
-        Get.put(NotificationRepository());
-        Get.put(NotificationsController());
-      }),
-      transition: Transition.cupertino,
-    ),
-    GetPage(
-      name: Routes.NOTIFICATION_DETAIL,
-      page: () => const NotificationDetailView(),
-      transition: Transition.rightToLeftWithFade,
-    ),
 
-    GetPage(name: Routes.HELP_SUPPORT, page: () => const HelpSupportView()),
     GetPage(name: Routes.ABOUT, page: () => const AboutView()),
 
     GetPage(
@@ -146,6 +96,15 @@ class AppPages {
       page: () => const MeterDetailView(),
       binding: BindingsBuilder(() {
         Get.put(MeterDetailController());
+      }),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: Routes.ASKUE_HISTORY,
+      page: () => const AskueHistoryView(),
+      binding: BindingsBuilder(() {
+        Get.put(AskueHistoryController());
       }),
       transition: Transition.rightToLeft,
     ),

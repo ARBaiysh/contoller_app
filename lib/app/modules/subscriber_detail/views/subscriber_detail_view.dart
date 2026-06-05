@@ -93,6 +93,28 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                         : const SizedBox.shrink();
                   }),
 
+                  // Кнопка истории АСКУЭ (если ПУ привязан к АСКУЭ)
+                  Obx(() => controller.hasAskue
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Constants.paddingM,
+                            vertical: Constants.paddingS,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: controller.openAskueHistory,
+                              icon: const Icon(Icons.insights_outlined),
+                              label: const Text('История АСКУЭ показаний'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: Constants.paddingM),
+                              ),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink()),
+
                   // Subscriber info card (moved down)
                   const SubscriberInfoCard(),
 

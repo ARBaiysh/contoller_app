@@ -4,16 +4,15 @@ import 'package:get/get.dart';
 import '../core/controllers/theme_controller.dart';
 import '../core/services/app_update_service.dart';
 import '../core/services/biometric_service.dart';
+import '../core/services/connectivity_service.dart';
+import '../core/services/secure_storage_service.dart';
 import '../data/providers/api_provider.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/statistics_repository.dart';
 import '../data/repositories/subscriber_repository.dart';
 import '../data/repositories/tp_repository.dart';
 import '../modules/auth/controllers/auth_controller.dart';
-import '../modules/help_support/controllers/help_support_controller.dart';
 import '../modules/home/controllers/home_controller.dart';
-import '../modules/report_viewer/controllers/report_viewer_controller.dart';
-import '../modules/reports/controllers/reports_controller.dart';
 import '../modules/search/controllers/search_controller.dart';
 import '../modules/settings/controllers/settings_controller.dart';
 import '../modules/splash/controllers/splash_controller.dart';
@@ -25,8 +24,12 @@ class InitialBinding extends Bindings {
   @override
   void dependencies() {
     // Core Services - Permanent
+    // SecureStorageService должен регистрироваться первым: его используют
+    // ApiProvider (refresh-токен) и BiometricService (миграция кред).
+    Get.put(SecureStorageService(), permanent: true);
     Get.put(ThemeController(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
+    Get.put(ConnectivityService(), permanent: true);
     Get.put(AppUpdateService(), permanent: true);
     Get.put(BiometricService(), permanent: true);
 
@@ -46,9 +49,6 @@ class InitialBinding extends Bindings {
     Get.lazyPut<SubscribersController>(() => SubscribersController(), fenix: true);
     Get.lazyPut<SubscriberDetailController>(() => SubscriberDetailController(), fenix: true);
     Get.lazyPut<GlobalSearchController>(() => GlobalSearchController(), fenix: true);
-    Get.lazyPut<ReportsController>(() => ReportsController(), fenix: true);
-    Get.lazyPut<ReportViewerController>(() => ReportViewerController(), fenix: true);
     Get.lazyPut<SettingsController>(() => SettingsController(), fenix: true);
-    Get.lazyPut<HelpSupportController>(() => HelpSupportController(), fenix: true);
   }
 }

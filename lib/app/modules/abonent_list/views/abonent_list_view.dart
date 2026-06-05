@@ -213,8 +213,8 @@ class AbonentListView extends GetView<AbonentListController> {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-          width: 1,
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+          width: 1.2,
         ),
       ),
       padding: const EdgeInsets.all(4),

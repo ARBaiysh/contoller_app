@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../../data/models/dashboard_model.dart';
 import '../controllers/home_controller.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,7 +17,6 @@ class DashboardHeader extends StatelessWidget {
     DashboardModel dashboard = controller.dashboard.value;
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,8 +28,8 @@ class DashboardHeader extends StatelessWidget {
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(Constants.borderRadius),
             border: Border.all(
-              color: theme.dividerColor.withOpacity(0.1),
-              width: 1,
+              color: theme.dividerColor.withOpacity(0.35),
+              width: 1.2,
             ),
           ),
           child: Column(
@@ -195,8 +193,8 @@ class DashboardHeader extends StatelessWidget {
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(Constants.borderRadius),
             border: Border.all(
-              color: theme.dividerColor.withOpacity(0.1),
-              width: 1,
+              color: theme.dividerColor.withOpacity(0.35),
+              width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
@@ -240,10 +238,5 @@ class DashboardHeader extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final formatter = DateFormat('dd.MM.yyyy HH:mm');
-    return formatter.format(dateTime);
   }
 }

@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import '../../../core/values/constants.dart';
-import '../../../widgets/app_drawer.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/coordinates_stats_card.dart';
 import '../widgets/dashboard_header.dart';
@@ -20,7 +19,6 @@ class HomeView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(context),
-      drawer: const AppDrawer(),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(
@@ -28,10 +26,13 @@ class HomeView extends StatelessWidget {
           );
         }
 
-        final dashboard = controller.dashboard.value;
-        if (dashboard == null) {
+        // dashboard инициализируется DashboardModel.empty() и никогда не null,
+        // поэтому об ошибке судим по hasError (выставляется в loadDashboard).
+        if (controller.hasError.value) {
           return _buildErrorState(context, refreshController, controller);
         }
+
+        final dashboard = controller.dashboard.value;
 
         return SmartRefresher(
           controller: refreshController,

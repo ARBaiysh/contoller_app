@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../home/views/home_view.dart';
-import '../reports/views/reports_view.dart';
+import '../settings/views/settings_view.dart';
 import '../search/views/search_view.dart';
 import '../tp_list/views/tp_list_view.dart';
 import 'main_nav_controller.dart';
@@ -83,7 +83,7 @@ class MainNavView extends StatelessWidget {
       buildTabNavigator(navKeys[0], const HomeView()),
       buildTabNavigator(navKeys[1], const TpListView()),
       buildTabNavigator(navKeys[2], const SearchView()),
-      buildTabNavigator(navKeys[3], const ReportsView()),
+      buildTabNavigator(navKeys[3], const SettingsView()),
     ];
 
     return PopScope(
@@ -107,7 +107,7 @@ class MainNavView extends StatelessWidget {
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
               BottomNavigationBarItem(icon: Icon(Icons.bolt), label: 'ТП'),
               BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Поиск'),
-              BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Отчёты'),
+              BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Настройки'),
             ],
           ),
         );

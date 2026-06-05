@@ -4,17 +4,31 @@ import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'secure_storage_service.dart';
+
 class BiometricService extends GetxService {
   final LocalAuthentication _localAuth = LocalAuthentication();
   final GetStorage _storage = GetStorage();
+  final SecureStorageService _secureStorage = Get.find<SecureStorageService>();
 
   static const String _biometricEnabledKey = 'biometric_enabled';
-  static const String _biometricCredentialsKey = 'biometric_credentials';
+
+  // Кэш кред в памяти, чтобы savedCredentials оставался синхронным геттером.
+  // Заполняется из шифрованного хранилища при старте и при сохранении.
+  Map<String, dynamic>? _cachedCredentials;
 
   @override
   void onInit() {
     super.onInit();
     _checkInitialState();
+    _loadCachedCredentials();
+  }
+
+  Future<void> _loadCachedCredentials() async {
+    // Ждём завершения миграции, иначе можем прочитать пустое хранилище
+    // до переноса старых кред из GetStorage.
+    await _secureStorage.ready;
+    _cachedCredentials = await _secureStorage.readBiometricCredentials();
   }
 
   Future<void> _checkInitialState() async {
@@ -62,19 +76,17 @@ class BiometricService extends GetxService {
   }
 
   Future<void> saveBiometricCredentials(String username, String password) async {
-    await _storage.write(_biometricCredentialsKey, {
-      'username': username,
-      'password': password,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    await _secureStorage.writeBiometricCredentials(username, password);
+    _cachedCredentials = {'username': username, 'password': password};
   }
 
   Map<String, dynamic>? get savedCredentials {
-    return _storage.read(_biometricCredentialsKey);
+    return _cachedCredentials;
   }
 
   Future<void> clearBiometricCredentials() async {
-    await _storage.remove(_biometricCredentialsKey);
+    await _secureStorage.deleteBiometricCredentials();
+    _cachedCredentials = null;
   }
 
   Future<bool> authenticateWithBiometrics() async {

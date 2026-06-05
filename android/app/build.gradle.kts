@@ -63,13 +63,20 @@ android {
         multiDexEnabled = true
     }
 
-    // ✅ Конфигурация подписи для release
+    // ✅ Конфигурация подписи для release.
+    // Включаем только если key.properties реально содержит ключи
+    // (просто наличия файла мало — он может быть пустым/битым).
+    val hasReleaseSigning = keystoreProperties["keyAlias"] != null &&
+            keystoreProperties["storeFile"] != null
+
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
@@ -80,8 +87,13 @@ android {
         }
 
         getByName("release") {
-            // ✅ Используем production ключ для подписи
-            signingConfig = signingConfigs.getByName("release")
+            // Используем production-ключ, если он настроен; иначе откатываемся
+            // на debug-подпись, чтобы сборка проходила.
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
 
             isMinifyEnabled = false
             isShrinkResources = false

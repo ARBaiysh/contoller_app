@@ -29,6 +29,8 @@ class AuthController extends GetxController {
   final _showBiometricOption = false.obs;
   final _isBiometricLoading = false.obs;
   final _isFormValid = false.obs;
+  final _isLoadingRegions = false.obs;
+  final _regionsError = false.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -39,11 +41,13 @@ class AuthController extends GetxController {
   bool get showBiometricOption => _showBiometricOption.value;
   bool get isBiometricLoading => _isBiometricLoading.value;
   bool get isFormValid => _isFormValid.value;
+  bool get isLoadingRegions => _isLoadingRegions.value;
+  bool get regionsError => _regionsError.value;
 
   @override
   void onInit() {
     super.onInit();
-    _loadRegions();
+    loadRegions();
     _checkBiometricAvailability();
     _loadSavedCredentials();
     _setupFormValidation();
@@ -84,9 +88,12 @@ class AuthController extends GetxController {
   // INITIALIZATION
   // ========================================
 
-  Future<void> _loadRegions() async {
+  /// Загрузка списка регионов. Используется при старте и для ретрая
+  /// при отсутствии связи с сервером.
+  Future<void> loadRegions() async {
     try {
-      _isLoading.value = true;
+      _isLoadingRegions.value = true;
+      _regionsError.value = false;
 
       final regionsList = await _authRepository.getRegions();
       _regions.value = regionsList;
@@ -105,14 +112,11 @@ class AuthController extends GetxController {
         _selectedRegion.value = regionsList.first;
       }
     } catch (e) {
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось загрузить список регионов',
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-      );
+      // Не показываем разовый snackbar — выводим постоянный блок с кнопкой
+      // «Повторить» прямо в форме (см. AuthView._buildRegionSelector).
+      _regionsError.value = true;
     } finally {
-      _isLoading.value = false;
+      _isLoadingRegions.value = false;
       _updateFormState();
     }
   }

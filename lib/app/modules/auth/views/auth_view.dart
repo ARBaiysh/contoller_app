@@ -287,34 +287,124 @@ class AuthView extends GetView<AuthController> {
   }
 
   Widget _buildRegionSelector(BuildContext context) {
-    return Obx(() => DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: 'Регион',
-        hintText: 'Выберите регион',
-        prefixIcon: const Icon(Icons.location_on_outlined),
-        filled: true,
-        fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+    return Obx(() {
+      // Идёт загрузка списка регионов
+      if (controller.isLoadingRegions) {
+        return _buildRegionLoading(context);
+      }
+
+      // Нет связи с сервером — показываем блок с кнопкой «Повторить»
+      if (controller.regionsError) {
+        return _buildRegionError(context);
+      }
+
+      return DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: 'Регион',
+          hintText: 'Выберите регион',
+          prefixIcon: const Icon(Icons.location_on_outlined),
+          filled: true,
+          fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+        ),
+        value: controller.selectedRegion?.code,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Выберите регион';
+          }
+          return null;
+        },
+        items: controller.regions
+            .map((region) => DropdownMenuItem(
+                  value: region.code,
+                  child: Text(region.name),
+                ))
+            .toList(),
+        onChanged: controller.isLoading
+            ? null
+            : (value) {
+                final region = controller.regions
+                    .firstWhereOrNull((r) => r.code == value);
+                controller.selectRegion(region);
+              },
+      );
+    });
+  }
+
+  Widget _buildRegionLoading(BuildContext context) {
+    return Container(
+      height: Constants.inputHeight,
+      padding: const EdgeInsets.symmetric(horizontal: Constants.paddingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).inputDecorationTheme.fillColor,
+        borderRadius: BorderRadius.circular(Constants.borderRadius),
       ),
-      value: controller.selectedRegion?.code,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Выберите регион';
-        }
-        return null;
-      },
-      items: controller.regions
-          .map((region) => DropdownMenuItem(
-        value: region.code,
-        child: Text(region.name),
-      ))
-          .toList(),
-      onChanged: controller.isLoading
-          ? null
-          : (value) {
-        final region = controller.regions
-            .firstWhereOrNull((r) => r.code == value);
-        controller.selectRegion(region);
-      },
-    ));
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: Constants.paddingM),
+          Text(
+            'Загрузка регионов...',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegionError(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(Constants.paddingM),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(Constants.borderRadius),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  color: AppColors.error, size: Constants.iconSizeMedium),
+              const SizedBox(width: Constants.paddingS),
+              Expanded(
+                child: Text(
+                  'Нет связи с сервером',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.error,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Constants.paddingXS),
+          Text(
+            'Не удалось загрузить список регионов. Проверьте подключение к интернету.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: Constants.paddingM),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: controller.loadRegions,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(Constants.borderRadius),
+                ),
+              ),
+              icon: const Icon(Icons.refresh, size: Constants.iconSizeSmall),
+              label: const Text('Повторить'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

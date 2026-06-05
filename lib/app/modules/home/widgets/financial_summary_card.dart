@@ -21,8 +21,8 @@ class FinancialSummaryCard extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: theme.dividerColor.withOpacity(0.1),
-          width: 1,
+          color: theme.dividerColor.withOpacity(0.35),
+          width: 1.2,
         ),
       ),
       child: Column(
@@ -59,29 +59,25 @@ class FinancialSummaryCard extends StatelessWidget {
               children: [
                 // ===== Потребление и начисления =====
 
+                // ===== Начислено за месяц: кВт·ч и сом — в один ряд =====
                 Row(
                   children: [
                     Expanded(
                       child: _buildMetricCard(
                         context: context,
                         icon: Icons.electric_bolt_outlined,
-                        label: 'Начислено за месяц (кВт·ч)',
+                        label: 'Начислено, кВт·ч',
                         value: '${NumberFormat('#,###', 'ru').format(dashboard.totalConsumptionThisMonth)} кВт·ч',
                         iconColor: Colors.amber,
                         iconBgColor: Colors.amber.withOpacity(0.15),
                       ),
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: Constants.paddingS),
-                Row(
-                  children: [
+                    const SizedBox(width: Constants.paddingS),
                     Expanded(
                       child: _buildMetricCard(
                         context: context,
                         icon: Icons.receipt_long_outlined,
-                        label: 'Начислено за месяц (сом)',
+                        label: 'Начислено, сом',
                         value: '${NumberFormat('#,###.##', 'ru').format(dashboard.totalChargeThisMonth)} сом',
                         iconColor: Colors.deepPurple,
                         iconBgColor: Colors.deepPurple.withOpacity(0.15),
@@ -164,8 +160,8 @@ class FinancialSummaryCard extends StatelessWidget {
             : theme.cardColor,
         borderRadius: BorderRadius.circular(Constants.borderRadius - 2),
         border: Border.all(
-          color: theme.dividerColor.withOpacity(0.1),
-          width: 1,
+          color: theme.dividerColor.withOpacity(0.35),
+          width: 1.2,
         ),
       ),
       child: Column(

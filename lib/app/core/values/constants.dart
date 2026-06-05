@@ -81,12 +81,12 @@ class Constants {
   static const double iconSizeMedium = 24.0;
   static const double iconSizeLarge = 32.0;
 
-  // Padding & Margins
+  // Padding & Margins (уплотнено: больше информации на экране)
   static const double paddingXS = 4.0;
   static const double paddingS = 8.0;
-  static const double paddingM = 16.0;
-  static const double paddingL = 24.0;
-  static const double paddingXL = 32.0;
+  static const double paddingM = 12.0;
+  static const double paddingL = 16.0;
+  static const double paddingXL = 20.0;
 
   // Font Sizes
   static const double fontSizeXS = 12.0;
@@ -132,14 +132,6 @@ class Constants {
   static const String loginSuccess = 'Вход выполнен успешно';
   static const String dataUpdated = 'Данные обновлены';
 
-  // Report Types
-  static const Map<String, String> reportTypes = {
-    'readings': 'Ведомость контрольного обхода',
-    'disconnections': 'Ведомость отключений',
-    'debtors': 'Список должников',
-    'payments': 'Отчет по оплатам',
-  };
-
   // Helper method for card decoration
   static BoxDecoration getCardDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -148,9 +140,9 @@ class Constants {
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.grey.withValues(alpha: 0.2),
-        width: 1,
+            ? Colors.white.withValues(alpha: 0.18)
+            : Colors.grey.withValues(alpha: 0.35),
+        width: 1.2,
       ),
       boxShadow: [
         BoxShadow(
