@@ -100,8 +100,15 @@ class SubscriberModel {
   /// Проверка наличия координат
   bool get hasCoordinates => latitude != null && longitude != null;
 
-  /// Привязан ли ПУ к системе АСКУЭ
-  bool get hasAskue => askueUuid != null && askueUuid!.isNotEmpty;
+  /// Привязан ли ПУ к системе АСКУЭ.
+  /// Отсекаем пустую строку/пробелы и nil-UUID (все нули) — заглушки из 1С.
+  bool get hasAskue {
+    final u = askueUuid?.trim();
+    if (u == null || u.isEmpty) return false;
+    // только дефисы и нули → nil-UUID (00000000-0000-0000-0000-000000000000)
+    if (u.replaceAll('-', '').replaceAll('0', '').isEmpty) return false;
+    return true;
+  }
 
   /// Проверка наличия валидного телефона
   bool get hasValidPhone {
