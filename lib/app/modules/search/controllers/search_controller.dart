@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
 import '../../../routes/app_pages.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 
 class GlobalSearchController extends GetxController {
@@ -158,13 +159,7 @@ class GlobalSearchController extends GetxController {
       }
     } catch (e) {
       print('Search error: $e');
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось выполнить поиск',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
-      );
+      AppSnackbar.error('Ошибка', 'Не удалось выполнить поиск');
     } finally {
       _isLoading.value = false;
     }

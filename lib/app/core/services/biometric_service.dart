@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'secure_storage_service.dart';
+import '../utils/app_snackbar.dart';
 
 class BiometricService extends GetxService {
   final LocalAuthentication _localAuth = LocalAuthentication();
@@ -121,13 +122,8 @@ class BiometricService extends GetxService {
     try {
       final bool isAvailable = await isBiometricAvailable;
       if (!isAvailable) {
-        Get.snackbar(
-          'Биометрия недоступна',
-          'На этом устройстве биометрическая аутентификация не поддерживается',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange.withOpacity(0.1),
-          colorText: Colors.orange,
-        );
+        AppSnackbar.warning('Биометрия недоступна',
+            'На этом устройстве биометрическая аутентификация не поддерживается');
         return false;
       }
 
@@ -175,13 +171,7 @@ class BiometricService extends GetxService {
         message = 'Ошибка биометрической аутентификации: ${e.message}';
     }
 
-    Get.snackbar(
-      'Ошибка биометрии',
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.red.withOpacity(0.1),
-      colorText: Colors.red,
-    );
+    AppSnackbar.error('Ошибка биометрии', message);
   }
 
   Future<void> disableBiometricAuth() async {

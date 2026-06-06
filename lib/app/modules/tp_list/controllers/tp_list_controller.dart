@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../data/models/tp_model.dart';
 import '../../../data/repositories/tp_repository.dart';
 import '../../../routes/app_pages.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 
 class TpListController extends GetxController {
@@ -49,13 +50,7 @@ class TpListController extends GetxController {
 
     } catch (e) {
       print('[TP CONTROLLER] Error loading TP list: $e');
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось загрузить список ТП',
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.error('Ошибка', 'Не удалось загрузить список ТП');
     } finally {
       _isLoading.value = false;
       _isRefreshing.value = false;

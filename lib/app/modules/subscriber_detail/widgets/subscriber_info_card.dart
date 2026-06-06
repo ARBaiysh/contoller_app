@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../widgets/phone_edit_dialog.dart';
@@ -55,7 +56,14 @@ class SubscriberInfoCard extends StatelessWidget {
             const SizedBox(height: Constants.paddingM),
 
             _InfoRow(label: 'ФИО', value: subscriber.fullName),
-            _InfoRow(label: 'Лицевой счет', value: subscriber.accountNumber),
+            _InfoRow(
+              label: 'Лицевой счет',
+              value: subscriber.accountNumber,
+              emphasize: true,
+              valueColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF26C6DA)
+                  : const Color(0xFF00838F),
+            ),
             _InfoRow(label: 'Адрес', value: subscriber.address),
 
             // Координаты
@@ -126,10 +134,14 @@ class SubscriberInfoCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final Color? valueColor;
+  final bool emphasize;
 
   const _InfoRow({
     required this.label,
     required this.value,
+    this.valueColor,
+    this.emphasize = false,
   });
 
   @override
@@ -151,8 +163,14 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
+              style: (emphasize
+                      ? Theme.of(context).textTheme.titleMedium
+                      : Theme.of(context).textTheme.bodyMedium)
+                  ?.copyWith(
+                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+                color: valueColor,
+                fontSize: emphasize ? 17 : null,
+                letterSpacing: emphasize ? 0.3 : null,
               ),
             ),
           ),
@@ -235,46 +253,88 @@ class _PhoneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Constants.paddingS),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              'Телефон',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color,
+    // Нет телефона → полноценная кнопка «Добавить телефон»
+    if (!hasValidPhone) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: Constants.paddingS),
+        child: SizedBox(
+          width: double.infinity,
+          height: Constants.buttonHeight,
+          child: OutlinedButton.icon(
+            onPressed: _showPhoneEditDialog,
+            icon: const Icon(Icons.add_call, size: 20),
+            label: const Text(
+              'Добавить телефон',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Constants.borderRadius),
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              hasValidPhone
-                  ? (subscriber.formattedPhone ?? subscriber.phone!)
-                  : 'Не указан',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: hasValidPhone ? null : Colors.grey,
+        ),
+      );
+    }
+
+    // Есть телефон → строка с номером + отдельная кнопка «Изменить»
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: Constants.paddingS),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 120,
+                child: Text(
+                  'Телефон',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  subscriber.formattedPhone ?? subscriber.phone!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          height: Constants.buttonHeight,
+          child: OutlinedButton.icon(
+            onPressed: _showPhoneEditDialog,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text(
+              'Изменить телефон',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Constants.borderRadius),
               ),
             ),
           ),
-          // Кнопка редактирования
-          InkWell(
-            onTap: _showPhoneEditDialog,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                hasValidPhone ? Icons.edit_outlined : Icons.add_circle_outline,
-                size: 18,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: Constants.paddingS),
+      ],
     );
   }
 }
@@ -372,13 +432,7 @@ ${subscriber.balance > 0 ? 'Просим своевременно погасит
   }
 
   void _showError(String message) {
-    Get.snackbar(
-      'Ошибка',
-      message,
-      backgroundColor: Constants.error.withValues(alpha: 0.1),
-      colorText: Constants.error,
-      snackPosition: SnackPosition.TOP,
-    );
+    AppSnackbar.error('Ошибка', message);
   }
 
   @override

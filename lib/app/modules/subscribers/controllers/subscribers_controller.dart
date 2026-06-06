@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
-import '../../../core/values/constants.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../routes/app_pages.dart';
 
 class SubscribersController extends GetxController {
@@ -139,13 +139,7 @@ class SubscribersController extends GetxController {
       applyFiltersAndSort();
     } catch (e) {
       print('[SUBSCRIBERS CONTROLLER] Error loading subscribers: $e');
-      Get.snackbar(
-        'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.error('Ошибка', e.toString().replaceAll('Exception: ', ''));
     } finally {
       _isLoading.value = false;
     }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../routes/app_pages.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 
 class SettingsController extends GetxController {
@@ -17,16 +18,9 @@ class SettingsController extends GetxController {
   String get userRole => _getRoleDisplayName(_authRepository.userRole);
   bool get isDarkTheme => Get.find<ThemeController>().isDarkMode;
 
-  // Toggle theme
+  // Toggle theme (без снекбара — смена темы и так видна по всему UI)
   void toggleTheme(bool value) {
     Get.find<ThemeController>().setTheme(value);
-
-    Get.snackbar(
-      'Тема изменена',
-      value ? 'Включена темная тема' : 'Включена светлая тема',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
   }
 
   // Show logout confirmation
@@ -63,13 +57,7 @@ class SettingsController extends GetxController {
       await _authRepository.logout();
       Get.offAllNamed(Routes.AUTH);
     } catch (e) {
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось выйти из системы',
-        backgroundColor: Constants.error.withValues(alpha: 0.1),
-        colorText: Constants.error,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.error('Ошибка', 'Не удалось выйти из системы');
     } finally {
       _isLoading.value = false;
     }

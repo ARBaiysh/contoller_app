@@ -10,6 +10,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/subscriber_model.dart';
 
@@ -59,10 +60,7 @@ class _QrPaymentPageState extends State<QrPaymentPage> {
     try {
       final file = await _captureImage();
       if (file == null) {
-        Get.snackbar('Ошибка', 'Не удалось создать изображение',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.1),
-            colorText: Colors.red);
+        AppSnackbar.error('Ошибка', 'Не удалось создать изображение');
         return;
       }
 

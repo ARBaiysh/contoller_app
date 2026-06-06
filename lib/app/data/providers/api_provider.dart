@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/secure_storage_service.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../../core/values/constants.dart';
 import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
@@ -167,14 +168,7 @@ class ApiProvider extends GetxService {
     Get.offAllNamed('/auth');
 
     // Показываем сообщение
-    Get.snackbar(
-      'Сессия истекла',
-      'Войдите в систему заново',
-      backgroundColor: Colors.orange,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.warning('Сессия истекла', 'Войдите в систему заново');
   }
 
   // ========================================

@@ -74,16 +74,35 @@ class SubscriberListItem extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
 
-                        // Account number (вторичная информация)
-                        Text(
-                          'Л/с: ${subscriber.accountNumber}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.color
-                                ?.withValues(alpha: 0.8),
-                          ),
+                        // Лицевой счёт — заметный (акцентный)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              'Л/с ',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            Text(
+                              subscriber.accountNumber,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                // Заметно на тёмной и светлой теме (бирюзовый)
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF26C6DA)
+                                    : const Color(0xFF00838F),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 2),
 

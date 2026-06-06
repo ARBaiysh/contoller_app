@@ -102,13 +102,27 @@ class SubscriberDetailView extends GetView<SubscriberDetailController> {
                           ),
                           child: SizedBox(
                             width: double.infinity,
+                            height: Constants.buttonHeight,
                             child: OutlinedButton.icon(
                               onPressed: controller.openAskueHistory,
-                              icon: const Icon(Icons.insights_outlined),
-                              label: const Text('История АСКУЭ показаний'),
+                              icon: const Icon(Icons.insights_outlined, size: 20),
+                              label: const Text(
+                                'История АСКУЭ показаний',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: Constants.paddingM),
+                                foregroundColor: AppColors.primary,
+                                side: BorderSide(
+                                  color: AppColors.primary.withValues(alpha: 0.5),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(Constants.borderRadius),
+                                ),
                               ),
                             ),
                           ),

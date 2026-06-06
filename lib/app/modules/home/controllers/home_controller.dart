@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/dashboard_model.dart';
 import '../../../data/repositories/statistics_repository.dart';
 import '../../../data/repositories/subscriber_repository.dart';
@@ -106,25 +107,13 @@ class HomeController extends GetxController {
 
       print('[HOME] Force refresh completed successfully');
 
-      Get.snackbar(
-        'Успешно',
-        'Данные обновлены из 1С',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: AppColors.success.withValues(alpha: 0.1),
-        colorText: AppColors.success,
-        duration: const Duration(seconds: 2),
-      );
+      AppSnackbar.success('Успешно', 'Данные обновлены из 1С',
+          duration: const Duration(seconds: 2));
     } catch (e) {
       print('[HOME] Error force refreshing: $e');
 
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: AppColors.error.withValues(alpha: 0.1),
-        colorText: AppColors.error,
-        duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.error('Ошибка',
+          'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
       isForceRefreshing.value = false;
     }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/askue_model.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
@@ -182,13 +183,7 @@ class SubscriberDetailController extends GetxController {
     _isLoading.value = true;
     try {
       // Если нет данных, показываем ошибку
-      Get.snackbar(
-        'Ошибка',
-        'Данные абонента не переданы',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Get.theme.colorScheme.onError,
-      );
+      AppSnackbar.error('Ошибка', 'Данные абонента не переданы');
     } catch (e) {
       print('[SUBSCRIBER DETAIL] Error loading subscriber: $e');
     } finally {
@@ -225,27 +220,15 @@ class SubscriberDetailController extends GetxController {
       _isSyncing.value = false;
       _syncMessage.value = '';
 
-      Get.snackbar(
-        'Успешно',
-        'Данные абонента обновлены',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green,
-        duration: const Duration(seconds: 2),
-      );
+      AppSnackbar.success('Успешно', 'Данные абонента обновлены',
+          duration: const Duration(seconds: 2));
     } catch (e) {
       print('[SUBSCRIBER DETAIL] Error refreshing: $e');
       _isSyncing.value = false;
       _syncMessage.value = '';
 
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.error('Ошибка',
+          'Не удалось обновить данные: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -352,15 +335,11 @@ class SubscriberDetailController extends GetxController {
       // 4. Обрабатываем результат
       if (finalStatus == 'COMPLETED') {
         // Успех!
-        Get.snackbar(
+        AppSnackbar.success(
           'Успешно',
           documentNumber != null
-            ? 'Показание зарегистрировано\nДокумент: $documentNumber'
-            : message.isNotEmpty ? message : 'Показание успешно отправлено',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green,
-          duration: const Duration(seconds: 3),
+              ? 'Показание зарегистрировано\nДокумент: $documentNumber'
+              : message.isNotEmpty ? message : 'Показание успешно отправлено',
         );
 
         // Очищаем форму
@@ -373,25 +352,14 @@ class SubscriberDetailController extends GetxController {
         ]);
       } else if (finalStatus == 'ERROR') {
         // Ошибка обработки
-        Get.snackbar(
+        AppSnackbar.error(
           'Ошибка обработки',
           message.isNotEmpty ? message : 'Произошла ошибка при обработке показания',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red,
           duration: const Duration(seconds: 5),
-          maxWidth: 500,
         );
       } else {
         // PROCESSING - еще обрабатывается
-        Get.snackbar(
-          'В обработке',
-          'Показание принято и обрабатывается',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange.withOpacity(0.1),
-          colorText: Colors.orange,
-          duration: const Duration(seconds: 3),
-        );
+        AppSnackbar.warning('В обработке', 'Показание принято и обрабатывается');
 
         // Очищаем форму
         readingController.clear();
@@ -408,14 +376,7 @@ class SubscriberDetailController extends GetxController {
 
       print('[SUBSCRIBER DETAIL] Error submitting reading: $e');
 
-      Get.snackbar(
-        'Ошибка отправки',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        duration: const Duration(seconds: 4),
-      );
+      AppSnackbar.error('Ошибка отправки', e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -457,27 +418,14 @@ class SubscriberDetailController extends GetxController {
 
       _isPhoneUpdating.value = false;
 
-      Get.snackbar(
-        'Успешно',
-        'Номер телефона обновлен',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green,
-        duration: const Duration(seconds: 2),
-      );
+      AppSnackbar.success('Успешно', 'Номер телефона обновлен',
+          duration: const Duration(seconds: 2));
     } catch (e) {
       _isPhoneUpdating.value = false;
 
       print('[SUBSCRIBER DETAIL] Error updating phone: $e');
 
-      Get.snackbar(
-        'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.error('Ошибка', e.toString().replaceAll('Exception: ', ''));
 
       rethrow; // Пробрасываем для обработки в диалоге
     }
@@ -617,14 +565,7 @@ class SubscriberDetailController extends GetxController {
       );
     } catch (e) {
       print('[SUBSCRIBER DETAIL] GPS error: $e');
-      Get.snackbar(
-        'Ошибка GPS',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.error('Ошибка GPS', e.toString().replaceAll('Exception: ', ''));
     }
   }
 

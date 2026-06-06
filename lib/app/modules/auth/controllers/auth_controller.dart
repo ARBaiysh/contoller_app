@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../../core/services/biometric_service.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../core/values/constants.dart';
 import '../../../data/models/region_model.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -183,12 +184,7 @@ class AuthController extends GetxController {
     if (!_isFormValid.value) return;
     if (!formKey.currentState!.validate()) return;
     if (_selectedRegion.value == null) {
-      Get.snackbar(
-        'Ошибка',
-        'Выберите регион',
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error('Ошибка', 'Выберите регион');
       return;
     }
 
@@ -220,14 +216,8 @@ class AuthController extends GetxController {
             await _storage.write('saved_region_code', regionCode);
             await _storage.write(Constants.biometricKey, true);
 
-            Get.snackbar(
-              'Успешно',
-              'Биометрическая аутентификация настроена',
-              backgroundColor: Colors.green.withOpacity(0.1),
-              colorText: Colors.green,
-              snackPosition: SnackPosition.TOP,
-              duration: const Duration(seconds: 2),
-            );
+            AppSnackbar.success('Успешно', 'Биометрическая аутентификация настроена',
+                duration: const Duration(seconds: 2));
           } else {
             await _storage.write('remember_me', true);
             await _storage.write('saved_username', username);
@@ -242,20 +232,10 @@ class AuthController extends GetxController {
 
       // Переход на главный экран
       Get.offAllNamed(Routes.NAVBAR);
-      Get.snackbar(
-        'Успешно',
-        'Добро пожаловать, ${response.inspector.fullName}!',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      AppSnackbar.success('Успешно', 'Добро пожаловать, ${response.inspector.fullName}!');
 
     } catch (e) {
-      Get.snackbar(
-        'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error('Ошибка', e.toString().replaceAll('Exception: ', ''));
     } finally {
       _isLoading.value = false;
       _updateFormState();
@@ -278,12 +258,7 @@ class AuthController extends GetxController {
       final savedRegionCode = _storage.read('saved_region_code');
 
       if (credentials == null || savedRegionCode == null) {
-        Get.snackbar(
-          'Ошибка',
-          'Не найдены сохраненные данные для входа',
-          backgroundColor: Get.theme.colorScheme.error,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error('Ошибка', 'Не найдены сохраненные данные для входа');
         return;
       }
 
@@ -291,12 +266,7 @@ class AuthController extends GetxController {
       final savedPassword = credentials['password'] as String?;
 
       if (savedUsername == null || savedPassword == null) {
-        Get.snackbar(
-          'Ошибка',
-          'Сохраненные данные повреждены',
-          backgroundColor: Get.theme.colorScheme.error,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error('Ошибка', 'Сохраненные данные повреждены');
         return;
       }
 
@@ -311,20 +281,10 @@ class AuthController extends GetxController {
 
       // Переход на главный экран
       Get.offAllNamed(Routes.NAVBAR);
-      Get.snackbar(
-        'Успешно',
-        'Добро пожаловать, ${response.inspector.fullName}!',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      AppSnackbar.success('Успешно', 'Добро пожаловать, ${response.inspector.fullName}!');
 
     } catch (e) {
-      Get.snackbar(
-        'Ошибка',
-        'Не удалось выполнить вход',
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error('Ошибка', 'Не удалось выполнить вход');
     } finally {
       _isBiometricLoading.value = false;
       _isLoading.value = false;

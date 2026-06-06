@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
 import '../../../routes/app_pages.dart';
+import '../../../core/utils/app_snackbar.dart';
 
 enum AbonentListType {
   consumption, // Показания
@@ -116,13 +117,7 @@ class AbonentListController extends GetxController {
       print('[ABONENT LIST] Loaded ${subscribers.length} abonents');
     } catch (e) {
       print('[ABONENT LIST] Error loading abonents: $e');
-      Get.snackbar(
-        'Ошибка',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Get.theme.colorScheme.error.withValues(alpha: 0.1),
-        colorText: Get.theme.colorScheme.error,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.error('Ошибка', e.toString().replaceAll('Exception: ', ''));
     } finally {
       _isLoading.value = false;
     }
