@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../controllers/subscribers_controller.dart';
 import '../../../widgets/custom_app_bar.dart';
 import '../../../widgets/subscriber_list_item.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/values/constants.dart';
 
 class SubscribersView extends GetView<SubscribersController> {
@@ -31,7 +30,7 @@ class SubscribersView extends GetView<SubscribersController> {
           }),
           IconButton(
             icon: const Icon(Icons.sort),
-            onPressed: () => _showSortDialog(context),
+            onPressed: controller.showSortDialog,
             tooltip: 'Сортировка',
           ),
         ],
@@ -240,66 +239,4 @@ class SubscribersView extends GetView<SubscribersController> {
     );
   }
 
-  // ========================================
-  // ДИАЛОГ СОРТИРОВКИ
-  // ========================================
-
-  void _showSortDialog(BuildContext context) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Constants.borderRadius),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(Constants.paddingL),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Сортировка',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: Constants.paddingM),
-              // Определяем sortOptions локально
-              ...[
-                {'value': 'default', 'label': 'По умолчанию'},
-                {'value': 'name', 'label': 'По имени'},
-                {'value': 'address', 'label': 'По адресу'},
-                {'value': 'account', 'label': 'По лицевому счету'},
-                {'value': 'debt', 'label': 'По задолженности'},
-              ].map((option) {
-                return RadioListTile<String>(
-                  title: Text(option['label']!),
-                  value: option['value']!,
-                  groupValue: controller.sortBy,
-                  onChanged: (value) {
-                    controller.setSorting(value!);
-                    Get.back();
-                  },
-                  activeColor: AppColors.primary,
-                  contentPadding: EdgeInsets.zero,
-                );
-              }).toList(),
-              const SizedBox(height: Constants.paddingM),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Закрыть'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

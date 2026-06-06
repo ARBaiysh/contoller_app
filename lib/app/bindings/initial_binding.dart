@@ -6,6 +6,7 @@ import '../core/services/app_update_service.dart';
 import '../core/services/biometric_service.dart';
 import '../core/services/connectivity_service.dart';
 import '../core/services/secure_storage_service.dart';
+import '../core/services/sort_prefs_service.dart';
 import '../data/providers/api_provider.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/statistics_repository.dart';
@@ -27,6 +28,7 @@ class InitialBinding extends Bindings {
     // SecureStorageService должен регистрироваться первым: его используют
     // ApiProvider (refresh-токен) и BiometricService (миграция кред).
     Get.put(SecureStorageService(), permanent: true);
+    Get.put(SortPrefsService(), permanent: true);
     Get.put(ThemeController(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
     Get.put(ConnectivityService(), permanent: true);

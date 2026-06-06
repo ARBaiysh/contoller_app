@@ -55,6 +55,26 @@ class SettingsView extends GetView<SettingsController> {
               ),
               const SizedBox(height: Constants.paddingL),
 
+              // Sorting defaults section
+              SettingsSection(
+                title: 'Сортировка по умолчанию',
+                children: [
+                  Obx(() => SettingsItem(
+                        icon: Icons.account_tree_outlined,
+                        title: 'Список ТП',
+                        subtitle: controller.tpSortLabel,
+                        onTap: controller.chooseTpSort,
+                      )),
+                  Obx(() => SettingsItem(
+                        icon: Icons.people_outline,
+                        title: 'Список абонентов',
+                        subtitle: controller.subscribersSortLabel,
+                        onTap: controller.chooseSubscribersSort,
+                      )),
+                ],
+              ),
+              const SizedBox(height: Constants.paddingL),
+
               // About section
               SettingsSection(
                 title: 'О приложении',

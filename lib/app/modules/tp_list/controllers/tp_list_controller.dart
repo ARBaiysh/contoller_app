@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/tp_model.dart';
 import '../../../data/repositories/tp_repository.dart';
 import '../../../routes/app_pages.dart';
 import '../../../core/utils/app_snackbar.dart';
-import '../../../core/values/constants.dart';
+import '../../../core/utils/natural_sort.dart';
+import '../../../core/services/sort_prefs_service.dart';
+import '../../../widgets/sort_bottom_sheet.dart';
 
 class TpListController extends GetxController {
   final TpRepository _tpRepository = Get.find<TpRepository>();
+  final SortPrefsService _sortPrefs = Get.find<SortPrefsService>();
 
   // Observable states
   final _isLoading = false.obs;
@@ -15,7 +17,6 @@ class TpListController extends GetxController {
   final _tpList = <TpModel>[].obs;
   final _filteredTpList = <TpModel>[].obs;
   final _searchQuery = ''.obs;
-  final _sortBy = 'default'.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -24,11 +25,13 @@ class TpListController extends GetxController {
   bool get isEmpty => _filteredTpList.isEmpty;
   bool get hasData => _filteredTpList.isNotEmpty;
   String get searchQuery => _searchQuery.value;
-  String get sortBy => _sortBy.value;
+  String get sortBy => _sortPrefs.tpSort.value;
 
   @override
   void onInit() {
     super.onInit();
+    // Реагируем на смену порядка по умолчанию (например, из Настроек).
+    ever(_sortPrefs.tpSort, (_) => applyFiltersAndSort());
     loadTpList();
   }
 
@@ -73,9 +76,9 @@ class TpListController extends GetxController {
     applyFiltersAndSort();
   }
 
-  /// Установка сортировки
+  /// Установка сортировки (сохраняется постоянно).
   void setSorting(String sort) {
-    _sortBy.value = sort;
+    _sortPrefs.setTpSort(sort);
     applyFiltersAndSort();
   }
 
@@ -87,19 +90,16 @@ class TpListController extends GetxController {
     filtered = filtered.where((tp) => tp.totalSubscribers > 0).toList();
 
     // Сортировка
-    switch (_sortBy.value) {
+    switch (_sortPrefs.tpSort.value) {
       case 'name':
-        filtered.sort((a, b) => a.name.compareTo(b.name));
-        break;
-      case 'code':
-        filtered.sort((a, b) => a.code.compareTo(b.code));
+        filtered.sort((a, b) => naturalCompare(a.name, b.name));
         break;
       case 'abonent_count':
         filtered.sort((a, b) => b.abonentCount.compareTo(a.abonentCount));
         break;
-      case 'default':
+      case 'code':
       default:
-        filtered.sort((a, b) => a.code.compareTo(b.code));
+        filtered.sort((a, b) => naturalCompare(a.code, b.code));
         break;
     }
 
@@ -125,62 +125,13 @@ class TpListController extends GetxController {
   // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
   // ========================================
 
-  /// Опции сортировки
-  List<SortOption> get sortOptions => [
-    SortOption(value: 'default', label: 'По умолчанию'),
-    SortOption(value: 'name', label: 'По названию'),
-    SortOption(value: 'code', label: 'По коду'),
-    SortOption(value: 'abonent_count', label: 'По количеству абонентов'),
-  ];
-
-  /// Показать диалог сортировки
+  /// Показать шторку сортировки
   void showSortDialog() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(Constants.paddingM),
-        decoration: BoxDecoration(
-          color: Get.theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(Constants.borderRadius),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Сортировка',
-              style: Get.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: Constants.paddingM),
-            ...sortOptions.map((option) => Obx(() => RadioListTile<String>(
-              title: Text(option.label),
-              value: option.value,
-              groupValue: _sortBy.value,
-              onChanged: (value) {
-                if (value != null) {
-                  setSorting(value);
-                  Get.back();
-                }
-              },
-            ))),
-            const SizedBox(height: Constants.paddingS),
-          ],
-        ),
-      ),
+    SortBottomSheet.show(
+      title: 'Сортировка ТП',
+      options: SortPrefsService.tpOptions,
+      selected: _sortPrefs.tpSort.value,
+      onSelected: setSorting,
     );
   }
-}
-
-// Модель опции сортировки
-class SortOption {
-  final String value;
-  final String label;
-
-  SortOption({
-    required this.value,
-    required this.label,
-  });
 }

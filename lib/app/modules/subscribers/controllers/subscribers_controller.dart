@@ -3,10 +3,14 @@ import 'package:get/get.dart';
 import '../../../data/models/subscriber_model.dart';
 import '../../../data/repositories/subscriber_repository.dart';
 import '../../../core/utils/app_snackbar.dart';
+import '../../../core/utils/natural_sort.dart';
+import '../../../core/services/sort_prefs_service.dart';
+import '../../../widgets/sort_bottom_sheet.dart';
 import '../../../routes/app_pages.dart';
 
 class SubscribersController extends GetxController {
   final SubscriberRepository _subscriberRepository = Get.find<SubscriberRepository>();
+  final SortPrefsService _sortPrefs = Get.find<SortPrefsService>();
 
   // Arguments
   late String tpId;
@@ -19,7 +23,6 @@ class SubscribersController extends GetxController {
   final _filteredSubscribers = <SubscriberModel>[].obs;
   final _selectedStatus = 'all'.obs;
   final _searchQuery = ''.obs;
-  final _sortBy = 'default'.obs;
 
   // Новые реактивные переменные для замены геттеров с логикой
   final _isEmpty = true.obs;
@@ -36,7 +39,7 @@ class SubscribersController extends GetxController {
   List<SubscriberModel> get subscribers => _filteredSubscribers;
   String get selectedStatus => _selectedStatus.value;
   String get searchQuery => _searchQuery.value;
-  String get sortBy => _sortBy.value;
+  String get sortBy => _sortPrefs.subscribersSort.value;
   bool get isEmpty => _isEmpty.value;
   bool get hasData => _hasData.value;
   int get totalSubscribers => _totalSubscribers.value;
@@ -53,6 +56,8 @@ class SubscribersController extends GetxController {
     // Слушатели для обновления зависимых состояний
     _subscribers.listen((_) => _updateStatistics());
     _selectedStatus.listen((_) => _updateStatusFilterOptions());
+    // Реагируем на смену порядка по умолчанию (например, из Настроек).
+    ever(_sortPrefs.subscribersSort, (_) => applyFiltersAndSort());
 
     // Получаем параметры
     final args = Get.arguments as Map<String, dynamic>? ?? {};
@@ -188,15 +193,15 @@ class SubscribersController extends GetxController {
     }
 
     // Применяем сортировку
-    switch (_sortBy.value) {
+    switch (_sortPrefs.subscribersSort.value) {
       case 'name':
-        filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
+        filtered.sort((a, b) => naturalCompare(a.fullName, b.fullName));
         break;
       case 'account':
-        filtered.sort((a, b) => a.accountNumber.compareTo(b.accountNumber));
+        filtered.sort((a, b) => naturalCompare(a.accountNumber, b.accountNumber));
         break;
       case 'address':
-        filtered.sort((a, b) => a.address.compareTo(b.address));
+        filtered.sort((a, b) => naturalCompare(a.address, b.address));
         break;
       case 'debt':
         filtered.sort((a, b) => b.debtAmount.compareTo(a.debtAmount));
@@ -209,7 +214,7 @@ class SubscribersController extends GetxController {
           if (aAvailable != bAvailable) {
             return aAvailable ? -1 : 1;
           }
-          return a.fullName.compareTo(b.fullName);
+          return naturalCompare(a.fullName, b.fullName);
         });
         break;
     }
@@ -232,11 +237,21 @@ class SubscribersController extends GetxController {
     print('[SUBSCRIBERS CONTROLLER] Search query changed to: "$query"');
   }
 
-  /// Установка сортировки
+  /// Установка сортировки (сохраняется постоянно).
   void setSorting(String sort) {
-    _sortBy.value = sort;
+    _sortPrefs.setSubscribersSort(sort);
     applyFiltersAndSort();
     print('[SUBSCRIBERS CONTROLLER] Sort changed to: $sort');
+  }
+
+  /// Показать шторку сортировки
+  void showSortDialog() {
+    SortBottomSheet.show(
+      title: 'Сортировка абонентов',
+      options: SortPrefsService.subscriberOptions,
+      selected: _sortPrefs.subscribersSort.value,
+      onSelected: setSorting,
+    );
   }
 
   // ========================================
