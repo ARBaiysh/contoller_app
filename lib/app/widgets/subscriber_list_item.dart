@@ -9,10 +9,16 @@ class SubscriberListItem extends StatelessWidget {
   final SubscriberModel subscriber;
   final VoidCallback onTap;
 
+  /// Показывать ТП абонента отдельной строкой сверху. Включается в глобальном
+  /// поиске, где результаты идут вперемешку по разным ТП. В списке абонентов
+  /// конкретной ТП не нужно (ТП и так в заголовке экрана).
+  final bool showTp;
+
   const SubscriberListItem({
     Key? key,
     required this.subscriber,
     required this.onTap,
+    this.showTp = false,
   }) : super(key: key);
 
   @override
@@ -38,6 +44,54 @@ class SubscriberListItem extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ТП абонента (только в поиске) — чип с акцентом,
+                        // длинные названия обрезаются многоточием.
+                        if (showTp && subscriber.transformerPointName.isNotEmpty) ...[
+                          Builder(builder: (context) {
+                            final isDark =
+                                Theme.of(context).brightness == Brightness.dark;
+                            final tpColor = isDark
+                                ? const Color(0xFFB39DDB) // light purple
+                                : const Color(0xFF5E35B1); // deep purple
+                            return Row(
+                              children: [
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: tpColor.withValues(
+                                          alpha: isDark ? 0.20 : 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.bolt, size: 16, color: tpColor),
+                                        const SizedBox(width: 3),
+                                        Flexible(
+                                          child: Text(
+                                            subscriber.transformerPointName,
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: tpColor,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                          const SizedBox(height: 6),
+                        ],
                         // Account number and name
                         Row(
                           children: [

@@ -392,34 +392,12 @@ class SearchView extends GetView<GlobalSearchController> {
             itemCount: controller.searchResults.length,
             itemBuilder: (context, index) {
               final subscriber = controller.searchResults[index];
-              return Column(
-                children: [
-                  // TP header (if different from previous)
-                  if (index == 0 ||
-                      controller.searchResults[index - 1].transformerPointCode != subscriber.transformerPointCode)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Constants.paddingM,
-                        vertical: Constants.paddingS,
-                      ),
-                      margin: const EdgeInsets.only(top: Constants.paddingS),
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                      child: Text(
-                        subscriber.transformerPointName,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ),
-
-                  // Subscriber item
-                  SubscriberListItem(
-                    subscriber: subscriber,
-                    onTap: () => controller.navigateToSubscriberDetail(subscriber),
-                  ),
-                ],
+              // ТП показываем прямо на карточке (showTp), т.к. результаты
+              // поиска идут вперемешку по разным ТП.
+              return SubscriberListItem(
+                subscriber: subscriber,
+                showTp: true,
+                onTap: () => controller.navigateToSubscriberDetail(subscriber),
               );
             },
           ),
