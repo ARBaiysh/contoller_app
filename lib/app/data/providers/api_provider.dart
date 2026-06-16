@@ -19,8 +19,7 @@ class ApiProvider extends GetxService {
   // Базовый URL можно переопределить при сборке: --dart-define=API_BASE_URL=...
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-   // defaultValue: 'https://ca.asdf.kg/api',
-    defaultValue: 'http://192.168.120.10:8269/api',
+    defaultValue: 'https://ca.asdf.kg/api',
   );
   late Dio _dio;
   final GetStorage _storage = GetStorage();
