@@ -46,11 +46,10 @@ class StatisticsRepository {
 
   Future<DashboardModel> _fetchDashboard() async {
     try {
-      final response = await _apiProvider.getDashboardStatistics();
-      return DashboardModel.fromJson(response);
+      return await _apiProvider.getDashboardStatistics();
     } catch (e) {
       print('[STATS REPO] Error getting dashboard statistics: $e');
-      throw Exception('Не удалось загрузить статистику');
+      rethrow;
     }
   }
 

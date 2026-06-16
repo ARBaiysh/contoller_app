@@ -26,6 +26,7 @@ dependencies:
 
   # Local Storage
   get_storage: ^2.1.1
+  # Защищённое хранилище для токенов (Keystore/Keychain)
   flutter_secure_storage: ^9.2.2
 
   # Utils
@@ -50,11 +51,18 @@ dependencies:
   share_plus: ^10.1.2
   path_provider: ^2.1.5
 
+  # JSON serialization (codegen)
+  json_annotation: ^4.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
   icons_launcher: ^3.0.2
+
+  # Codegen for JSON serialization
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
 
 icons_launcher:
   image_path: 'assets/icons/logo2.png'

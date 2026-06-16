@@ -55,17 +55,15 @@ class TpRepository {
 
   Future<List<TpModel>> _fetchTpList(bool forceRefresh) async {
     try {
-      final responseData = await _apiProvider.getTransformerPoints(
+      final tpList = await _apiProvider.getTransformerPoints(
         forceRefresh: forceRefresh,
       );
-
-      final tpList = responseData.map((json) => TpModel.fromJson(json)).toList();
 
       print('[TP REPO] Loaded ${tpList.length} TPs');
       return tpList;
     } catch (e) {
       print('[TP REPO] Error fetching TP list: $e');
-      throw Exception('Не удалось загрузить список ТП');
+      rethrow;
     }
   }
 

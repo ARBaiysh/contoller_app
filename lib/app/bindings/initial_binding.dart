@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../core/controllers/theme_controller.dart';
 import '../core/services/app_update_service.dart';
+import '../core/services/auth_events.dart';
 import '../core/services/biometric_service.dart';
 import '../core/services/connectivity_service.dart';
 import '../core/services/secure_storage_service.dart';
@@ -30,6 +31,7 @@ class InitialBinding extends Bindings {
     Get.put(SecureStorageService(), permanent: true);
     Get.put(SortPrefsService(), permanent: true);
     Get.put(ThemeController(), permanent: true);
+    Get.put(AuthEvents(), permanent: true);
     Get.put(ApiProvider(), permanent: true);
     Get.put(ConnectivityService(), permanent: true);
     Get.put(AppUpdateService(), permanent: true);

@@ -124,10 +124,11 @@ class AuthController extends GetxController {
 
   Future<void> _checkBiometricAvailability() async {
     try {
-      final hasSavedCredentials = _biometricService.savedCredentials != null &&
-          _biometricService.isBiometricEnabled;
+      // Биометрия доступна, если она включена и есть активная сессия (refresh-токен)
+      final canUseBiometric = _biometricService.isBiometricEnabled &&
+          _authRepository.isAuthenticated;
 
-      if (hasSavedCredentials) {
+      if (canUseBiometric) {
         final isAvailable = await _biometricService.isBiometricAvailable;
         _showBiometricOption.value = isAvailable;
       } else {
@@ -203,30 +204,21 @@ class AuthController extends GetxController {
       );
 
       // Сохраняем данные если включено "Запомнить меня"
+      // (пароль НЕ сохраняется — сессию держит refresh-токен)
       if (_rememberMe.value) {
+        await _storage.write('remember_me', true);
+        await _storage.write('saved_username', username);
+        await _storage.write('saved_region_code', regionCode);
+
+        // Опционально предлагаем включить вход по биометрии
         final isBiometricAvailable = await _biometricService.isBiometricAvailable;
-
         if (isBiometricAvailable) {
-          final biometricSetup = await _biometricService.setupBiometricAuth(
-            username,
-            password,
-          );
-
+          final biometricSetup = await _biometricService.setupBiometricAuth();
           if (biometricSetup) {
-            await _storage.write('saved_region_code', regionCode);
             await _storage.write(Constants.biometricKey, true);
-
             AppSnackbar.success('Успешно', 'Биометрическая аутентификация настроена',
                 duration: const Duration(seconds: 2));
-          } else {
-            await _storage.write('remember_me', true);
-            await _storage.write('saved_username', username);
-            await _storage.write('saved_region_code', regionCode);
           }
-        } else {
-          await _storage.write('remember_me', true);
-          await _storage.write('saved_username', username);
-          await _storage.write('saved_region_code', regionCode);
         }
       }
 
@@ -254,34 +246,25 @@ class AuthController extends GetxController {
         return;
       }
 
-      final credentials = _biometricService.savedCredentials;
-      final savedRegionCode = _storage.read('saved_region_code');
-
-      if (credentials == null || savedRegionCode == null) {
-        AppSnackbar.error('Ошибка', 'Не найдены сохраненные данные для входа');
-        return;
-      }
-
-      final savedUsername = credentials['username'] as String?;
-      final savedPassword = credentials['password'] as String?;
-
-      if (savedUsername == null || savedPassword == null) {
-        AppSnackbar.error('Ошибка', 'Сохраненные данные повреждены');
+      // Сессию держит refresh-токен; пароль не требуется
+      if (!_authRepository.isAuthenticated) {
+        AppSnackbar.error('Ошибка', 'Сессия не найдена. Войдите по логину и паролю');
         return;
       }
 
       _isLoading.value = true;
       _updateFormState();
 
-      final response = await _authRepository.login(
-        username: savedUsername,
-        password: savedPassword,
-        regionCode: savedRegionCode,
-      );
+      // Обновляем access-токен по refresh-токену
+      final ok = await _authRepository.refreshSession();
+      if (!ok) {
+        // refreshSession при провале уже увёл на экран входа и показал сообщение
+        return;
+      }
 
       // Переход на главный экран
       Get.offAllNamed(Routes.NAVBAR);
-      AppSnackbar.success('Успешно', 'Добро пожаловать, ${response.inspector.fullName}!');
+      AppSnackbar.success('Успешно', 'Добро пожаловать, ${_authRepository.userFullName}!');
 
     } catch (e) {
       AppSnackbar.error('Ошибка', 'Не удалось выполнить вход');

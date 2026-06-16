@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../core/services/biometric_service.dart';
-import '../../core/services/secure_storage_service.dart';
+import '../../core/services/token_storage.dart';
 import '../providers/api_provider.dart';
 import '../models/region_model.dart';
 import '../models/auth_response_model.dart';
@@ -9,22 +9,21 @@ import '../../core/values/constants.dart';
 
 class AuthRepository {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
+  final TokenStorage _tokenStorage = Get.find<TokenStorage>();
   final GetStorage _storage = GetStorage();
-  final SecureStorageService _secureStorage = Get.find<SecureStorageService>();
 
   // Current user data
   InspectorData? _currentUser;
-  String? _authToken;
 
   // Getters
-  bool get isAuthenticated => _authToken != null;
+  /// Сессия активна, пока есть refresh-токен в защищённом хранилище.
+  bool get isAuthenticated => _tokenStorage.hasSession;
   InspectorData? get currentUser => _currentUser;
-  String? get authToken => _authToken;
+  String? get authToken => _tokenStorage.accessToken;
 
   // Initialize repository
   Future<void> init() async {
-    // Load saved auth data
-    _authToken = _storage.read(Constants.tokenKey);
+    // Токены уже загружены TokenStorage.load() при старте приложения.
     final userData = _storage.read(Constants.userKey);
     if (userData != null) {
       _currentUser = InspectorData.fromJson(Map<String, dynamic>.from(userData));
@@ -54,20 +53,18 @@ class AuthRepository {
         regionCode: regionCode,
       );
 
-      // Handle successful login - новая структура API
-      await _saveAuthData(
-        token: response.token,
-        username: username,
-        password: password,
-        regionCode: regionCode,
-        inspectorData: response.inspector,
-      );
-
+      await _saveAuthData(response);
       return response;
     } catch (e) {
       print('Login error: $e');
       throw e;
     }
+  }
+
+  /// Обновить сессию по refresh-токену (без пароля).
+  /// Используется при входе по биометрии и автологине.
+  Future<bool> refreshSession() {
+    return _apiProvider.refreshSession();
   }
 
   /// Получить профиль текущего инспектора
@@ -83,45 +80,42 @@ class AuthRepository {
     }
   }
 
-  // Save auth data
-  Future<void> _saveAuthData({
-    required String token,
-    required String username,
-    required String password,
-    required String regionCode,
-    required InspectorData inspectorData,
-  }) async {
-    _authToken = token;
-    _currentUser = inspectorData;
+  // Save auth data: токены — в защищённое хранилище, профиль — в GetStorage.
+  // Пароль НЕ сохраняется нигде.
+  Future<void> _saveAuthData(AuthResponseModel response) async {
+    _currentUser = response.inspector;
 
-    // Persist to storage. Пароль — только в шифрованном хранилище.
-    await _storage.write(Constants.tokenKey, token);
-    await _storage.write(Constants.usernameKey, username);
-    await _secureStorage.writePassword(password);
-    await _storage.write(Constants.regionCodeKey, regionCode);
-    await _storage.write(Constants.userKey, inspectorData.toJson());
+    await _tokenStorage.saveTokens(
+      accessToken: response.token,
+      refreshToken: response.refreshToken ?? '',
+    );
+    await _storage.write(Constants.userKey, response.inspector.toJson());
+
+    // Успешный вход — снимаем флаг «сессия истекла»
+    _apiProvider.resetAuthFailureFlag();
   }
-
 
   // Logout
   Future<void> logout() async {
-    _authToken = null;
     _currentUser = null;
 
-    // Clear all saved data
-    await _storage.remove(Constants.tokenKey);
-    await _storage.remove(Constants.usernameKey);
-    await _storage.remove(Constants.regionCodeKey);
+    // Отзываем refresh-токен на сервере (best-effort), затем чистим локально
+    await _apiProvider.revokeRefreshToken();
+    await _tokenStorage.clear();
+
+    // Чистим профиль и флаги
     await _storage.remove(Constants.userKey);
     await _storage.remove(Constants.biometricKey);
 
-    // Clear saved login data
+    // Устаревшие ключи (миграция со старых версий)
+    await _storage.remove(Constants.tokenKey);
+    await _storage.remove(Constants.usernameKey);
+    await _storage.remove(Constants.passwordKey);
+    await _storage.remove(Constants.regionCodeKey);
     await _storage.remove('saved_username');
+    await _storage.remove('saved_password');
     await _storage.remove('saved_region_code');
     await _storage.remove('remember_me');
-
-    // Чувствительные данные (пароль + биометрические креды)
-    await _secureStorage.clearAll();
   }
 
   // Get user full name

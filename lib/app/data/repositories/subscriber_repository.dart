@@ -16,19 +16,15 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Getting all subscribers (forceRefresh: $forceRefresh)');
 
-      final responseData = await _apiProvider.getAllAbonents(
+      final subscribers = await _apiProvider.getAllAbonents(
         forceRefresh: forceRefresh,
       );
-
-      final subscribers = responseData
-          .map((json) => SubscriberModel.fromJson(json))
-          .toList();
 
       print('[SUBSCRIBER REPO] Loaded ${subscribers.length} subscribers');
       return subscribers;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error fetching all subscribers: $e');
-      throw Exception('Не удалось загрузить список абонентов');
+      rethrow;
     }
   }
 
@@ -41,20 +37,16 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Getting subscribers for TP: $tpCode (forceRefresh: $forceRefresh)');
 
-      final responseData = await _apiProvider.getAbonentsByTp(
+      final subscribers = await _apiProvider.getAbonentsByTp(
         tpCode,
         forceRefresh: forceRefresh,
       );
-
-      final subscribers = responseData
-          .map((json) => SubscriberModel.fromJson(json))
-          .toList();
 
       print('[SUBSCRIBER REPO] Loaded ${subscribers.length} subscribers for TP: $tpCode');
       return subscribers;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error fetching subscribers: $e');
-      throw Exception('Не удалось загрузить список абонентов');
+      rethrow;
     }
   }
 
@@ -67,18 +59,16 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Getting subscriber: $accountNumber (forceRefresh: $forceRefresh)');
 
-      final responseData = await _apiProvider.getAbonentByAccount(
+      final subscriber = await _apiProvider.getAbonentByAccount(
         accountNumber,
         forceRefresh: forceRefresh,
       );
-
-      final subscriber = SubscriberModel.fromJson(responseData);
 
       print('[SUBSCRIBER REPO] Successfully fetched subscriber: ${subscriber.fullName}');
       return subscriber;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error getting subscriber by account: $e');
-      throw Exception('Не удалось получить данные абонента');
+      rethrow;
     }
   }
 
@@ -96,17 +86,13 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Searching subscribers with query: $query');
 
-      final results = await _apiProvider.searchAbonents(query);
-
-      final subscribers = results
-          .map((json) => SubscriberModel.fromJson(json))
-          .toList();
+      final subscribers = await _apiProvider.searchAbonents(query);
 
       print('[SUBSCRIBER REPO] Search completed: found ${subscribers.length} results');
       return subscribers;
     } catch (e) {
       print('[SUBSCRIBER REPO] Search error: $e');
-      throw Exception('Ошибка при поиске абонентов');
+      rethrow;
     }
   }
 
@@ -134,7 +120,7 @@ class SubscriberRepository {
       return response;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error submitting reading: $e');
-      throw Exception('Не удалось отправить показание');
+      rethrow;
     }
   }
 
@@ -148,7 +134,7 @@ class SubscriberRepository {
       return response;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error checking reading status: $e');
-      throw Exception('Не удалось проверить статус показания');
+      rethrow;
     }
   }
 
@@ -157,16 +143,13 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Getting reading history for: $accountNumber');
 
-      final response = await _apiProvider.getReadingHistory(accountNumber);
-
-      // Преобразуем в список Map
-      final history = response.map((item) => Map<String, dynamic>.from(item)).toList();
+      final history = await _apiProvider.getReadingHistory(accountNumber);
 
       print('[SUBSCRIBER REPO] Reading history loaded: ${history.length} items');
       return history;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error getting reading history: $e');
-      throw Exception('Не удалось получить историю показаний');
+      rethrow;
     }
   }
 
@@ -273,14 +256,13 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Fetching abonents with consumption');
 
-      final data = await _apiProvider.getAbonentsWithConsumption();
-      final subscribers = data.map((json) => SubscriberModel.fromJson(json)).toList();
+      final subscribers = await _apiProvider.getAbonentsWithConsumption();
 
       print('[SUBSCRIBER REPO] Loaded ${subscribers.length} abonents with consumption');
       return subscribers;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error fetching consumption list: $e');
-      throw Exception('Не удалось загрузить список абонентов с показаниями');
+      rethrow;
     }
   }
 
@@ -289,14 +271,13 @@ class SubscriberRepository {
     try {
       print('[SUBSCRIBER REPO] Fetching abonents with payments');
 
-      final data = await _apiProvider.getAbonentsWithPayments();
-      final subscribers = data.map((json) => SubscriberModel.fromJson(json)).toList();
+      final subscribers = await _apiProvider.getAbonentsWithPayments();
 
       print('[SUBSCRIBER REPO] Loaded ${subscribers.length} abonents with payments');
       return subscribers;
     } catch (e) {
       print('[SUBSCRIBER REPO] Error fetching payments list: $e');
-      throw Exception('Не удалось загрузить список оплативших абонентов');
+      rethrow;
     }
   }
 

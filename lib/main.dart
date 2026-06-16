@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'app/bindings/initial_binding.dart';
+import 'app/core/services/token_storage.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
 import 'app/widgets/connection_overlay.dart';
@@ -13,6 +14,12 @@ void main() async {
 
   // Initialize GetStorage
   await GetStorage.init();
+
+  // Загружаем токены из защищённого хранилища до старта UI,
+  // чтобы интерцептор Dio имел доступ к access-токену синхронно.
+  final tokenStorage = TokenStorage();
+  await tokenStorage.load();
+  Get.put<TokenStorage>(tokenStorage, permanent: true);
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

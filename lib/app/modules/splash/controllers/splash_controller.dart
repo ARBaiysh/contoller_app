@@ -45,8 +45,6 @@ class SplashController extends GetxController {
   Future<void> _initializeApp() async {
     _loadingText.value = 'Загрузка данных...';
 
-    await Future.delayed(const Duration(seconds: 1));
-
     // ========================================
     // ПРОВЕРКА ВЕРСИИ ПРИЛОЖЕНИЯ
     // ========================================
@@ -93,21 +91,17 @@ class SplashController extends GetxController {
 
     await _authRepository.init();
 
-    await Future.delayed(const Duration(milliseconds: 500));
-
     await _checkAuthStatus();
   }
 
   Future<void> _checkAuthStatus() async {
-    // Проверяем, настроена ли биометрия
-    final hasBiometricCredentials = _biometricService.savedCredentials != null &&
-        _biometricService.isBiometricEnabled;
+    // Биометрия применима, если она включена и есть активная сессия (refresh-токен)
+    final canUseBiometric = _biometricService.isBiometricEnabled &&
+        _authRepository.isAuthenticated;
 
     // Если биометрия настроена - ВСЕГДА запрашиваем её
-    if (hasBiometricCredentials) {
+    if (canUseBiometric) {
       _loadingText.value = 'Проверка биометрии...';
-
-      await Future.delayed(const Duration(milliseconds: 300));
 
       final success = await _tryBiometricLogin();
 
@@ -146,33 +140,12 @@ class SplashController extends GetxController {
         return false;
       }
 
-      final credentials = _biometricService.savedCredentials;
-      final savedRegionCode = _storage.read('saved_region_code');
-
-      if (credentials == null || savedRegionCode == null) {
+      // Сессию держит refresh-токен; обновляем access-токен без пароля
+      if (!_authRepository.isAuthenticated) {
         return false;
       }
 
-      final username = credentials['username'] as String?;
-      final password = credentials['password'] as String?;
-
-      if (username == null || password == null) {
-        return false;
-      }
-
-      final response = await _authRepository.login(
-        username: username,
-        password: password,
-        regionCode: savedRegionCode,
-      );
-
-      if (response.status == 'SUCCESS') {
-        return true;
-      } else if (response.status == 'SYNCING') {
-        return false;
-      } else {
-        return false;
-      }
+      return await _authRepository.refreshSession();
     } catch (e) {
       return false;
     }

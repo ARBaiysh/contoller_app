@@ -1,26 +1,49 @@
 // lib/app/data/models/subscriber_model.dart
 
 import 'package:intl/intl.dart';
+import 'package:json_annotation/json_annotation.dart';
 
+import 'json_converters.dart';
+
+part 'subscriber_model.g.dart';
+
+@JsonSerializable()
 class SubscriberModel {
+  @JsonKey(defaultValue: '')
   final String accountNumber;
+  @JsonKey(defaultValue: '')
   final String fullName;
+  @JsonKey(defaultValue: '')
   final String address;
+  @JsonKey(fromJson: _phoneFromJson)
   final String? phone;
+  @JsonKey(defaultValue: 0.0)
   final double balance;
+  @JsonKey(defaultValue: '')
   final String meterSerialNumber;
   final String? meterType;
   final String? askueUuid; // UUID АСКУЭ-системы (если ПУ привязан к АСКУЭ)
+  // Бэкенд присылает последнее показание в поле 'lastReading'
+  @JsonKey(name: 'lastReading', defaultValue: 0)
   final int currentReading;
+  @JsonKey(defaultValue: 0)
   final int previousReading;
+  @JsonKey(fromJson: dateTimeOrNull)
   final DateTime? lastReadingDate;
+  @JsonKey(defaultValue: 0.0)
   final double currentMonthConsumption;
+  @JsonKey(defaultValue: 0.0)
   final double currentMonthCharge;
+  @JsonKey(fromJson: dateTimeOrNull)
   final DateTime? lastPaymentDate;
+  @JsonKey(defaultValue: 0.0)
   final double lastPaymentAmount;
+  @JsonKey(defaultValue: 0.0)
   final double tariff;
   final String? tariffName;
+  @JsonKey(defaultValue: '')
   final String transformerPointCode;
+  @JsonKey(defaultValue: '')
   final String transformerPointName;
   final String? contractDate;
   final String? notes;
@@ -153,104 +176,10 @@ class SubscriberModel {
   // JSON SERIALIZATION
   // ========================================
 
-  factory SubscriberModel.fromJson(Map<String, dynamic> json) {
-    String? processPhone(dynamic phoneValue) {
-      if (phoneValue == null) return null;
+  factory SubscriberModel.fromJson(Map<String, dynamic> json) =>
+      _$SubscriberModelFromJson(json);
 
-      final phoneStr = phoneValue.toString().trim();
-
-      if (phoneStr.isEmpty) return null;
-
-      final invalidPlaceholders = [
-        'неопределено',
-        'не указано',
-        'не указан',
-        'отсутствует',
-        'нет данных',
-        'нет',
-        'n/a',
-        'na',
-        'none',
-        'null',
-        'undefined',
-        'unknown',
-        '-',
-        '--',
-        '---',
-      ];
-
-      if (invalidPlaceholders.contains(phoneStr.toLowerCase())) {
-        return null;
-      }
-
-      final digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
-      if (digitsOnly.length < 9) {
-        return null;
-      }
-
-      return phoneStr;
-    }
-
-    return SubscriberModel(
-      accountNumber: json['accountNumber'] ?? '',
-      fullName: json['fullName'] ?? '',
-      address: json['address'] ?? '',
-      phone: processPhone(json['phone']),
-      balance: (json['balance'] ?? 0).toDouble(),
-      meterSerialNumber: json['meterSerialNumber'] ?? '',
-      meterType: json['meterType'],
-      askueUuid: json['askueUuid'],
-      currentReading: json['lastReading'] ?? json['currentReading'] ?? 0,
-      previousReading: json['previousReading'] ?? 0,
-      lastReadingDate: json['lastReadingDate'] != null
-          ? DateTime.tryParse(json['lastReadingDate'])
-          : null,
-      currentMonthConsumption: (json['currentMonthConsumption'] ?? 0).toDouble(),
-      currentMonthCharge: (json['currentMonthCharge'] ?? 0).toDouble(),
-      lastPaymentAmount: (json['lastPaymentAmount'] ?? 0).toDouble(),
-      lastPaymentDate: json['lastPaymentDate'] != null
-          ? DateTime.tryParse(json['lastPaymentDate'])
-          : null,
-      tariff: (json['tariff'] ?? 0).toDouble(),
-      tariffName: json['tariffName'],
-      transformerPointCode: json['transformerPointCode'] ?? '',
-      transformerPointName: json['transformerPointName'] ?? '',
-      contractDate: json['contractDate'],
-      notes: json['notes'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
-      accuracy: json['accuracy']?.toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'accountNumber': accountNumber,
-      'fullName': fullName,
-      'address': address,
-      'phone': phone,
-      'balance': balance,
-      'meterSerialNumber': meterSerialNumber,
-      'meterType': meterType,
-      'askueUuid': askueUuid,
-      'currentReading': currentReading,
-      'previousReading': previousReading,
-      'lastReadingDate': lastReadingDate?.toIso8601String(),
-      'currentMonthConsumption': currentMonthConsumption,
-      'currentMonthCharge': currentMonthCharge,
-      'lastPaymentAmount': lastPaymentAmount,
-      'lastPaymentDate': lastPaymentDate?.toIso8601String(),
-      'tariff': tariff,
-      'tariffName': tariffName,
-      'transformerPointCode': transformerPointCode,
-      'transformerPointName': transformerPointName,
-      'contractDate': contractDate,
-      'notes': notes,
-      'latitude': latitude,
-      'longitude': longitude,
-      'accuracy': accuracy,
-    };
-  }
+  Map<String, dynamic> toJson() => _$SubscriberModelToJson(this);
 
   // ========================================
   // COPY WITH
@@ -346,6 +275,47 @@ class SubscriberModel {
 
   @override
   int get hashCode => accountNumber.hashCode;
+}
+
+// ========================================
+// JSON HELPERS
+// ========================================
+
+/// Очистка телефона: отбрасывает плейсхолдеры и слишком короткие номера.
+String? _phoneFromJson(dynamic phoneValue) {
+  if (phoneValue == null) return null;
+
+  final phoneStr = phoneValue.toString().trim();
+  if (phoneStr.isEmpty) return null;
+
+  const invalidPlaceholders = [
+    'неопределено',
+    'не указано',
+    'не указан',
+    'отсутствует',
+    'нет данных',
+    'нет',
+    'n/a',
+    'na',
+    'none',
+    'null',
+    'undefined',
+    'unknown',
+    '-',
+    '--',
+    '---',
+  ];
+
+  if (invalidPlaceholders.contains(phoneStr.toLowerCase())) {
+    return null;
+  }
+
+  final digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
+  if (digitsOnly.length < 9) {
+    return null;
+  }
+
+  return phoneStr;
 }
 
 // ========================================

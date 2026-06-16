@@ -1,15 +1,32 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'dashboard_model.g.dart';
+
+@JsonSerializable()
 class DashboardModel {
+  @JsonKey(defaultValue: 0)
   final int totalAbonents;
+  @JsonKey(defaultValue: 0)
   final int totalTransformerPoints;
+  @JsonKey(defaultValue: 0)
   final int readingsThisMonth;
+  @JsonKey(defaultValue: 0)
   final double totalCharge;
+  @JsonKey(defaultValue: 0)
   final double totalDebt;
+  @JsonKey(defaultValue: 0)
   final double totalPrepayment;
+  @JsonKey(defaultValue: 0)
   final double totalConsumption;
+  @JsonKey(defaultValue: 0)
   final int paymentCountThisMonth;
+  @JsonKey(defaultValue: 0)
   final double totalPaymentAmount;
+  @JsonKey(defaultValue: 0)
   final int coordinatesTotal;
+  @JsonKey(defaultValue: 0)
   final int coordinatesThisMonth;
+  @JsonKey(defaultValue: 0)
   final int coordinatesToday;
 
   DashboardModel({
@@ -27,39 +44,10 @@ class DashboardModel {
     this.coordinatesToday = 0,
   });
 
-  factory DashboardModel.fromJson(Map<String, dynamic> json) {
-    return DashboardModel(
-      totalAbonents: json['totalAbonents'] ?? 0,
-      totalTransformerPoints: json['totalTransformerPoints'] ?? 0,
-      readingsThisMonth: json['readingsThisMonth'] ?? 0,
-      totalCharge: (json['totalCharge'] ?? 0).toDouble(),
-      totalDebt: (json['totalDebt'] ?? 0).toDouble(),
-      totalPrepayment: (json['totalPrepayment'] ?? 0).toDouble(),
-      totalConsumption: (json['totalConsumption'] ?? 0).toDouble(),
-      paymentCountThisMonth: json['paymentCountThisMonth'] ?? 0,
-      totalPaymentAmount: (json['totalPaymentAmount'] ?? 0).toDouble(),
-      coordinatesTotal: json['coordinatesTotal'] ?? 0,
-      coordinatesThisMonth: json['coordinatesThisMonth'] ?? 0,
-      coordinatesToday: json['coordinatesToday'] ?? 0,
-    );
-  }
+  factory DashboardModel.fromJson(Map<String, dynamic> json) =>
+      _$DashboardModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'totalAbonents': totalAbonents,
-      'totalTransformerPoints': totalTransformerPoints,
-      'readingsThisMonth': readingsThisMonth,
-      'totalCharge': totalCharge,
-      'totalDebt': totalDebt,
-      'totalPrepayment': totalPrepayment,
-      'totalConsumption': totalConsumption,
-      'paymentCountThisMonth': paymentCountThisMonth,
-      'totalPaymentAmount': totalPaymentAmount,
-      'coordinatesTotal': coordinatesTotal,
-      'coordinatesThisMonth': coordinatesThisMonth,
-      'coordinatesToday': coordinatesToday,
-    };
-  }
+  Map<String, dynamic> toJson() => _$DashboardModelToJson(this);
 
   // Для обратной совместимости со старым кодом
   double get completionPercentage {

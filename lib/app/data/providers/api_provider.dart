@@ -1,21 +1,37 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../core/errors/app_exception.dart';
+import '../../core/services/auth_events.dart';
 import '../../core/services/connectivity_service.dart';
-import '../../core/services/secure_storage_service.dart';
-import '../../core/utils/app_snackbar.dart';
+import '../../core/services/token_storage.dart';
+import '../../core/utils/app_logger.dart';
 import '../../core/values/constants.dart';
 import '../models/app_version_model.dart';
 import '../models/auth_response_model.dart';
+import '../models/dashboard_model.dart';
 import '../models/meter_detail_model.dart';
 import '../models/region_model.dart';
+import '../models/subscriber_model.dart';
+import '../models/tp_model.dart';
 
 class ApiProvider extends GetxService {
-  //static const String baseUrl = 'http://192.168.120.10:8269/api';
-  static const String baseUrl = 'https://ca.asdf.kg/api';
+  // Базовый URL можно переопределить при сборке: --dart-define=API_BASE_URL=...
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+   // defaultValue: 'https://ca.asdf.kg/api',
+    defaultValue: 'http://192.168.120.10:8269/api',
+  );
   late Dio _dio;
   final GetStorage _storage = GetStorage();
+  final TokenStorage _tokenStorage = Get.find<TokenStorage>();
+
+  /// Один общий Future обновления токена (single-flight): пока он не завершён,
+  /// все параллельные 401-запросы ждут его, а не запускают свой refresh.
+  Future<bool>? _refreshing;
+
+  /// Защита от множественной обработки провала сессии.
+  bool _authFailureHandled = false;
 
   Dio get dio => _dio;
 
@@ -39,35 +55,36 @@ class ApiProvider extends GetxService {
     // Add interceptor for token management
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
-        // Add token to header if available
-        final token = _storage.read(Constants.tokenKey);
+        // Подставляем access-токен из защищённого хранилища (in-memory копия)
+        final token = _tokenStorage.accessToken;
         if (token != null && !options.path.contains('/auth/')) {
           options.headers['Authorization'] = 'Bearer $token';
         }
         handler.next(options);
       },
       onResponse: (response, handler) {
-        // Любой успешный ответ снимает глобальный оверлей «нет связи»
+        // Успешный ответ — сбрасываем оверлей «нет связи / тех. работы»
         _reportConnectivitySuccess();
         handler.next(response);
       },
       onError: (error, handler) async {
-        // Классифицируем сетевые ошибки для глобального оверлея
+        // Оверлей показываем только на сетевых сбоях/5xx, не на обычных 4xx
         _reportConnectivityError(error);
 
-        // Handle 403 - token expired
-        if (error.response?.statusCode == 403 && !error.requestOptions.path.contains('/auth/')) {
-          print('[API] Got 403 - attempting to refresh token...');
+        // 401 на защищённом эндпоинте = истёк/отсутствует access-токен
+        // (бэкенд отдаёт 401 через RestAuthenticationEntryPoint). 403 теперь —
+        // это бизнес-ошибка «нет доступа», её рефрешить НЕ нужно.
+        if (error.response?.statusCode == 401 && !error.requestOptions.path.contains('/auth/')) {
+          AppLogger.d('[API] Got 401 - attempting to refresh token...');
 
-          // Try to refresh token
-          final refreshed = await _refreshToken();
+          final refreshed = await refreshSession();
           if (refreshed) {
-            // Retry original request with new token
+            // Повторяем исходный запрос уже с новым access-токеном
             final opts = Options(
               method: error.requestOptions.method,
               headers: error.requestOptions.headers,
             );
-            opts.headers!['Authorization'] = 'Bearer ${_storage.read(Constants.tokenKey)}';
+            opts.headers!['Authorization'] = 'Bearer ${_tokenStorage.accessToken}';
 
             try {
               final response = await _dio.request(
@@ -81,7 +98,7 @@ class ApiProvider extends GetxService {
               return handler.reject(error);
             }
           } else {
-            // Refresh failed - user will be redirected to login by _handleAuthFailure()
+            // refresh не удался — _handleAuthFailure уже увёл на экран входа
             return handler.reject(error);
           }
         }
@@ -90,8 +107,101 @@ class ApiProvider extends GetxService {
     ));
   }
 
+  /// Обновление сессии по refresh-токену (single-flight).
+  /// Используется и интерцептором (на 401), и при входе по биометрии.
+  Future<bool> refreshSession() {
+    return _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+  }
+
+  Future<bool> _doRefresh() async {
+    final refreshToken = _tokenStorage.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      AppLogger.d('[API] No refresh token available');
+      _handleAuthFailure();
+      return false;
+    }
+
+    try {
+      AppLogger.d('[API] Refreshing session via /auth/refresh...');
+      final response = await _dio.post(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+
+      final authResponse = AuthResponseModel.fromJson(response.data);
+      if (authResponse.token.isEmpty || authResponse.refreshToken == null) {
+        _handleAuthFailure();
+        return false;
+      }
+
+      await _tokenStorage.saveTokens(
+        accessToken: authResponse.token,
+        refreshToken: authResponse.refreshToken!,
+      );
+      AppLogger.d('[API] Session refreshed successfully');
+      return true;
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
+        // refresh-токен недействителен/истёк — завершаем сессию
+        AppLogger.d('[API] Refresh rejected ($status) - logging out');
+        _handleAuthFailure();
+      } else {
+        // Сетевая ошибка — НЕ разлогиниваем, токены сохраняем, дадим повторить
+        AppLogger.e('[API] Refresh network error (session kept)', e);
+      }
+      return false;
+    } catch (e) {
+      AppLogger.e('[API] Unexpected error refreshing session (session kept)', e);
+      return false;
+    }
+  }
+
+  // Обработка неудачной авторизации (истёкший/отозванный refresh-токен).
+  // Данные чистим здесь (дата-слой), UI-реакцию делегируем AuthEvents (UI-слой).
+  void _handleAuthFailure() {
+    if (_authFailureHandled) return;
+    _authFailureHandled = true;
+
+    // Чистим токены из защищённого хранилища
+    _tokenStorage.clear();
+
+    // Чистим прочие пользовательские данные и устаревшие ключи
+    _storage.remove(Constants.userKey);
+    _storage.remove(Constants.biometricKey);
+    // Устаревшие ключи (на случай миграции со старых версий)
+    _storage.remove(Constants.tokenKey);
+    _storage.remove(Constants.usernameKey);
+    _storage.remove(Constants.passwordKey);
+    _storage.remove(Constants.regionCodeKey);
+    _storage.remove('saved_username');
+    _storage.remove('saved_password');
+    _storage.remove('saved_region_code');
+    _storage.remove('remember_me');
+
+    // UI-реакция (редирект + сообщение) — в отдельном сервисе
+    Get.find<AuthEvents>().onSessionExpired();
+  }
+
+  /// Сбросить флаг обработки провала сессии (после успешного входа).
+  void resetAuthFailureFlag() {
+    _authFailureHandled = false;
+    Get.find<AuthEvents>().reset();
+  }
+
+  /// Выход с устройства — отзыв refresh-токена на сервере (best-effort).
+  Future<void> revokeRefreshToken() async {
+    final refreshToken = _tokenStorage.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) return;
+    try {
+      await _dio.post('/auth/logout', data: {'refreshToken': refreshToken});
+    } catch (e) {
+      AppLogger.e('[API] Error revoking refresh token', e);
+    }
+  }
+
   // ========================================
-  // ОТЧЁТЫ В ГЛОБАЛЬНЫЙ МОНИТОР СВЯЗИ
+  // CONNECTIVITY OVERLAY (нет связи / технические работы)
   // ========================================
 
   void _reportConnectivitySuccess() {
@@ -101,7 +211,7 @@ class ApiProvider extends GetxService {
   }
 
   /// Сообщаем монитору только о сетевых сбоях (нет связи / сервер не отвечает /
-  /// 5xx). Обычные 4xx (валидация, 403, 404 и т.п.) оверлей не показывают.
+  /// 5xx). Обычные 4xx (валидация, 401, 403, 404 и т.п.) оверлей не показывают.
   void _reportConnectivityError(DioException error) {
     final statusCode = error.response?.statusCode;
     final isConnectionLevel = error.type == DioExceptionType.connectionError ||
@@ -117,58 +227,12 @@ class ApiProvider extends GetxService {
     }
   }
 
-  Future<bool> _refreshToken() async {
-    try {
-      final username = _storage.read(Constants.usernameKey);
-      final password = await Get.find<SecureStorageService>().readPassword();
-      final regionCode = _storage.read(Constants.regionCodeKey);
+  // ========================================
+  // ВСПОМОГАТЕЛЬНОЕ
+  // ========================================
 
-      if (username == null || password == null || regionCode == null) {
-        print('[API] No saved credentials for refresh token');
-        _handleAuthFailure();
-        return false;
-      }
-
-      print('[API] Attempting to refresh token...');
-      final response = await _dio.post(
-        '/auth/login',
-        data: {
-          'username': username,
-          'password': password,
-          'regionCode': regionCode,
-        },
-      );
-
-      final authResponse = AuthResponseModel.fromJson(response.data);
-      await _storage.write(Constants.tokenKey, authResponse.token);
-      print('[API] Token refreshed successfully');
-      return true;
-    } catch (e) {
-      print('[API] Error refreshing token: $e');
-      _handleAuthFailure();
-      return false;
-    }
-  }
-// Обработка неудачной авторизации
-  void _handleAuthFailure() {
-    // Очищаем все сохраненные данные
-    _storage.remove(Constants.tokenKey);
-    _storage.remove(Constants.usernameKey);
-    _storage.remove(Constants.regionCodeKey);
-    _storage.remove(Constants.userKey);
-    _storage.remove(Constants.biometricKey);
-    _storage.remove('saved_username');
-    _storage.remove('saved_region_code');
-    _storage.remove('remember_me');
-
-    // Чувствительные данные (пароль + биометрические креды)
-    Get.find<SecureStorageService>().clearAll();
-
-    // Редирект на авторизацию
-    Get.offAllNamed('/auth');
-
-    // Показываем сообщение
-    AppSnackbar.warning('Сессия истекла', 'Войдите в систему заново');
+  List<Map<String, dynamic>> _asMapList(dynamic data) {
+    return (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   // ========================================
@@ -178,8 +242,7 @@ class ApiProvider extends GetxService {
   Future<List<RegionModel>> getRegions() async {
     try {
       final response = await _dio.get('/auth/regions');
-      final List<dynamic> data = response.data;
-      return data.map((json) => RegionModel.fromJson(json)).toList();
+      return _asMapList(response.data).map(RegionModel.fromJson).toList();
     } catch (e) {
       throw _handleError(e);
     }
@@ -211,7 +274,7 @@ class ApiProvider extends GetxService {
   Future<InspectorData> getProfile() async {
     try {
       final response = await _dio.get('/mobile/profile');
-      return InspectorData.fromJson(response.data);
+      return InspectorData.fromJson(Map<String, dynamic>.from(response.data));
     } catch (e) {
       throw _handleError(e);
     }
@@ -223,16 +286,15 @@ class ApiProvider extends GetxService {
 
   /// Получить список ТП (с опциональным forceRefresh)
   /// GET /api/mobile/transformer-points?forceRefresh=true
-  Future<List<Map<String, dynamic>>> getTransformerPoints({bool forceRefresh = false}) async {
+  Future<List<TpModel>> getTransformerPoints({bool forceRefresh = false}) async {
     try {
       final response = await _dio.get(
         '/mobile/transformer-points',
         queryParameters: forceRefresh ? {'forceRefresh': true} : null,
       );
-
-      return List<Map<String, dynamic>>.from(response.data);
+      return _asMapList(response.data).map(TpModel.fromJson).toList();
     } catch (e) {
-      print('[API] Error getting transformer points: $e');
+      AppLogger.e('[API] Error getting transformer points', e);
       throw _handleError(e);
     }
   }
@@ -243,102 +305,90 @@ class ApiProvider extends GetxService {
 
   /// Получить всех абонентов инспектора
   /// GET /api/mobile/abonents?forceRefresh=true
-  Future<List<Map<String, dynamic>>> getAllAbonents({bool forceRefresh = false}) async {
+  Future<List<SubscriberModel>> getAllAbonents({bool forceRefresh = false}) async {
     try {
-      print('[API] Getting all abonents');
+      AppLogger.d('[API] Getting all abonents');
       final response = await _dio.get(
         '/mobile/abonents',
         queryParameters: forceRefresh ? {'forceRefresh': true} : null,
       );
-
-      return List<Map<String, dynamic>>.from(response.data);
+      return _asMapList(response.data).map(SubscriberModel.fromJson).toList();
     } catch (e) {
-      print('[API] Error getting all abonents: $e');
+      AppLogger.e('[API] Error getting all abonents', e);
       throw _handleError(e);
     }
   }
 
   /// Получение списка абонентов по ТП
   /// GET /api/mobile/transformer-points/{tpCode}/abonents?forceRefresh=true
-  Future<List<Map<String, dynamic>>> getAbonentsByTp(String tpCode, {bool forceRefresh = false}) async {
+  Future<List<SubscriberModel>> getAbonentsByTp(String tpCode, {bool forceRefresh = false}) async {
     try {
-      print('[API] Getting abonents for TP: $tpCode');
+      AppLogger.d('[API] Getting abonents for TP: $tpCode');
       final response = await _dio.get(
         '/mobile/transformer-points/$tpCode/abonents',
         queryParameters: forceRefresh ? {'forceRefresh': true} : null,
       );
-
-      return List<Map<String, dynamic>>.from(response.data);
+      return _asMapList(response.data).map(SubscriberModel.fromJson).toList();
     } catch (e) {
-      print('[API] Error getting abonents for TP: $e');
+      AppLogger.e('[API] Error getting abonents for TP', e);
       throw _handleError(e);
     }
   }
 
   /// Получение детальной информации об абоненте
   /// GET /api/mobile/abonents/{accountNumber}?forceRefresh=true
-  Future<Map<String, dynamic>> getAbonentByAccount(String accountNumber, {bool forceRefresh = false}) async {
+  Future<SubscriberModel> getAbonentByAccount(String accountNumber, {bool forceRefresh = false}) async {
     try {
-      print('[API] Getting abonent data for: $accountNumber');
+      AppLogger.d('[API] Getting abonent data for: $accountNumber');
       final response = await _dio.get(
         '/mobile/abonents/$accountNumber',
         queryParameters: forceRefresh ? {'forceRefresh': true} : null,
       );
-
-      return response.data;
+      return SubscriberModel.fromJson(Map<String, dynamic>.from(response.data));
     } catch (e) {
-      print('[API] Error getting abonent data: $e');
+      AppLogger.e('[API] Error getting abonent data', e);
       throw _handleError(e);
     }
   }
 
   /// Поиск абонентов (живой поиск)
   /// GET /api/mobile/abonents/search?query=...
-  Future<List<dynamic>> searchAbonents(String query) async {
+  Future<List<SubscriberModel>> searchAbonents(String query) async {
     try {
-      print('[API] Searching abonents with query: $query');
-
+      AppLogger.d('[API] Searching abonents with query: $query');
       final response = await _dio.get(
         '/mobile/abonents/search',
         queryParameters: {'query': query},
       );
-
-      print('[API] Search returned ${response.data.length} results');
-      return response.data as List<dynamic>;
+      return _asMapList(response.data).map(SubscriberModel.fromJson).toList();
     } catch (e) {
-      print('[API] Search error: $e');
+      AppLogger.e('[API] Search error', e);
       throw _handleError(e);
     }
   }
 
   /// Получить абонентов с показаниями за текущий месяц
   /// GET /api/mobile/abonents/consumption-current-month
-  Future<List<dynamic>> getAbonentsWithConsumption() async {
+  Future<List<SubscriberModel>> getAbonentsWithConsumption() async {
     try {
-      print('[API] Fetching abonents with consumption for current month');
-
+      AppLogger.d('[API] Fetching abonents with consumption for current month');
       final response = await _dio.get('/mobile/abonents/consumption-current-month');
-
-      print('[API] Consumption list returned ${response.data.length} results');
-      return response.data as List<dynamic>;
+      return _asMapList(response.data).map(SubscriberModel.fromJson).toList();
     } catch (e) {
-      print('[API] Get consumption error: $e');
+      AppLogger.e('[API] Get consumption error', e);
       throw _handleError(e);
     }
   }
 
   /// Получить абонентов которые оплатили в текущем месяце
   /// GET /api/mobile/abonents/paid-current-month
-  Future<List<dynamic>> getAbonentsWithPayments() async {
+  Future<List<SubscriberModel>> getAbonentsWithPayments() async {
     try {
-      print('[API] Fetching abonents with payments for current month');
-
+      AppLogger.d('[API] Fetching abonents with payments for current month');
       final response = await _dio.get('/mobile/abonents/paid-current-month');
-
-      print('[API] Payments list returned ${response.data.length} results');
-      return response.data as List<dynamic>;
+      return _asMapList(response.data).map(SubscriberModel.fromJson).toList();
     } catch (e) {
-      print('[API] Get payments error: $e');
+      AppLogger.e('[API] Get payments error', e);
       throw _handleError(e);
     }
   }
@@ -355,7 +405,7 @@ class ApiProvider extends GetxService {
     String? meterSerialNumber,
   }) async {
     try {
-      print('[API] Submitting meter reading for: $accountNumber, reading: $currentReading');
+      AppLogger.d('[API] Submitting meter reading for: $accountNumber, reading: $currentReading');
 
       final data = {
         'accountNumber': accountNumber,
@@ -367,11 +417,9 @@ class ApiProvider extends GetxService {
       }
 
       final response = await _dio.post('/mobile/meter-readings', data: data);
-      print('[API] Submit reading response: ${response.data}');
-
-      return response.data;
+      return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      print('[API] Error submitting reading: $e');
+      AppLogger.e('[API] Error submitting reading', e);
       throw _handleError(e);
     }
   }
@@ -380,25 +428,24 @@ class ApiProvider extends GetxService {
   /// GET /api/mobile/meter-readings/{readingId}/status
   Future<Map<String, dynamic>> checkReadingStatus(int readingId) async {
     try {
-      print('[API] Checking reading status for: $readingId');
+      AppLogger.d('[API] Checking reading status for: $readingId');
       final response = await _dio.get('/mobile/meter-readings/$readingId/status');
-      return response.data;
+      return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      print('[API] Error checking reading status: $e');
+      AppLogger.e('[API] Error checking reading status', e);
       throw _handleError(e);
     }
   }
 
   /// Получить историю показаний по лицевому счету
   /// GET /api/mobile/meter-readings/by-account/{accountNumber}
-  Future<List<dynamic>> getReadingHistory(String accountNumber) async {
+  Future<List<Map<String, dynamic>>> getReadingHistory(String accountNumber) async {
     try {
-      print('[API] Getting reading history for: $accountNumber');
+      AppLogger.d('[API] Getting reading history for: $accountNumber');
       final response = await _dio.get('/mobile/meter-readings/by-account/$accountNumber');
-      print('[API] Reading history response: ${response.data}');
-      return List<dynamic>.from(response.data);
+      return _asMapList(response.data);
     } catch (e) {
-      print('[API] Error getting reading history: $e');
+      AppLogger.e('[API] Error getting reading history', e);
       throw _handleError(e);
     }
   }
@@ -408,59 +455,28 @@ class ApiProvider extends GetxService {
   // ========================================
 
   /// GET /api/mobile/dashboard/stats
-  Future<Map<String, dynamic>> getDashboardStatistics() async {
+  Future<DashboardModel> getDashboardStatistics() async {
     try {
       final response = await _dio.get('/mobile/dashboard/stats');
-      return Map<String, dynamic>.from(response.data);
+      return DashboardModel.fromJson(Map<String, dynamic>.from(response.data));
     } catch (e) {
-      print('[API] Error getting dashboard statistics: $e');
+      AppLogger.e('[API] Error getting dashboard statistics', e);
       throw _handleError(e);
     }
   }
 
   // ========================================
-  // ERROR HANDLING
+  // APP VERSION CHECK ENDPOINT
   // ========================================
-
-  Exception _handleError(dynamic error) {
-    if (error is DioException) {
-      switch (error.type) {
-        case DioExceptionType.connectionTimeout:
-        case DioExceptionType.sendTimeout:
-        case DioExceptionType.receiveTimeout:
-          return Exception('Время ожидания истекло. Проверьте соединение.');
-        case DioExceptionType.badResponse:
-          final statusCode = error.response?.statusCode;
-          final message = error.response?.data?['message'] ?? 'Неизвестная ошибка';
-          return Exception('Ошибка $statusCode: $message');
-        case DioExceptionType.connectionError:
-          return Exception('Ошибка соединения. Проверьте интернет.');
-        default:
-          return Exception('Произошла ошибка: ${error.message}');
-      }
-    }
-    return Exception('Неизвестная ошибка');
-  }
-
-
-  // Добавь этот метод в lib/app/data/providers/api_provider.dart
-// В конец класса ApiProvider, перед закрывающей скобкой }
-
-// Не забудь добавить импорт в начале файла:
-// import '../models/app_version_model.dart';
-
-// ========================================
-// APP VERSION CHECK ENDPOINT
-// ========================================
 
   /// Проверка версии приложения
   /// GET /api/auth/app-version
   Future<AppVersionModel> checkAppVersion() async {
     try {
       final response = await _dio.get('/auth/app-version');
-      return AppVersionModel.fromJson(response.data);
+      return AppVersionModel.fromJson(Map<String, dynamic>.from(response.data));
     } catch (e) {
-      print('[API] Error checking app version: $e');
+      AppLogger.e('[API] Error checking app version', e);
       throw _handleError(e);
     }
   }
@@ -471,13 +487,12 @@ class ApiProvider extends GetxService {
 
   /// Обновить номер телефона абонента
   /// POST /api/mobile/abonents/phone
-  /// Body: { "accountNumber": "12345", "phoneNumber": "+996700123456" }
   Future<Map<String, dynamic>> updatePhone({
     required String accountNumber,
     required String phoneNumber,
   }) async {
     try {
-      print('[API] Updating phone for account: $accountNumber, phone: $phoneNumber');
+      AppLogger.d('[API] Updating phone for account: $accountNumber');
       final response = await _dio.post(
         '/mobile/abonents/phone',
         data: {
@@ -485,23 +500,9 @@ class ApiProvider extends GetxService {
           'phoneNumber': phoneNumber,
         },
       );
-      print('[API] Update phone response (${response.statusCode}): ${response.data}');
-
-      return response.data;
-    } on DioException catch (e) {
-      print('[API] Error updating phone: $e');
-
-      if (e.response?.statusCode == 400) {
-        throw Exception('Неверный формат номера телефона');
-      } else if (e.response?.statusCode == 403) {
-        throw Exception('Нет доступа к данному абоненту');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('Абонент не найден');
-      }
-
-      throw _handleError(e);
+      return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      print('[API] Unexpected error updating phone: $e');
+      AppLogger.e('[API] Error updating phone', e);
       throw _handleError(e);
     }
   }
@@ -519,7 +520,7 @@ class ApiProvider extends GetxService {
     required double accuracy,
   }) async {
     try {
-      print('[API] Updating coordinates for account: $accountNumber, lat: $latitude, lng: $longitude, accuracy: $accuracy');
+      AppLogger.d('[API] Updating coordinates for account: $accountNumber');
       final response = await _dio.post(
         '/mobile/abonents/coordinates',
         data: {
@@ -529,22 +530,9 @@ class ApiProvider extends GetxService {
           'accuracy': accuracy,
         },
       );
-      print('[API] Update coordinates response (${response.statusCode}): ${response.data}');
-      return response.data;
-    } on DioException catch (e) {
-      print('[API] Error updating coordinates: $e');
-
-      if (e.response?.statusCode == 400) {
-        throw Exception('Неверные данные координат');
-      } else if (e.response?.statusCode == 403) {
-        throw Exception('Нет доступа к данному абоненту');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('Абонент не найден');
-      }
-
-      throw _handleError(e);
+      return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      print('[API] Unexpected error updating coordinates: $e');
+      AppLogger.e('[API] Error updating coordinates', e);
       throw _handleError(e);
     }
   }
@@ -553,8 +541,39 @@ class ApiProvider extends GetxService {
   // REPORTS ENDPOINTS
   // ========================================
 
-  // УДАЛЕНО: getReportsStatistics() - в новом API нет этого эндпоинта
-  // Теперь используется getDashboardStatistics() в StatisticsRepository
+  /// Сформировать отчет
+  /// POST /api/mobile/reports/generate
+  Future<Map<String, dynamic>> generateReport({
+    required String reportType,
+    String? tpId,
+  }) async {
+    try {
+      AppLogger.d('[API] Generating report - type: $reportType, tpId: $tpId');
+
+      final requestData = <String, dynamic>{
+        'reportType': reportType,
+      };
+
+      if (tpId != null && tpId.isNotEmpty) {
+        requestData['tpId'] = tpId;
+      }
+
+      final response = await _dio.post(
+        '/mobile/reports/generate',
+        data: requestData,
+      );
+
+      // Ожидаем структуру: { "success": true, "data": { ... } }
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+
+      throw AppException('Неверный формат ответа сервера');
+    } catch (e) {
+      AppLogger.e('[API] Error generating report', e);
+      throw _handleError(e);
+    }
+  }
 
   // ========================================
   // METER DATA ENDPOINTS
@@ -567,30 +586,19 @@ class ApiProvider extends GetxService {
     required String meterNumber,
   }) async {
     try {
-      print('[API] Getting meter data for account: $accountNumber, meter: $meterNumber');
+      AppLogger.d('[API] Getting meter data for account: $accountNumber, meter: $meterNumber');
       final response = await _dio.get(
         '/mobile/abonents/$accountNumber/meter-data/$meterNumber',
       );
-      print('[API] Meter data response: ${response.data}');
-      return MeterDetailModel.fromJson(response.data);
-    } on DioException catch (e) {
-      print('[API] Error getting meter data: $e');
-
-      if (e.response?.statusCode == 404) {
-        throw Exception('Данные счётчика не найдены');
-      } else if (e.response?.statusCode == 403) {
-        throw Exception('Нет доступа к данному абоненту');
-      }
-
-      throw _handleError(e);
+      return MeterDetailModel.fromJson(Map<String, dynamic>.from(response.data));
     } catch (e) {
-      print('[API] Unexpected error getting meter data: $e');
+      AppLogger.e('[API] Error getting meter data', e);
       throw _handleError(e);
     }
   }
 
   // ========================================
-  // АСКУЭ ENDPOINTS (прокси к minimdm)
+  // АСКУЭ ENDPOINTS
   // ========================================
 
   /// Статус АСКУЭ абонента (есть ли свежее показание)
@@ -600,7 +608,7 @@ class ApiProvider extends GetxService {
       final response = await _dio.get('/mobile/abonents/$accountNumber/askue');
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      print('[API] Error getting askue status: $e');
+      AppLogger.e('[API] Error getting askue status', e);
       throw _handleError(e);
     }
   }
@@ -623,9 +631,52 @@ class ApiProvider extends GetxService {
       );
       return response.data as List<dynamic>;
     } catch (e) {
-      print('[API] Error getting askue readings: $e');
+      AppLogger.e('[API] Error getting askue readings', e);
       throw _handleError(e);
     }
   }
 
+  // ========================================
+  // ERROR HANDLING
+  // ========================================
+
+  /// Единый разбор ошибки в [AppException].
+  /// Сначала пытается достать единый формат бэкенда
+  /// `{ "error": { "code": "...", "message": "..." } }`, затем — фолбэк по типу.
+  AppException _handleError(dynamic error) {
+    // Если ошибка уже разобрана выше по стеку — пробрасываем как есть
+    if (error is AppException) return error;
+
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+
+      // Единый формат ошибки от бэкенда
+      final data = error.response?.data;
+      if (data is Map && data['error'] is Map) {
+        final detail = data['error'] as Map;
+        final message = detail['message']?.toString();
+        final code = detail['code']?.toString();
+        if (message != null && message.isNotEmpty) {
+          return AppException(message, code: code, statusCode: statusCode);
+        }
+      }
+
+      // Фолбэк по типу ошибки
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return AppException('Время ожидания истекло. Проверьте соединение.',
+              statusCode: statusCode);
+        case DioExceptionType.connectionError:
+          return AppException('Ошибка соединения. Проверьте интернет.');
+        case DioExceptionType.badResponse:
+          return AppException('Ошибка сервера${statusCode != null ? ' ($statusCode)' : ''}',
+              statusCode: statusCode);
+        default:
+          return AppException('Произошла ошибка. Попробуйте позже.');
+      }
+    }
+    return AppException('Неизвестная ошибка');
+  }
 }

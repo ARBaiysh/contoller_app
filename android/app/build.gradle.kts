@@ -53,7 +53,8 @@ android {
     defaultConfig {
         applicationId = "kg.asdf.contoller_app"
 
-        minSdk = flutter.minSdkVersion
+        // flutter_secure_storage с encryptedSharedPreferences требует API >= 23
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = 35
 
         // ✅ ПРАВИЛЬНО: Берём версию из pubspec.yaml через Flutter

@@ -4,32 +4,16 @@ import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'secure_storage_service.dart';
-import '../utils/app_snackbar.dart';
-
 class BiometricService extends GetxService {
   final LocalAuthentication _localAuth = LocalAuthentication();
   final GetStorage _storage = GetStorage();
-  final SecureStorageService _secureStorage = Get.find<SecureStorageService>();
 
   static const String _biometricEnabledKey = 'biometric_enabled';
-
-  // Кэш кред в памяти, чтобы savedCredentials оставался синхронным геттером.
-  // Заполняется из шифрованного хранилища при старте и при сохранении.
-  Map<String, dynamic>? _cachedCredentials;
 
   @override
   void onInit() {
     super.onInit();
     _checkInitialState();
-    _loadCachedCredentials();
-  }
-
-  Future<void> _loadCachedCredentials() async {
-    // Ждём завершения миграции, иначе можем прочитать пустое хранилище
-    // до переноса старых кред из GetStorage.
-    await _secureStorage.ready;
-    _cachedCredentials = await _secureStorage.readBiometricCredentials();
   }
 
   Future<void> _checkInitialState() async {
@@ -76,20 +60,6 @@ class BiometricService extends GetxService {
     await _storage.write(_biometricEnabledKey, enabled);
   }
 
-  Future<void> saveBiometricCredentials(String username, String password) async {
-    await _secureStorage.writeBiometricCredentials(username, password);
-    _cachedCredentials = {'username': username, 'password': password};
-  }
-
-  Map<String, dynamic>? get savedCredentials {
-    return _cachedCredentials;
-  }
-
-  Future<void> clearBiometricCredentials() async {
-    await _secureStorage.deleteBiometricCredentials();
-    _cachedCredentials = null;
-  }
-
   Future<bool> authenticateWithBiometrics() async {
     try {
       if (!isBiometricEnabled) {
@@ -118,12 +88,20 @@ class BiometricService extends GetxService {
     }
   }
 
-  Future<bool> setupBiometricAuth(String username, String password) async {
+  /// Включение входа по биометрии.
+  /// Учётные данные больше не сохраняются — сессию держит refresh-токен
+  /// в защищённом хранилище, биометрия лишь локально подтверждает личность.
+  Future<bool> setupBiometricAuth() async {
     try {
       final bool isAvailable = await isBiometricAvailable;
       if (!isAvailable) {
-        AppSnackbar.warning('Биометрия недоступна',
-            'На этом устройстве биометрическая аутентификация не поддерживается');
+        Get.snackbar(
+          'Биометрия недоступна',
+          'На этом устройстве биометрическая аутентификация не поддерживается',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.withOpacity(0.1),
+          colorText: Colors.orange,
+        );
         return false;
       }
 
@@ -137,7 +115,6 @@ class BiometricService extends GetxService {
 
       if (didAuthenticate) {
         await setBiometricEnabled(true);
-        await saveBiometricCredentials(username, password);
         return true;
       }
       return false;
@@ -171,12 +148,17 @@ class BiometricService extends GetxService {
         message = 'Ошибка биометрической аутентификации: ${e.message}';
     }
 
-    AppSnackbar.error('Ошибка биометрии', message);
+    Get.snackbar(
+      'Ошибка биометрии',
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.red.withOpacity(0.1),
+      colorText: Colors.red,
+    );
   }
 
   Future<void> disableBiometricAuth() async {
     await setBiometricEnabled(false);
-    await clearBiometricCredentials();
   }
 
   String getBiometricTypeText(List<BiometricType> types) {
@@ -199,7 +181,6 @@ class BiometricService extends GetxService {
         'can_check_biometrics': await _localAuth.canCheckBiometrics,
         'available_biometrics': await availableBiometrics,
         'biometric_enabled': isBiometricEnabled,
-        'has_saved_credentials': savedCredentials != null,
       };
     } catch (e) {
       return {'error': e.toString()};

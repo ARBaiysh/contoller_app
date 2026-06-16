@@ -1,13 +1,26 @@
 // lib/app/data/models/app_version_model.dart
 
+import 'package:json_annotation/json_annotation.dart';
+
+part 'app_version_model.g.dart';
+
+@JsonSerializable()
 class AppVersionModel {
+  @JsonKey(defaultValue: '1.0.0')
   final String currentVersion;
+  @JsonKey(defaultValue: 1)
   final int currentBuildNumber;
+  @JsonKey(defaultValue: '1.0.0')
   final String minVersion;
+  @JsonKey(defaultValue: 1)
   final int minBuildNumber;
+  @JsonKey(defaultValue: false)
   final bool forceUpdate;
+  @JsonKey(defaultValue: 'Доступно новое обновление')
   final String updateMessage;
+  @JsonKey(defaultValue: '')
   final String apkUrl;
+  @JsonKey(defaultValue: 0)
   final int apkSize; // в байтах
   final String? releaseNotes;
 
@@ -39,35 +52,10 @@ class AppVersionModel {
     return '${sizeInMB.toStringAsFixed(1)} МБ';
   }
 
-  // From JSON
-  factory AppVersionModel.fromJson(Map<String, dynamic> json) {
-    return AppVersionModel(
-      currentVersion: json['currentVersion'] ?? '1.0.0',
-      currentBuildNumber: json['currentBuildNumber'] ?? 1,
-      minVersion: json['minVersion'] ?? '1.0.0',
-      minBuildNumber: json['minBuildNumber'] ?? 1,
-      forceUpdate: json['forceUpdate'] ?? false,
-      updateMessage: json['updateMessage'] ?? 'Доступно новое обновление',
-      apkUrl: json['apkUrl'] ?? '',
-      apkSize: json['apkSize'] ?? 0,
-      releaseNotes: json['releaseNotes'],
-    );
-  }
+  factory AppVersionModel.fromJson(Map<String, dynamic> json) =>
+      _$AppVersionModelFromJson(json);
 
-  // To JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'currentVersion': currentVersion,
-      'currentBuildNumber': currentBuildNumber,
-      'minVersion': minVersion,
-      'minBuildNumber': minBuildNumber,
-      'forceUpdate': forceUpdate,
-      'updateMessage': updateMessage,
-      'apkUrl': apkUrl,
-      'apkSize': apkSize,
-      'releaseNotes': releaseNotes,
-    };
-  }
+  Map<String, dynamic> toJson() => _$AppVersionModelToJson(this);
 
   @override
   String toString() {

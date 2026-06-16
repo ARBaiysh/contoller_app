@@ -1,17 +1,35 @@
 import 'package:intl/intl.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-/// Модель детальных данных счётчика
+import 'json_converters.dart';
+
+part 'meter_detail_model.g.dart';
+
+/// Модель детальных данных счётчика.
+/// Бэкенд (MeterDataDto) отдаёт поля в snake_case — отсюда fieldRename.snake.
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MeterDetailModel {
+  @JsonKey(defaultValue: '')
   final String meterType;
+  @JsonKey(defaultValue: '')
   final String meterNumber;
+  @JsonKey(fromJson: dateTimeOrNull)
   final DateTime? meterDate;
+  @JsonKey(defaultValue: 1)
   final int coefficient;
+  @JsonKey(defaultValue: 1)
   final int phase;
+  @JsonKey(defaultValue: '')
   final String amperage;
+  @JsonKey(defaultValue: 5)
   final int digitCapacity;
+  @JsonKey(defaultValue: '')
   final String stateSeal;
+  @JsonKey(defaultValue: '')
   final String oneTimeSeal;
+  @JsonKey(defaultValue: '')
   final String coverSeal;
+  @JsonKey(defaultValue: '')
   final String boxSeal;
 
   MeterDetailModel({
@@ -28,39 +46,10 @@ class MeterDetailModel {
     required this.boxSeal,
   });
 
-  factory MeterDetailModel.fromJson(Map<String, dynamic> json) {
-    return MeterDetailModel(
-      meterType: json['meter_type'] ?? '',
-      meterNumber: json['meter_number'] ?? '',
-      meterDate: json['meter_date'] != null
-          ? DateTime.tryParse(json['meter_date'])
-          : null,
-      coefficient: json['coefficient'] ?? 1,
-      phase: json['phase'] ?? 1,
-      amperage: json['amperage'] ?? '',
-      digitCapacity: json['digit_capacity'] ?? 5,
-      stateSeal: json['state_seal'] ?? '',
-      oneTimeSeal: json['one_time_seal'] ?? '',
-      coverSeal: json['cover_seal'] ?? '',
-      boxSeal: json['box_seal'] ?? '',
-    );
-  }
+  factory MeterDetailModel.fromJson(Map<String, dynamic> json) =>
+      _$MeterDetailModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'meter_type': meterType,
-      'meter_number': meterNumber,
-      'meter_date': meterDate?.toIso8601String(),
-      'coefficient': coefficient,
-      'phase': phase,
-      'amperage': amperage,
-      'digit_capacity': digitCapacity,
-      'state_seal': stateSeal,
-      'one_time_seal': oneTimeSeal,
-      'cover_seal': coverSeal,
-      'box_seal': boxSeal,
-    };
-  }
+  Map<String, dynamic> toJson() => _$MeterDetailModelToJson(this);
 
   /// Форматированная дата установки
   String get formattedMeterDate {
