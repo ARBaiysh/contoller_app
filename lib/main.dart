@@ -27,6 +27,9 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Edge-to-edge: обязательный режим начиная с Android 15 (API 35+)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   runApp(const MyApp());
 }
 

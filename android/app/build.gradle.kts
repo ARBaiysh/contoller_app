@@ -38,7 +38,7 @@ fun getFlutterVersionName(): String {
 
 android {
     namespace = "kg.asdf.contoller_app"
-    compileSdk = 36
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -55,7 +55,7 @@ android {
 
         // flutter_secure_storage с encryptedSharedPreferences требует API >= 23
         minSdk = maxOf(flutter.minSdkVersion, 23)
-        targetSdk = 35
+        targetSdk = flutter.targetSdkVersion
 
         // ✅ ПРАВИЛЬНО: Берём версию из pubspec.yaml через Flutter
         versionCode = getFlutterVersionCode()
